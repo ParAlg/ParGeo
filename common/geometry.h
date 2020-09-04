@@ -114,6 +114,11 @@ public:
   floatT coordinate(int i) {return x[i];}
   void updateX(int i, floatT val) {x[i]=val;}//Deprecate
   void updateCoordinate(int i, floatT val) {x[i]=val;}
+  pointT average(pointT p2) {
+    auto pp = pointT();
+    for (int i=0; i<_dim; ++i) pp.x[i] = (p2[i] + x[i])/2;
+    return pp;
+  }
   void minCoords(pointT b) {
     for (int i=0; i<_dim; ++i) x[i] = min(x[i], b.x[i]);}
   void minCoords(floatT* b) {
@@ -381,6 +386,40 @@ inline double triAreaNormalized(point2d a, point2d b, point2d c) {
 inline int counterClockwise(point2d a, point2d b, point2d c) {
   return (b-a).cross(c-a) > 0.0;
 }
+
+// A class for sphere
+template <int _dim> class sphere {
+public:
+  typedef double floatT;
+  typedef point<_dim> pointT;
+  pointT center;
+  floatT radius;
+
+  //d=2 circle constructor
+  sphere(pointT a, pointT b, pointT c) {
+    if (_dim != 2) {
+      cout << "error, this constructor for sphere only works for dim=2, abort" << endl;}
+    auto x1 = a[0]; auto y1 = a[1];
+    auto x2 = b[0]; auto y2 = b[1];
+    auto x3 = c[0]; auto y3 = c[1];
+    floatT A = x1*(y2-y3) - y1*(x2-x3) + x2*y3 - x3*y2;
+    floatT B = (x1*x1+y1*y1)*(y3-y2) + (x2*x2+y2*y2)*(y1-y3) + (x3*x3+y3*y3)*(y2-y1);
+    floatT C = (x1*x1+y1*y1)*(x2-x3) + (x2*x2+y2*y2)*(x3-x1) + (x3*x3+y3*y3)*(x1-x2);
+    floatT D = (x1*x1+y1*y1)*(x3*y2-x2*y3) + (x2*x2+y2*y2)*(x1*y3-x3*y1) + (x3*x3+y3*y3)*(x2*y1-x1*y2);
+    center.x[0] = -B/(2*A);
+    center.x[1] = -C/(2*A);
+    radius = sqrt((B*B+C*C-4*A*D)/(4*A*A));
+  }
+
+  //generic constructor
+  sphere(pointT centerr, floatT radiuss): center(centerr), radius(radiuss) {}
+
+  //empty constructor
+  sphere(): center(pointT()), radius(-1) {}
+
+  inline bool contain(pointT p) {
+    return p.pointDist(center) <= radius*1.000001;}//todo, sqrt optimize
+};
 
 template <class floatT>
 inline _vect3d<floatT> onParabola(_vect2d<floatT> v) {

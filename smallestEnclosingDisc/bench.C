@@ -20,6 +20,8 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "pbbs/gettime.h"
+#include "pbbs/utils.h"
+#include "pbbs/sequence.h"
 #include "bench.h"
 #include "geometry.h"
 using namespace std;
@@ -33,28 +35,69 @@ sphere<dim> smallestEnclosingDisc2DSerial(point<dim>* P, intT n) {
   intT i = 2;
 
   while (i < n) {
+    bool conflict = false;
     for (; i<n; ++i) {
-      if (!circle.contain(P[i])) break;}
+      if (!circle.contain(P[i])) {
+        conflict = true;
+        break;}
+    }
 
-    auto p0 = P[0];
-    auto pi = P[i];
-    circle = circleT(p0.average(pi), p0.pointDist(pi));
-    for (intT j=1; j<i; ++j) {
-      if (!circle.contain(P[j])) {
-        circle = circleT(p0, pi, P[j]);
-      }}
-    i++;
+    if (conflict) {
+      cout << "conflict = " << i << endl;
+      auto p0 = P[0];
+      auto pi = P[i];//i now points to conflicting point
+      circle = circleT(p0.average(pi), p0.pointDist(pi));
+      for (intT j=1; j<i; ++j) {
+        if (!circle.contain(P[j])) {
+          circle = circleT(p0, pi, P[j]);
+        }}
+    } else i++;
   }
   return circle;
 }
 
-// template<int dim>
-// sphere<dim> smallestEnclosingDisc2DParallel(point<dim>* P, intT n) {
-//   typedef point<dim> pointT;
-//   typedef sphere<dim> circleT;
+template<int dim>
+sphere<dim> smallestEnclosingDisc2DParallel(point<dim>* P, intT n) {
+  typedef point<dim> pointT;
+  typedef sphere<dim> circleT;
 
-  
-// }
+  auto flag = newA(intT, n+1);
+
+  auto circle = circleT(P[0].average(P[1]), P[0].pointDist(P[1]));
+  intT i = 2;
+
+  while (i < n) {
+    intT prefix = min(i+i, n);
+
+    par_for (intT ii=i; ii<prefix; ++ii) {
+      if (!circle.contain(P[ii])) flag[ii-i] = 1;
+      else flag[ii-i] = 0;
+    }
+    intT numBad = sequence::prefixSum(flag, 0, prefix-i);
+    flag[prefix-i] = numBad;
+
+    if (numBad > 0) {
+      intT conflict = -1;
+      par_for(intT ii=0; ii<prefix-i; ++ii) {
+        if (flag[ii]==0 && flag[ii]!=flag[ii+1]) conflict = ii;}
+      i += conflict;//i now points to conflicting point
+      cout << "conflict = " << i << endl;
+
+      auto p0 = P[0];
+      auto pi = P[i];
+      circle = circleT(p0.average(pi), p0.pointDist(pi));
+      for (intT j=1; j<i; ++j) {
+        if (!circle.contain(P[j])) {
+          circle = circleT(p0, pi, P[j]);
+        }}
+    } else {
+      i = prefix;
+    }
+  }
+
+  free(flag);
+  return circle;
+}
 
 // *************************************************************
 //    DRIVER
@@ -71,20 +114,22 @@ void bench(point<dim>* P, intT n) {
   if (n < 2) abort();
 
   timing t0;t0.start();
-  auto circle = smallestEnclosingDisc2DSerial(P, n);
+  sphere<dim> circle = sphere<dim>();
+  if(serial) circle = smallestEnclosingDisc2DSerial(P, n);
+  else circle = smallestEnclosingDisc2DParallel(P, n);
 
   cout << "total-time = " << t0.stop() << endl;
   cout << "circle = " << circle.center << ", " << circle.radius << endl;
 
-  //verify correctness
-  for (intT i=0; i<n; ++i) {
-    if(!circle.contain(P[0])) {
-      cout << "outside point = " << P[0] << endl;
-      cout << "dist = " << P[0].pointDist(circle.center) << endl;
-      abort();
-    }
-  }
-  cout << "correctness verified" << endl;
+  //code for verifying correctness
+  // for (intT i=0; i<n; ++i) {
+  //   if(!circle.contain(P[0])) {
+  //     cout << "outside point = " << P[0] << endl;
+  //     cout << "dist = " << P[0].pointDist(circle.center) << endl;
+  //     abort();
+  //   }
+  // }
+  // cout << "correctness verified" << endl;
 }
 
 template void bench<2>(point<2>*, intT);
