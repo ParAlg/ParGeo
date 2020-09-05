@@ -29,44 +29,44 @@
 #include "geometry.h"
 using namespace benchIO;
 
-inline int xToStringLen(point2d a) { 
-  return xToStringLen(a.x) + xToStringLen(a.y) + 1;
-}
+// inline int xToStringLen(point2d a) { 
+//   return xToStringLen(a.x) + xToStringLen(a.y) + 1;
+// }
 
-inline void xToString(char* s, point2d a) { 
-  int l = xToStringLen(a.x);
-  xToString(s, a.x);
-  s[l] = ' ';
-  xToString(s+l+1, a.y);
-}
+// inline void xToString(char* s, point2d a) { 
+//   int l = xToStringLen(a.x);
+//   xToString(s, a.x);
+//   s[l] = ' ';
+//   xToString(s+l+1, a.y);
+// }
 
-inline int xToStringLen(point3d a) { 
-  return xToStringLen(a.x) + xToStringLen(a.y) + xToStringLen(a.z) + 2;
-}
+// inline int xToStringLen(point3d a) { 
+//   return xToStringLen(a.x) + xToStringLen(a.y) + xToStringLen(a.z) + 2;
+// }
 
-inline void xToString(char* s, point3d a) { 
-  int lx = xToStringLen(a.x);
-  int ly = xToStringLen(a.y);
-  xToString(s, a.x);
-  s[lx] = ' ';
-  xToString(s+lx+1, a.y);
-  s[lx+ly+1] = ' ';
-  xToString(s+lx+ly+2, a.z);
-}
+// inline void xToString(char* s, point3d a) { 
+//   int lx = xToStringLen(a.x);
+//   int ly = xToStringLen(a.y);
+//   xToString(s, a.x);
+//   s[lx] = ' ';
+//   xToString(s+lx+1, a.y);
+//   s[lx+ly+1] = ' ';
+//   xToString(s+lx+ly+2, a.z);
+// }
 
-inline int xToStringLen(triangle a) { 
-  return xToStringLen(a.C[0]) + xToStringLen(a.C[1]) + xToStringLen(a.C[2]) + 2;
-}
+// inline int xToStringLen(triangle a) { 
+//   return xToStringLen(a.C[0]) + xToStringLen(a.C[1]) + xToStringLen(a.C[2]) + 2;
+// }
 
-inline void xToString(char* s, triangle a) { 
-  int lx = xToStringLen(a.C[0]);
-  int ly = xToStringLen(a.C[1]);
-  xToString(s, a.C[0]);
-  s[lx] = ' ';
-  xToString(s+lx+1, a.C[1]);
-  s[lx+ly+1] = ' ';
-  xToString(s+lx+ly+2, a.C[2]);
-}
+// inline void xToString(char* s, triangle a) { 
+//   int lx = xToStringLen(a.C[0]);
+//   int ly = xToStringLen(a.C[1]);
+//   xToString(s, a.C[0]);
+//   s[lx] = ' ';
+//   xToString(s+lx+1, a.C[1]);
+//   s[lx+ly+1] = ' ';
+//   xToString(s+lx+ly+2, a.C[2]);
+// }
 
 namespace benchIO {
   using namespace std;
@@ -129,26 +129,26 @@ namespace benchIO {
     free(a);
   }
 
-  void parseNdPoints(char** Str, pointNd* P, long n, int dim) {
-    // double* a = newA(double,n*dim);
-    // {parallel_for (long i=0; i < dim*n; i++) {
-    //   a[i] = atof(Str[i]);
-    //   // cout << a[i] << ' ';
-    // }}
-    {par_for (long i=0; i<n; i++) {
-      // P[i].init(a+(dim*i), dim);
-      P[i].m_dim = dim;
-      for (intT d = 0; d < dim; ++ d) {
-        // P[i].m_data[d] = *(a+(dim*i) + d);
-        P[i].m_data[d] = atof(Str[dim * i + d]);
-        // P[i].m_data[d] = 1;
-        // cout << P[i].m_data[d] << ' ';
-      }
-      // cout << endl;
-    }}
-    // cout << '\n' << "!!!" << endl;
-    // free(a);
-  }
+  // void parseNdPoints(char** Str, pointNd* P, long n, int dim) {
+  //   // double* a = newA(double,n*dim);
+  //   // {parallel_for (long i=0; i < dim*n; i++) {
+  //   //   a[i] = atof(Str[i]);
+  //   //   // cout << a[i] << ' ';
+  //   // }}
+  //   {par_for (long i=0; i<n; i++) {
+  //     // P[i].init(a+(dim*i), dim);
+  //     P[i].m_dim = dim;
+  //     for (intT d = 0; d < dim; ++ d) {
+  //       // P[i].m_data[d] = *(a+(dim*i) + d);
+  //       P[i].m_data[d] = atof(Str[dim * i + d]);
+  //       // P[i].m_data[d] = 1;
+  //       // cout << P[i].m_data[d] << ' ';
+  //     }
+  //     // cout << endl;
+  //   }}
+  //   // cout << '\n' << "!!!" << endl;
+  //   // free(a);
+  // }
 
   inline int readPointsDimensionFromFile(char* fname) {
     _seq<char> S = readStringFromFile(fname);
