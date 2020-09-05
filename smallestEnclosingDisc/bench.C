@@ -83,7 +83,7 @@ sphere<dim> smallestEnclosingDisc2DParallel(point<dim>* P, intT n) {
     //insertion
     if (prefix - i < 2000) {
       //serial insertion
-      for (; i<n; ++i) {
+      for (; i<prefix; ++i) {
         if (!circle.contain(P[i])) {
           conflict = true;
           break;}
