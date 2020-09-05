@@ -411,8 +411,14 @@ public:
     radius = sqrt((B*B+C*C-4*A*D)/(4*A*A));
   }
 
-  //generic constructor
+  //generic constructor 1
   sphere(pointT centerr, floatT radiuss): center(centerr), radius(radiuss) {}
+
+  //generic constructor 2
+  sphere(pointT a, pointT b) {
+    center = a.average(b);
+    radius = a.pointDist(b)/2;
+  }
 
   //empty constructor
   sphere(): center(pointT()), radius(-1) {}
