@@ -25,48 +25,50 @@
 #define _BENCH_GEOMETRY_IO
 #include <string>
 #include "IO.h"
-#include "pbbs/parallel.h"
 #include "geometry.h"
+#include "pbbs/parallel.h"
 using namespace benchIO;
 
-// inline int xToStringLen(point2d a) { 
-//   return xToStringLen(a.x) + xToStringLen(a.y) + 1;
-// }
+//these few functions are for triangle io
 
-// inline void xToString(char* s, point2d a) { 
-//   int l = xToStringLen(a.x);
-//   xToString(s, a.x);
-//   s[l] = ' ';
-//   xToString(s+l+1, a.y);
-// }
+inline int xToStringLen(point2d a) {
+  return xToStringLen(a.x()) + xToStringLen(a.y()) + 1;
+}
 
-// inline int xToStringLen(point3d a) { 
-//   return xToStringLen(a.x) + xToStringLen(a.y) + xToStringLen(a.z) + 2;
-// }
+inline void xToString(char* s, point2d a) {
+  int l = xToStringLen(a.x());
+  xToString(s, a.x());
+  s[l] = ' ';
+  xToString(s+l+1, a.y());
+}
 
-// inline void xToString(char* s, point3d a) { 
-//   int lx = xToStringLen(a.x);
-//   int ly = xToStringLen(a.y);
-//   xToString(s, a.x);
-//   s[lx] = ' ';
-//   xToString(s+lx+1, a.y);
-//   s[lx+ly+1] = ' ';
-//   xToString(s+lx+ly+2, a.z);
-// }
+inline int xToStringLen(point3d a) {
+  return xToStringLen(a.x()) + xToStringLen(a.y()) + xToStringLen(a.z()) + 2;
+}
 
-// inline int xToStringLen(triangle a) { 
-//   return xToStringLen(a.C[0]) + xToStringLen(a.C[1]) + xToStringLen(a.C[2]) + 2;
-// }
+inline void xToString(char* s, point3d a) {
+  int lx = xToStringLen(a.x());
+  int ly = xToStringLen(a.y());
+  xToString(s, a.x());
+  s[lx] = ' ';
+  xToString(s+lx+1, a.y());
+  s[lx+ly+1] = ' ';
+  xToString(s+lx+ly+2, a.z());
+}
 
-// inline void xToString(char* s, triangle a) { 
-//   int lx = xToStringLen(a.C[0]);
-//   int ly = xToStringLen(a.C[1]);
-//   xToString(s, a.C[0]);
-//   s[lx] = ' ';
-//   xToString(s+lx+1, a.C[1]);
-//   s[lx+ly+1] = ' ';
-//   xToString(s+lx+ly+2, a.C[2]);
-// }
+inline int xToStringLen(triangle a) {
+  return xToStringLen(a.C[0]) + xToStringLen(a.C[1]) + xToStringLen(a.C[2]) + 2;
+}
+
+inline void xToString(char* s, triangle a) {
+  int lx = xToStringLen(a.C[0]);
+  int ly = xToStringLen(a.C[1]);
+  xToString(s, a.C[0]);
+  s[lx] = ' ';
+  xToString(s+lx+1, a.C[1]);
+  s[lx+ly+1] = ' ';
+  xToString(s+lx+ly+2, a.C[2]);
+}
 
 namespace benchIO {
   using namespace std;
@@ -207,7 +209,7 @@ namespace benchIO {
       return false;
     }
   }
-  
+
   inline intT extractDim(words *W) {
     int d;
     char *targetString = W->Strings[0];
@@ -216,6 +218,84 @@ namespace benchIO {
     targetString[myPt] = '\0'; // TODO Support 10+
     d = atoi(&targetString[18]);
     return d;
+  }
+
+  triangles<point2d> readTrianglesFromFileNodeEle(char* fname) {
+    string nfilename(fname);
+    _seq<char> S = readStringFromFile((char*)nfilename.append(".node").c_str());
+    words W = stringToWords(S.A, S.n);
+    triangles<point2d> Tr;
+    Tr.numPoints = atol(W.Strings[0]);
+    if (W.m < 4*Tr.numPoints + 4) {
+      cout << "readStringFromFileNodeEle inconsistent length" << endl;
+      abort();
+    }
+
+    Tr.P = newA(point2d, Tr.numPoints);
+    for(intT i=0; i < Tr.numPoints; i++)
+      Tr.P[i] = point2d(atof(W.Strings[4*i+5]), atof(W.Strings[4*i+6]));
+
+    string efilename(fname);
+    _seq<char> SN = readStringFromFile((char*)efilename.append(".ele").c_str());
+    words WE = stringToWords(SN.A, SN.n);
+    Tr.numTriangles = atol(WE.Strings[0]);
+    if (WE.m < 4*Tr.numTriangles + 3) {
+      cout << "readStringFromFileNodeEle inconsistent length" << endl;
+      abort();
+    }
+
+    Tr.T = newA(triangle, Tr.numTriangles);
+    for (long i=0; i < Tr.numTriangles; i++)
+      for (int j=0; j < 3; j++)
+	Tr.T[i].C[j] = atol(WE.Strings[4*i + 4 + j]);
+
+    return Tr;
+  }
+
+  template <class pointT>
+    triangles<pointT> readTrianglesFromFile(char* fname, intT offset) {
+    int d = pointT::dim;
+    _seq<char> S = readStringFromFile(fname);
+    words W = stringToWords(S.A, S.n);
+    if (W.Strings[0] != HeaderTriangles) {
+      cout << "readTrianglesFromFile wrong file type" << endl;
+      abort();
+    }
+
+    int headerSize = 3;
+    triangles<pointT> Tr;
+    Tr.numPoints = atol(W.Strings[1]);
+    Tr.numTriangles = atol(W.Strings[2]);
+    if (W.m != headerSize + 3 * Tr.numTriangles + d * Tr.numPoints) {
+      cout << "readTrianglesFromFile inconsistent length" << endl;
+      abort();
+    }
+
+    Tr.P = newA(pointT, Tr.numPoints);
+    parsePoints(W.Strings + headerSize, Tr.P, Tr.numPoints);
+
+    Tr.T = newA(triangle, Tr.numTriangles);
+    char** Triangles = W.Strings + headerSize + d * Tr.numPoints;
+    for (long i=0; i < Tr.numTriangles; i++)
+      for (int j=0; j < 3; j++)
+	Tr.T[i].C[j] = atol(Triangles[3*i + j])-offset;
+    return Tr;
+  }
+
+  template <class pointT>
+  int writeTrianglesToFile(triangles<pointT> Tr, char* fileName) {
+    ofstream file (fileName, ios::binary);
+    if (!file.is_open()) {
+      std::cout << "Unable to open file: " << fileName << std::endl;
+      return 1;
+    }
+    file << HeaderTriangles << endl;
+    file << Tr.numPoints << endl;
+    file << Tr.numTriangles << endl;
+    writeArrayToStream(file, Tr.P, Tr.numPoints);
+    writeArrayToStream(file, Tr.T, Tr.numTriangles);
+    file.close();
+    return 0;
   }
 
 };

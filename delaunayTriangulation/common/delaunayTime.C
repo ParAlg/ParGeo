@@ -67,7 +67,10 @@ void timeDelaunay(point2d* pts, intT n, int rounds, char* outFile, int perturb) 
     cout << "timing = " << t0.stop() << endl;
   }
   cout << endl;
-  // if (outFile != NULL) write(R); // todo, write triangle
+  if (outFile != NULL) {
+    cout << "writing triangles to file" << endl;
+    writeTrianglesToFile(R, outFile);
+  }
 }
 
 int main(int argc, char* argv[]) {
@@ -96,52 +99,10 @@ int main(int argc, char* argv[]) {
     if(!readCsv) PIn = readPointsFromFile<point<2>>(iFile);
     else PIn = readPointsFromFileCSV<point<2>>(iFile, csvCol, csvSCol, csvECol);
     point2d* PP = newA(point2d, PIn.n);
-    par_for(intT i=0; i<PIn.n; ++i) PP[i] = point2d(PIn.A[i]);
+    par_for(intT i=0; i<PIn.n; ++i) PP[i] = point2d(PIn.A[i]);//convert to 2d points
     timeDelaunay<2>(PP, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
     free(PP);
   }
-  // else if (dim == 3) {
-  //   _seq<point<3>> PIn;
-  //   if(!readCsv) PIn = readPointsFromFile<point<3>>(iFile);
-  //   else PIn = readPointsFromFileCSV<point<3>>(iFile, csvCol, csvSCol, csvECol);
-  //   timeDelaunay<3>(PIn.A, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
-  // }
-  // else if (dim == 4) {
-  //   _seq<point<4>> PIn;
-  //   if(!readCsv) PIn = readPointsFromFile<point<4>>(iFile);
-  //   else PIn = readPointsFromFileCSV<point<4>>(iFile, csvCol, csvSCol, csvECol);
-  //   timeDelaunay<4>(PIn.A, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
-  // }
-  // else if (dim == 5) {
-  //   _seq<point<5>> PIn;
-  //   if(!readCsv) PIn = readPointsFromFile<point<5>>(iFile);
-  //   else PIn = readPointsFromFileCSV<point<5>>(iFile, csvCol, csvSCol, csvECol);
-  //   timeDelaunay<5>(PIn.A, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
-  // }
-  // else if (dim == 6) {
-  //   _seq<point<6>> PIn;
-  //   if(!readCsv) PIn = readPointsFromFile<point<6>>(iFile);
-  //   else PIn = readPointsFromFileCSV<point<6>>(iFile, csvCol, csvSCol, csvECol);
-  //   timeDelaunay<6>(PIn.A, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
-  // }
-  // else if (dim == 7) {
-  //   _seq<point<7>> PIn;
-  //   if(!readCsv) PIn = readPointsFromFile<point<7>>(iFile);
-  //   else PIn = readPointsFromFileCSV<point<7>>(iFile, csvCol, csvSCol, csvECol);
-  //   timeDelaunay<7>(PIn.A, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
-  // }
-  // else if (dim == 8) {
-  //   _seq<point<8>> PIn;
-  //   if(!readCsv) PIn = readPointsFromFile<point<8>>(iFile);
-  //   else PIn = readPointsFromFileCSV<point<8>>(iFile, csvCol, csvSCol, csvECol);
-  //   timeDelaunay<8>(PIn.A, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
-  // }
-  // else if (dim == 9) {
-  //   _seq<point<9>> PIn;
-  //   if(!readCsv) PIn = readPointsFromFile<point<9>>(iFile);
-  //   else PIn = readPointsFromFileCSV<point<9>>(iFile, csvCol, csvSCol, csvECol);
-  //   timeDelaunay<9>(PIn.A, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
-  // }
   else {
     cout << "dimension " << dim << " not yet supported, abort" << endl; abort();
   }

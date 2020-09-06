@@ -25,7 +25,7 @@
 #include "nearestNeighbors.h"
 #include "topology.h"
 #include "geometry.h"
-#include "delaunayDefs.h"
+#include "delaunay.h"
 using namespace std;
 
 // *************************************************************

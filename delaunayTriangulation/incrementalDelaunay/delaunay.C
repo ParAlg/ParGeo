@@ -120,30 +120,30 @@ bool insert(vertex *v, simplex t, Qs *q) {
 //    CHECKING THE TRIANGULATION
 // *************************************************************
 
-void checkDelaunay(tri *triangs, intT n, intT boundarySize) {
-  intT *bcount = newA(intT,n);
-  par_for(intT j=0; j<n; j++) bcount[j] = 0;
-  par_for (intT i=0; i<n; i++) {
-    if (triangs[i].initialized >= 0) {
-      simplex t = simplex(&triangs[i],0);
-      for (int i=0; i < 3; i++) {
-	simplex a = t.across();
-	if (a.valid()) {
-	  vertex* v = a.rotClockwise().firstVertex();
-	  if (!t.outside(v)) {
-	    cout << "Inside Out: "; v->pt.print(); t.print();}
-	  if (t.inCirc(v)) {
-	    cout << "In Circle Violation: "; v->pt.print(); t.print(); }
-	} else bcount[i]++;
-	t = t.rotClockwise();
-      }
-    }
-  }
-  if (boundarySize != sequence::plusReduce(bcount,n))
-    cout << "Wrong boundary size: should be " << boundarySize 
-	 << " is " << bcount << endl;
-  free(bcount);
-}
+// void checkDelaunay(tri *triangs, intT n, intT boundarySize) {
+//   intT *bcount = newA(intT,n);
+//   par_for(intT j=0; j<n; j++) bcount[j] = 0;
+//   par_for (intT i=0; i<n; i++) {
+//     if (triangs[i].initialized >= 0) {
+//       simplex t = simplex(&triangs[i],0);
+//       for (int i=0; i < 3; i++) {
+// 	simplex a = t.across();
+// 	if (a.valid()) {
+// 	  vertex* v = a.rotClockwise().firstVertex();
+// 	  if (!t.outside(v)) {
+// 	    cout << "Inside Out: "; v->pt.print(); t.print();}
+// 	  if (t.inCirc(v)) {
+// 	    cout << "In Circle Violation: "; v->pt.print(); t.print(); }
+// 	} else bcount[i]++;
+// 	t = t.rotClockwise();
+//       }
+//     }
+//   }
+//   if (boundarySize != sequence::plusReduce(bcount,n))
+//     cout << "Wrong boundary size: should be " << boundarySize
+// 	 << " is " << bcount << endl;
+//   free(bcount);
+// }
 
 // *************************************************************
 //    CREATING A BOUNDING CIRCULAR REGION AND FILL WITH INITIAL SIMPLICES
