@@ -42,7 +42,7 @@ class kdNode {
   typedef double floatT;
   typedef point<dim> pointT;
   typedef kdNode<dim, objT> nodeT;
-  static const intT leafSize = 16;
+  intT leafSize = 16;
   static const int boxInclude = 0;
   static const int boxOverlap = 1;
   static const int boxExclude = 2;
@@ -142,7 +142,7 @@ class kdNode {
     }
     return true;}
 
-  void constructSerial(nodeT *space) {
+  void constructSerial(nodeT *space, bool noCoarsen) {
     boundingBoxSerial();
     if (isLeaf()) {
       left = NULL; right = NULL;
@@ -157,17 +157,17 @@ class kdNode {
       xM = (pMax[k]+pMin[k])/2;
       intT median = splitItemSerial(xM);
       if (median == 0 || median == n) {median = n/2;}
-      space[0] = nodeT(items, median, space+1);
-      space[2*median-1] = nodeT(items+median, n-median, space+2*median);
+      space[0] = nodeT(items, median, space+1, noCoarsen);
+      space[2*median-1] = nodeT(items+median, n-median, space+2*median, noCoarsen);
       left = space;
       right = space+2*median-1;
     }
   }
 
   //cilk_spawn requires function
-  void buildNode(nodeT *space, objT** itemss, intT nn, nodeT *spacee, objT** scratchh, intT* flagss) {
-    space[0] = nodeT(itemss, nn, spacee, scratchh, flagss);}
-  void constructParallel(nodeT *space, objT** scratch, intT* flags) {
+  void buildNode(nodeT *space, objT** itemss, intT nn, nodeT *spacee, objT** scratchh, intT* flagss, bool noCoarsen) {
+    space[0] = nodeT(itemss, nn, spacee, scratchh, flagss, noCoarsen);}
+  void constructParallel(nodeT *space, objT** scratch, intT* flags, bool noCoarsen) {
     boundingBoxParallel();
     if (isLeaf()) {
       left = NULL; right = NULL;
@@ -182,8 +182,8 @@ class kdNode {
       xM = (pMax[k]+pMin[k])/2;
       intT median = splitItemParallel(xM, scratch, flags);
       if (median == 0 || median == n) {median = n/2;}
-      cilk_spawn buildNode(&space[0], items, median, space+1, scratch, flags);
-      buildNode(&space[2*median-1], items+median, n-median, space+2*median, scratch+median, flags+median);
+      cilk_spawn buildNode(&space[0], items, median, space+1, scratch, flags, noCoarsen);
+      buildNode(&space[2*median-1], items+median, n-median, space+2*median, scratch+median, flags+median, noCoarsen);
       cilk_sync;
       left = space;
       right = space+2*median-1;
@@ -191,16 +191,108 @@ class kdNode {
   }
 
   public:
-  kdNode(objT** itemss, intT nn, nodeT *space, objT** scratch, intT* flags): items(itemss), n(nn) {
-    if (n>2000) constructParallel(space, scratch, flags);
-    else constructSerial(space);}
-  kdNode(objT** itemss, intT nn, nodeT *space): items(itemss), n(nn) {
-    constructSerial(space);}
+  nodeT* L() {return left;}
+  nodeT* R() {return right;}
+  inline intT size() {return n;}
+  inline objT* operator[](intT i) {return items[i];}
+
+  kdNode(objT** itemss, intT nn, nodeT *space, objT** scratch, intT* flags, bool noCoarsen=false): items(itemss), n(nn) {
+    if (noCoarsen) leafSize = 1;
+    if (n>2000) constructParallel(space, scratch, flags, noCoarsen);
+    else constructSerial(space, noCoarsen);}
+  kdNode(objT** itemss, intT nn, nodeT *space, bool noCoarsen=false): items(itemss), n(nn) {
+    if (noCoarsen) leafSize = 1;
+    constructSerial(space, noCoarsen);}
 
   void setEmpty() {n=-1;}
   bool isEmpty() {return n<0;}
   bool isLeaf() {return n<=leafSize;}
 
+  floatT nodeDiag() {//todo change name
+    floatT result = 0;
+    for (int d = 0; d < dim; ++ d) {
+      floatT tmp = pMax[d] - pMin[d];
+      result += tmp * tmp;
+    }
+    return sqrt(result);
+  }
+
+  // return maximum span of node bounding box among all dimensions
+  inline floatT lMax() {
+    floatT myMax = 0;
+    for (int d=0; d<dim; ++d) {
+      floatT thisMax = pMax[d] - pMin[d];
+      if (thisMax > myMax) {
+	myMax = thisMax;}
+    }
+    return myMax;
+  }
+
+  //return the bb distance with and n2
+  inline floatT nodeDistance(nodeT* n2) {
+    for (int d = 0; d < dim; ++ d) {
+      if (pMin[d] > n2->pMax[d] || n2->pMin[d] > pMax[d]) {
+        // disjoint at dim d, and intersect on dim < d
+        floatT rsqr = 0;
+        for (int dd = d; dd < dim; ++ dd) {
+          floatT tmp = max(pMin[dd]-n2->pMax[dd], n2->pMin[dd]-pMax[dd]);
+          tmp = max(tmp, (floatT)0);
+          rsqr += tmp*tmp;
+        }
+        return sqrt(rsqr);
+      }
+    }
+    return 0; // intersect
+  }
+
+  // inline floatT objDistance(objT* p2) {
+  //   for (int d = 0; d < dim; ++ d) {
+  //     if (pMin[d] > p2->coordinate(d) || p2->coordinate(d) > pMax[d]) {
+  //       floatT rsqr = 0;
+  //       for (int dd = d; dd < dim; ++ dd) {
+  //         floatT tmp = max(pMin[dd]-p2->coordinate(dd), p2->coordinate(dd)-pMax[dd]);
+  //         tmp = max(tmp, (floatT)0);
+  //         rsqr += tmp*tmp;
+  //       }
+  //       return sqrt(rsqr);
+  //     }
+  //   }
+  //   return 0; // p2 inside
+  // }
+
+  //return the far bb distance between n1 and n2
+  inline floatT nodeFarDistance(nodeT* n2) {
+    floatT result = 0;
+    for (int d = 0; d < dim; ++ d) {
+      floatT tmp = max(pMax[d],n2->pMax[d]) - min(pMax[d],n2->pMax[d]);
+      result += tmp *tmp;
+    }
+    return sqrt(result);
+  }
+
+  //whether well separated with v
+  inline bool wellSeparated(nodeT *v) {
+    static const int s = 2; // separation constant
+    floatT circleDiam_u = 0;
+    floatT circleDiam_v = 0;
+    floatT circleDistance = 0;
+    for (int d = 0; d < dim; ++ d) {
+      floatT uTmpDiff = pMax[d] - pMin[d];
+      floatT vTmpDiff = v->pMax[d] - v->pMin[d];
+      floatT uTmpAvg = (pMax[d] + pMin[d])/2;
+      floatT vTmpAvg = (v->pMax[d] + v->pMin[d])/2;
+      circleDistance += (uTmpAvg - vTmpAvg) * (uTmpAvg - vTmpAvg);
+      circleDiam_u += uTmpDiff * uTmpDiff;
+      circleDiam_v += vTmpDiff * vTmpDiff;
+    }
+    circleDiam_u = sqrt(circleDiam_u);
+    circleDiam_v = sqrt(circleDiam_v);
+    floatT myRadius = max(circleDiam_u, circleDiam_v)/2;
+    circleDistance = sqrt(circleDistance) - circleDiam_u/2 - circleDiam_v/2;
+    return circleDistance >= (s * myRadius);
+  }
+
+  //Deprecate
   void rangeNeighbor(pointT pMin1, pointT pMax1, floatT r, vector<objT*>* accum) {
     int relation = boxCompare(pMin1, pMax1, pMin, pMax);
     if (relation == boxInclude) {
@@ -255,6 +347,53 @@ class kdNode {
         right->rangeNeighbor(pMin1, pMax1, r, term, doTerm);}
     }
   }
+
+  struct bcp {
+    objT* u;
+    objT* v;
+    floatT dist;
+    bcp(objT* uu, objT* vv, floatT distt): u(uu), v(vv), dist(distt) {}
+    bcp(): u(NULL), v(NULL), dist(floatMax()) {}
+    void update(objT* uu, objT* vv) {
+      auto distt = uu->dist(*vv);
+      if (distt < dist) {
+        u = uu; v = vv; dist = distt;}
+    }
+  };
+
+  inline void compBcpH(nodeT* n2, bcp* r) {
+    if (nodeDistance(n2) > r->dist) return;
+
+    if (isLeaf() && n2->isLeaf()) {//basecase
+      for (intT i=0; i<size(); ++i) {
+        for (intT j=0; j<n2->size(); ++j) {
+          r->update(items[i], n2->items[j]);}
+      }
+    } else {//recursive, todo consider call order, might help
+      if (isLeaf()) {
+        compBcpH(n2->left, r);
+        compBcpH(n2->right, r);
+      } else if (n2->isLeaf()) {
+        n2->compBcpH(left, r);
+        n2->compBcpH(right, r);
+      } else {
+        left->compBcpH(n2->left, r);
+        left->compBcpH(n2->right, r);
+        right->compBcpH(n2->left, r);
+        right->compBcpH(n2->right, r);}
+    }
+  }
+
+  inline bcp compBcp(nodeT* n2) {
+    auto r = bcp();
+    compBcpH(n2, &r);
+    // for (intT i=0; i<size(); ++i) {
+    //   for (intT j=0; j<n2->size(); ++j) {
+    //     r.update(items[i], n2->items[j]);}
+    // }
+    return r;
+  }
+
 };
 
 template<int dim, class objT>
@@ -262,11 +401,13 @@ class kdTree {
   typedef double floatT;
   typedef point<dim> pointT;
   typedef kdNode<dim, objT> nodeT;
-  nodeT *root;
   objT **items;
+  nodeT *root;
 
   public:
-  kdTree(objT* P, intT n, bool parallel=true) {
+  nodeT* rootNode() {return root;}
+
+  kdTree(objT* P, intT n, bool parallel=true, bool noCoarsen=false) {
     items = newA(objT*, n);
     par_for(intT i=0; i<n; ++i) {
       items[i]=&P[i];
@@ -278,11 +419,11 @@ class kdTree {
     if (parallel) {
       objT** scratch = newA(objT*, n);
       intT* flags = newA(intT, n);
-      root[0] = nodeT(items, n, root+1, scratch, flags);
+      root[0] = nodeT(items, n, root+1, scratch, flags, noCoarsen);
       free(scratch);
       free(flags);
     } else {
-      root[0] = nodeT(items, n, root+1);}
+      root[0] = nodeT(items, n, root+1, noCoarsen);}
   }
   ~kdTree() {
     free(items);

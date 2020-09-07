@@ -146,7 +146,12 @@ public:
     }
     return false;
   }
-  floatT pointDist(pointT p) {
+  floatT pointDist(pointT p) {//deprecate
+    floatT xx=0;
+    for (int i=0; i<_dim; ++i) xx += (x[i]-p.x[i])*(x[i]-p.x[i]);
+    return sqrt(xx);
+  }
+  floatT dist(pointT p) {
     floatT xx=0;
     for (int i=0; i<_dim; ++i) xx += (x[i]-p.x[i])*(x[i]-p.x[i]);
     return sqrt(xx);
