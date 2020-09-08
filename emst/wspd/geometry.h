@@ -113,7 +113,6 @@ public:
       if (abs(a[ii]-b[ii]) > 0.0) return false;}
     return true;
   }
-  friend bool operator!=(pointT a, pointT b) {return !(a==b);}
   floatT* coordinate() {return x;}
   floatT coordinate(int i) {return x[i];}
   void updateX(int i, floatT val) {x[i]=val;}//Deprecate

@@ -19,56 +19,17 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#ifndef WSPD_NORMAL
-#define WSPD_NORMAL
-
 #include <vector>
-#include "parBuf.h"
-#include "wspd.h"
+#include "geometry.h"
+#include "pbbs/parallel.h"
 
-template <class nodeT>
-struct wspdNormalSerial {
-  typedef wsp<nodeT> pType;
-  vector<pType> *out;
-
-  wspdNormalSerial(vector<pType> *outt) : out(outt) {}
-
-  inline void run(nodeT *u, nodeT *v) {out->emplace_back(u, v);}
-  inline bool moveon(nodeT *u, nodeT *v) {return true;}
-  inline bool start(nodeT *t_u) { return true; }
+template<class pointT>
+struct wEdge {
+  pointT u;
+  pointT v;
+  floatT weight;
+  wEdge(pointT uu, pointT vv, floatT weightt): u(uu), v(vv), weight(weightt) {};
 };
 
-template <class nodeT>
-struct wspdNormalParallel {
-  typedef wsp<nodeT> pType;
-  typedef parBuf<pType> bufT;
-  bufT **out;
-
-  wspdNormalParallel(intT n) {
-    int P = getWorkers();
-    out = newA(bufT*, P);
-    par_for(int p=0; p<P; ++p) {
-      out[p] = new bufT(n/P);
-    }
-  }
-
-  vector<pType>* collect() {
-    int P = getWorkers();
-    auto tmp = parBufCollect<pType>(out, P);
-
-    par_for(int p=0; p<P; ++p) delete out[p];
-    free(out);
-    return tmp;
-  }
-
-  inline void run(nodeT *u, nodeT *v) {
-    auto tmp = out[getWorkerId()]->increment();
-    tmp->u = u;
-    tmp->v = v;
-  }
-
-  inline bool moveon(nodeT *u, nodeT *v) {return true;}
-  inline bool start(nodeT *t_u) { return true; }
-};
-
-#endif
+template<int dim>
+wEdge<point<dim>>* emst(point<dim>*, intT);

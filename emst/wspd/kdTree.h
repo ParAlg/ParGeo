@@ -193,8 +193,6 @@ class kdNode {
   public:
   nodeT* L() {return left;}
   nodeT* R() {return right;}
-  objT** getItems() {return items;}
-  pair<pointT, pointT> getBox() {return make_pair(pMin, pMax);}
   inline intT size() {return n;}
   inline objT* operator[](intT i) {return items[i];}
 
