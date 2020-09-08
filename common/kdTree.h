@@ -27,7 +27,7 @@
 #include "pbbs/parallel.h"
 #include "pbbs/utils.h"
 #include "pbbs/sequence.h"
-#include "pbbs/parallel.h"
+#include "pbbs/quickSort.h"
 #include "geometry.h"
 
 // *************************************************************
@@ -193,8 +193,6 @@ class kdNode {
   public:
   nodeT* L() {return left;}
   nodeT* R() {return right;}
-  objT** getItems() {return items;}
-  pair<pointT, pointT> getBox() {return make_pair(pMin, pMax);}
   inline intT size() {return n;}
   inline objT* operator[](intT i) {return items[i];}
 
@@ -373,16 +371,33 @@ class kdNode {
       }
     } else {//recursive, todo consider call order, might help
       if (isLeaf()) {
-        compBcpH(n2->left, r);
-        compBcpH(n2->right, r);
+        if (nodeDistance(n2->left) < nodeDistance(n2->right)) {
+          compBcpH(n2->left, r);
+          compBcpH(n2->right, r);
+        } else {
+          compBcpH(n2->right, r);
+          compBcpH(n2->left, r);
+        }
       } else if (n2->isLeaf()) {
-        n2->compBcpH(left, r);
-        n2->compBcpH(right, r);
+        if (n2->nodeDistance(left) < n2->nodeDistance(right)) {
+          n2->compBcpH(left, r);
+          n2->compBcpH(right, r);
+        } else {
+          n2->compBcpH(right, r);
+          n2->compBcpH(left, r);
+        }
       } else {
-        left->compBcpH(n2->left, r);
-        left->compBcpH(n2->right, r);
-        right->compBcpH(n2->left, r);
-        right->compBcpH(n2->right, r);}
+        pair<nodeT*, nodeT*> ordering[4];
+        ordering[0] = make_pair(n2->left, left);
+        ordering[1] = make_pair(n2->right, left);
+        ordering[2] = make_pair(n2->left, right);
+        ordering[3] = make_pair(n2->right, right);
+        auto bbd = [&](pair<nodeT*,nodeT*> p1, pair<nodeT*,nodeT*> p2) {
+                     return p1.first->nodeDistance(p1.second) < p2.first->nodeDistance(p2.second);};
+        quickSortSerial(ordering, 4, bbd);
+        for (intT o=0; o<4; ++o) {
+          ordering[o].first->compBcpH(ordering[o].second, r);}
+      }
     }
   }
 

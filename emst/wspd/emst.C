@@ -101,10 +101,10 @@ wEdge<point<dim>>* emst(point<dim>* P, intT n) {
 }
 
 template wEdge<point<2>>* emst(point<2>*, intT);
-// template wEdge<point<3>>* emst(point<3>*, intT);
-// template wEdge<point<4>>* emst(point<4>*, intT);
-// template wEdge<point<5>>* emst(point<5>*, intT);
-// template wEdge<point<6>>* emst(point<6>*, intT);
-// template wEdge<point<7>>* emst(point<7>*, intT);
-// template wEdge<point<8>>* emst(point<8>*, intT);
-// template wEdge<point<9>>* emst(point<9>*, intT);
+template wEdge<point<3>>* emst(point<3>*, intT);
+template wEdge<point<4>>* emst(point<4>*, intT);
+template wEdge<point<5>>* emst(point<5>*, intT);
+template wEdge<point<6>>* emst(point<6>*, intT);
+template wEdge<point<7>>* emst(point<7>*, intT);
+template wEdge<point<8>>* emst(point<8>*, intT);
+template wEdge<point<9>>* emst(point<9>*, intT);
