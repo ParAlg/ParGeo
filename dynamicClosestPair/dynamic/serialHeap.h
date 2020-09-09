@@ -30,7 +30,7 @@
    So it supports both get-min based on dist and erase/find based on u.
  */
 
-#include "../common/pbbs/ndHash.h"
+#include "pbbs/ndHash.h"
 #include "../common/shared.h"
 
 template<int dim> struct pointer;
