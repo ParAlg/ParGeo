@@ -1,6 +1,4 @@
-// This code is part of the project "A Parallel Batch-Dynamic Data Structure
-// for the Closest Pair Problem"
-// Copyright (c) 2020 Yiqiu Wang, Shangdi Yu, Yan Gu, Julian Shun
+// Copyright (c) 2020 Yiqiu Wang
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the
@@ -24,7 +22,8 @@
 #include "emst.h"
 #include "kdTree.h"
 #include "wspd.h"
-#include "wspdNormal.h"
+#include "wspdFilter.h"
+#include "mark.h"
 #include "parallelKruskal.h"
 #include "pbbs/gettime.h"
 
@@ -57,33 +56,53 @@ wEdge<point<dim>>* emst(point<dim>* P, intT n) {
   treeT* tree = new treeT(P, n, paraTree, 1);
   cout << "build-tree-time = " << t0.next() << endl;
 
-  auto wgpar = wspdNormalParallel<nodeT>(tree->rootNode()->size());
-  wspdParallel<nodeT, wspdNormalParallel<nodeT>>(tree->rootNode(), &wgpar);
-  auto out = wgpar.collect();
-  // vector<pairT> *out = new vector<pairT>();
-  // auto wg = wspdNormalSerial<nodeT>(out);
-  // wspdSerial<nodeT, wspdNormalSerial<nodeT>>(tree->rootNode(), &wg);
-
-  cout << "#wsp = " << out->size() << endl;
-  cout << "wspd-time = " << t0.next() << endl;
-
-  struct indexBcp {
-    intT u,v;
-    floatT dist;
-    indexBcp(intT uu, intT vv, floatT distt): u(uu), v(vv), dist(distt) {};
-  };
-
-  auto bcps = newA(indexBcp, out->size());
-
-  par_for (intT i=0; i<out->size(); ++i) {
-    bcpT bcp = out->at(i).u->compBcp(out->at(i).v);
-    bcps[i] = indexBcp(bcp.u-P, bcp.v-P, bcp.dist);
-  }
-  cout << "bcp-time = " << t0.next() << endl;
+  floatT rhoLo = -0.1;
+  floatT beta = 2;
+  intT edgesAdded = 0;
+  intT numEdges = 0;
 
   edgeUnionFind *uf = new edgeUnionFind(n);
-  parKruskal::mst(parKruskal::bcpWrap<indexBcp>(bcps), n, out->size(), uf);
-  cout << "kruskal-time = " << t0.next() << endl;
+
+  while (edgesAdded < n-1) {
+    // auto *out = new vector<bcpT>();
+    // floatT tmp = filterWspdSerial<treeT, nodeT>(beta, rhoLo, out, tree, uf);
+    auto output = filterWspdParallel<treeT, nodeT>(beta, rhoLo, tree, uf);
+    floatT tmp = output.first;//rho hi
+    auto out = output.second;//bcp vector
+    cout << "---" << endl;
+    cout << "beta = " << beta << endl;
+    cout << "rho = " << rhoLo << " -- " << tmp << endl;
+
+    numEdges += out->size();
+
+    if (out->size() <= 0) {
+      delete out;
+      beta *= 2;
+      rhoLo = tmp;
+      continue;}
+
+    intT edgeCount = out->size();
+    cout << "edges = " << edgeCount << endl;
+
+    struct nodeWrap {
+      bcpT *E;
+      pointT *s;
+      nodeWrap(bcpT *Ein, pointT* ss) : E(Ein), s(ss) {}
+      //index from offset
+      inline intT GetU(intT i) {return E[i].u-s;}
+      inline intT GetV(intT i) {return E[i].v-s;}
+      inline double GetWeight(intT i) {return E[i].dist;}
+    };
+
+    edgesAdded += parKruskal::mst(nodeWrap(&out->at(0), P), n, out->size(), uf);
+    cout << "mst edges = " << edgesAdded << endl;
+
+    mark(tree->rootNode(), uf, P);
+
+    //delete out;
+    beta *= 2;
+    rhoLo = tmp;
+  }
 
   typedef wEdge<point<dim>> outT;
   auto R = newA(outT, n-1);
@@ -94,8 +113,6 @@ wEdge<point<dim>>* emst(point<dim>* P, intT n) {
   cout << "copy-time = " << t0.stop() << endl;
 
   delete uf;
-  free(bcps);
-  delete out;
   return R;
 }
 

@@ -64,6 +64,11 @@ void timeEmst(point<dim>* pts, intT n, int rounds, char* outFile, int perturb) {
     timing t0; t0.start();
     auto R = emst<dim>(pts, n);
     cout << "timing = " << t0.stop() << endl;
+    floatT sum = 0;
+    for (int j=0; j<n-1; j++) {
+      sum += R[j].weight;
+    }
+    cout << "weight-sum = " << sum << endl;
   }
   cout << endl;
 

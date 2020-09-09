@@ -19,16 +19,17 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#include <vector>
 #include "geometry.h"
 #include "pbbs/parallel.h"
 
-struct edge {
-  typedef point<dim> pointT;
+template<class pointT>
+struct wEdge {
   pointT u;
-  ponitT v;
+  pointT v;
   floatT weight;
-  edge(pointT uu, pointT vv, floatT weightt): u(uu), v(vv), weight(weightt) {};
+  wEdge(pointT uu, pointT vv, floatT weightt): u(uu), v(vv), weight(weightt) {};
 };
 
 template<int dim>
-vector<edge>* emst(point<dim>*, intT);
+wEdge<point<dim>>* emst(point<dim>*, intT);

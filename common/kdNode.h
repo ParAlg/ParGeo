@@ -1,3 +1,24 @@
+// Copyright (c) 2020 Yiqiu Wang
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights (to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 #ifndef KD_NODE_H
 #define KD_NODE_H
 
@@ -6,7 +27,6 @@ class kdNode {
   typedef double floatT;
   typedef point<dim> pointT;
   typedef kdNode<dim, objT> nodeT;
-  intT leafSize = 16;
   static const int boxInclude = 0;
   static const int boxOverlap = 1;
   static const int boxExclude = 2;
@@ -16,6 +36,8 @@ class kdNode {
   intT n;
   nodeT* left;
   nodeT* right;
+
+  intT id;//optional
 
   inline void boundingBoxSerial() {
     pMin = pointT(items[0]->coordinate());
@@ -106,9 +128,9 @@ class kdNode {
     }
     return true;}
 
-  void constructSerial(nodeT *space, bool noCoarsen) {
+  void constructSerial(nodeT *space, intT leafSize) {
     boundingBoxSerial();
-    if (isLeaf()) {
+    if (n <= leafSize) {
       left = NULL; right = NULL;
     } else {
       if (!space[0].isEmpty() || !space[1].isEmpty()) {
@@ -121,19 +143,19 @@ class kdNode {
       xM = (pMax[k]+pMin[k])/2;
       intT median = splitItemSerial(xM);
       if (median == 0 || median == n) {median = n/2;}
-      space[0] = nodeT(items, median, space+1, noCoarsen);
-      space[2*median-1] = nodeT(items+median, n-median, space+2*median, noCoarsen);
+      space[0] = nodeT(items, median, space+1, leafSize);
+      space[2*median-1] = nodeT(items+median, n-median, space+2*median, leafSize);
       left = space;
       right = space+2*median-1;
     }
   }
 
   //cilk_spawn requires function
-  void buildNode(nodeT *space, objT** itemss, intT nn, nodeT *spacee, objT** scratchh, intT* flagss, bool noCoarsen) {
-    space[0] = nodeT(itemss, nn, spacee, scratchh, flagss, noCoarsen);}
-  void constructParallel(nodeT *space, objT** scratch, intT* flags, bool noCoarsen) {
+  void buildNode(nodeT *space, objT** itemss, intT nn, nodeT *spacee, objT** scratchh, intT* flagss, intT leafSize) {
+    space[0] = nodeT(itemss, nn, spacee, scratchh, flagss, leafSize);}
+  void constructParallel(nodeT *space, objT** scratch, intT* flags, intT leafSize) {
     boundingBoxParallel();
-    if (isLeaf()) {
+    if (n <= leafSize) {
       left = NULL; right = NULL;
     } else {
       if (!space[0].isEmpty() || !space[1].isEmpty()) {
@@ -146,8 +168,8 @@ class kdNode {
       xM = (pMax[k]+pMin[k])/2;
       intT median = splitItemParallel(xM, scratch, flags);
       if (median == 0 || median == n) {median = n/2;}
-      cilk_spawn buildNode(&space[0], items, median, space+1, scratch, flags, noCoarsen);
-      buildNode(&space[2*median-1], items+median, n-median, space+2*median, scratch+median, flags+median, noCoarsen);
+      cilk_spawn buildNode(&space[0], items, median, space+1, scratch, flags, leafSize);
+      buildNode(&space[2*median-1], items+median, n-median, space+2*median, scratch+median, flags+median, leafSize);
       cilk_sync;
       left = space;
       right = space+2*median-1;
@@ -162,17 +184,20 @@ class kdNode {
   inline intT size() {return n;}
   inline objT* operator[](intT i) {return items[i];}
 
-  kdNode(objT** itemss, intT nn, nodeT *space, objT** scratch, intT* flags, bool noCoarsen=false): items(itemss), n(nn) {
-    if (noCoarsen) leafSize = 1;
-    if (n>2000) constructParallel(space, scratch, flags, noCoarsen);
-    else constructSerial(space, noCoarsen);}
-  kdNode(objT** itemss, intT nn, nodeT *space, bool noCoarsen=false): items(itemss), n(nn) {
-    if (noCoarsen) leafSize = 1;
-    constructSerial(space, noCoarsen);}
+  inline intT getId() {return id;}
+  inline void setId(intT idd) {id = idd;}
+  inline void resetId() {id = -1;}
+  inline bool hasId() {return id >= 0;}
+
+  kdNode(objT** itemss, intT nn, nodeT *space, objT** scratch, intT* flags, intT leafSize=16): items(itemss), n(nn), id(-1) {
+    if (n>2000) constructParallel(space, scratch, flags, leafSize);
+    else constructSerial(space, leafSize);}
+  kdNode(objT** itemss, intT nn, nodeT *space, intT leafSize=16): items(itemss), n(nn), id(-1) {
+    constructSerial(space, leafSize);}
 
   void setEmpty() {n=-1;}
   bool isEmpty() {return n<0;}
-  bool isLeaf() {return n<=leafSize;}
+  bool isLeaf() {return !left;}//check
 
   floatT nodeDiag() {//todo change name
     floatT result = 0;
@@ -211,26 +236,11 @@ class kdNode {
     return 0; // intersect
   }
 
-  // inline floatT objDistance(objT* p2) {
-  //   for (int d = 0; d < dim; ++ d) {
-  //     if (pMin[d] > p2->coordinate(d) || p2->coordinate(d) > pMax[d]) {
-  //       floatT rsqr = 0;
-  //       for (int dd = d; dd < dim; ++ dd) {
-  //         floatT tmp = max(pMin[dd]-p2->coordinate(dd), p2->coordinate(dd)-pMax[dd]);
-  //         tmp = max(tmp, (floatT)0);
-  //         rsqr += tmp*tmp;
-  //       }
-  //       return sqrt(rsqr);
-  //     }
-  //   }
-  //   return 0; // p2 inside
-  // }
-
   //return the far bb distance between n1 and n2
   inline floatT nodeFarDistance(nodeT* n2) {
     floatT result = 0;
     for (int d = 0; d < dim; ++ d) {
-      floatT tmp = max(pMax[d],n2->pMax[d]) - min(pMax[d],n2->pMax[d]);
+      floatT tmp = max(pMax[d],n2->pMax[d]) - min(pMin[d],n2->pMin[d]);
       result += tmp *tmp;
     }
     return sqrt(result);
@@ -378,11 +388,5 @@ class kdNode {
   }
 
 };
-
-// template<int dim, class objT>
-// class clusterNode : kdNode<dim, objT>
-// {
-//   intT clusterId;
-// };
 
 #endif

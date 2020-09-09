@@ -19,8 +19,7 @@ void bench(point<dim>* P, intT n) {
 
   timing t0;
   t0.start();
-  bool noCoarsen = true;
-  treeT* tree = new treeT(P, n, !serial, noCoarsen);
+  treeT* tree = new treeT(P, n, !serial, 1);
   cout << "build-tree-time = " << t0.next() << endl;
 
   cout << endl << "basic tests" << endl;

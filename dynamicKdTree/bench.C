@@ -87,8 +87,7 @@ void bench(point<dim>* P, intT n) {
   double range = 5;
 
   t0.start();
-  bool noCoarsen = true;
-  treeT* tree = new treeT(P, n, !serial, noCoarsen);
+  treeT* tree = new treeT(P, n, !serial, 1);
   cout << ">>>>> range query " << tree->rangeNeighbor(&P[q], range)->size() << endl << endl;
   cout << "static = " << t0.stop() << endl;
 
