@@ -99,7 +99,7 @@ wEdge<point<dim>>* emst(point<dim>* P, intT n) {
 
     mark(tree->rootNode(), uf, P);
 
-    //delete out;
+    delete out;
     beta *= 2;
     rhoLo = tmp;
   }
