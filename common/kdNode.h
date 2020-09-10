@@ -22,6 +22,8 @@
 #ifndef KD_NODE_H
 #define KD_NODE_H
 
+#include "kBuffer.h"
+
 template<int dim, class objT>
 class kdNode {
   typedef double floatT;
@@ -36,6 +38,7 @@ class kdNode {
   intT n;
   nodeT* left;
   nodeT* right;
+  nodeT* sib;
 
   intT id;//optional
 
@@ -130,6 +133,7 @@ class kdNode {
 
   void constructSerial(nodeT *space, intT leafSize) {
     boundingBoxSerial();
+    sib = NULL;
     if (n <= leafSize) {
       left = NULL; right = NULL;
     } else {
@@ -147,6 +151,8 @@ class kdNode {
       space[2*median-1] = nodeT(items+median, n-median, space+2*median, leafSize);
       left = space;
       right = space+2*median-1;
+      left->sib = right;
+      right->sib = left;
     }
   }
 
@@ -155,6 +161,7 @@ class kdNode {
     space[0] = nodeT(itemss, nn, spacee, scratchh, flagss, leafSize);}
   void constructParallel(nodeT *space, objT** scratch, intT* flags, intT leafSize) {
     boundingBoxParallel();
+    sib = NULL;
     if (n <= leafSize) {
       left = NULL; right = NULL;
     } else {
@@ -173,21 +180,36 @@ class kdNode {
       cilk_sync;
       left = space;
       right = space+2*median-1;
+      left->sib = right;
+      right->sib = left;
     }
   }
 
+  typedef struct KBuffer::KBuffer<objT*> kbufT;
+  typedef struct KBuffer::KElem<objT*> kelemT;
+  void knnRange(objT* q, floatT radius, kbufT *out);
+  void knnRangeHelper(objT* q, pointT qMin, pointT qMax, floatT radius, kbufT *out);
+  void knnHelper(objT* q, intT k, kbufT *out);
+
   public:
-  nodeT* L() {return left;}
-  nodeT* R() {return right;}
+  inline nodeT* L() {return left;}
+  inline nodeT* R() {return right;}
+  inline nodeT* siblin() {return sib;}//todo
   inline pair<pointT, pointT> getBox() {return make_pair(pMin, pMax);}
   inline objT** getItems() {return items;}
+  inline objT* getItem(intT i) {return items[i];}
   inline intT size() {return n;}
   inline objT* operator[](intT i) {return items[i];}
+  inline pointT getMax() {return pMax;}
+  inline pointT getMin() {return pMin;}
 
   inline intT getId() {return id;}
   inline void setId(intT idd) {id = idd;}
   inline void resetId() {id = -1;}
   inline bool hasId() {return id >= 0;}
+
+  void kNN(objT* q, intT k, kbufT* out);
+  objT** kNN(objT* q, intT k);
 
   kdNode(objT** itemss, intT nn, nodeT *space, objT** scratch, intT* flags, intT leafSize=16): items(itemss), n(nn), id(-1) {
     if (n>2000) constructParallel(space, scratch, flags, leafSize);

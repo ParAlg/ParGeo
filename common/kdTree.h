@@ -37,6 +37,8 @@
 // objT needs to be templatized with int dim,
 // and supports coordinate() that returns floatT[dim],
 // and coordinate(i) that returns floatT* A[i]
+// and dist(objT p2) that computes euclidean distance with p2
+// and objT need an empty constructor for empty value
 
 template<int dim, class objT>
 class kdTree {
@@ -105,8 +107,11 @@ class kdTree {
       pMax1.updateX(i, center[i]+r);}
     root->rangeNeighbor(pMin1, pMax1, r, term, doTerm);
   }
-  // objT* nearestNeighbor(objT*) {};
-  // vector<objT*> kNearestNeighbor(objT*, intT k) {};
+
+  objT** kNN(objT* q, intT k) {
+    return rootNode()->kNN(q, k);
+  }
+
 };
 
 #endif
