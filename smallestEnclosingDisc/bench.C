@@ -161,6 +161,71 @@ sphere<dim> smallestEnclosingDisc2DParallel(point<dim>* P, intT n) {
   return circle;
 }
 
+template<int dim>
+sphere<dim> smallestEnclosingDisc3DSerial(point<dim>* P, intT n) {
+  typedef point<dim> pointT;
+  typedef sphere<dim> sphereT;
+
+  auto sphere = sphereT(P[0], P[1], P[2], P[3]);
+  intT i = 4;
+
+  while (i < n) {
+    bool conflict = false;
+    for (; i<n; ++i) {
+      if (!sphere.contain(P[i])) {
+        conflict = true;
+        break;}
+    }
+
+    if (conflict) {
+      cout << "conflict = " << i << endl;
+
+      sphere = sphereT(P[0], P[1], P[2], P[i]);
+
+      for (intT j=3; j<i; ++j) {//update 1
+        if (!sphere.contain(P[j])) {
+          sphere = sphereT(P[0], P[1], P[i], P[j]);
+
+          for (intT k=2; k<j; ++k) {//update 2
+            if (!sphere.contain(P[k])) {
+              sphere = sphereT(P[0], P[i], P[j], P[k]);
+
+              for (intT l=1; l<k; ++l) {//update 3
+                if (!sphere.contain(P[l])) {
+                  sphere = sphereT(P[i], P[j], P[k], P[l]);
+                }}
+
+            }}
+
+        }}
+
+    }
+  }
+  return sphere;
+}
+
+template<int dim>
+sphere<dim> smallestEnclosingDisc3DParallel(point<dim>* P, intT n) {
+  return smallestEnclosingDisc3DSerial(P, n);//todo
+}
+
+// *************************************************************
+//    CHECKER
+// *************************************************************
+
+template<int dim>
+void check(sphere<dim>* circle, point<dim>* P, intT n) {
+  //code for verifying correctness
+  for (intT i=0; i<n; ++i) {
+    if(!circle->contain(P[i])) {
+      cout << "outside point = " << P[i] << endl;
+      cout << "dist = " << P[i].pointDist(circle->center) << endl;
+      abort();
+    }
+  }
+  cout << "correctness verified" << endl;
+}
+
 // *************************************************************
 //    DRIVER
 // *************************************************************
@@ -171,10 +236,13 @@ void bench(point<dim>* P, intT n) {
   static const bool serial = false;
   static const bool noRandom = true;
   cout << "smallest enclosing disc, " << n << ", dim " << dim << " points" << endl;
-  if (dim > 2) {
-    cout << "dim > 2 is not supported yet, abort" << endl;
+  if (dim > 3) {
+    cout << "smallest enclosing sphere only supported for dim <= 3" << endl;
     abort();}
-  if (n < 2) abort();
+
+  if (n < 4) {
+    cout << "smallest enclosing sphere needs at least 4 points" << endl;
+    abort();}
 
   timing t0;t0.start();
   if(!noRandom) {
@@ -182,22 +250,26 @@ void bench(point<dim>* P, intT n) {
     cout << "permuting points" << endl;
     randPerm(P, n);
   }
-  sphere<dim> circle = sphere<dim>();
-  if(serial) circle = smallestEnclosingDisc2DSerial(P, n);
-  else circle = smallestEnclosingDisc2DParallel(P, n);
 
-  cout << "total-time = " << t0.stop() << endl;
-  cout << "circle = " << circle.center << ", " << circle.radius << endl;
+  if (dim == 2) {
+    sphere<dim> disc = sphere<dim>();
+    if(serial) disc = smallestEnclosingDisc2DSerial(P, n);
+    else disc = smallestEnclosingDisc2DParallel(P, n);
+    cout << "total-time = " << t0.stop() << endl;
+    cout << "disc = " << disc.center << ", " << disc.radius << endl;
+    check(&disc, P, n);
+  } else if (dim == 3) {
+    sphere<dim> disc = sphere<dim>();
+    if(serial) disc = smallestEnclosingDisc3DSerial(P, n);
+    else disc = smallestEnclosingDisc3DParallel(P, n);
+    cout << "total-time = " << t0.stop() << endl;
+    cout << "disc = " << disc.center << ", " << disc.radius << endl;
+    check(&disc, P, n);
+  } else {
+    cout << "smallest enclosing sphere only supported for dim <= 3" << endl;
+    abort();
+  }
 
-  // //code for verifying correctness
-  // for (intT i=0; i<n; ++i) {
-  //   if(!circle.contain(P[i])) {
-  //     cout << "outside point = " << P[i] << endl;
-  //     cout << "dist = " << P[i].pointDist(circle.center) << endl;
-  //     abort();
-  //   }
-  // }
-  // cout << "correctness verified" << endl;
 }
 
 template void bench<2>(point<2>*, intT);

@@ -405,6 +405,23 @@ inline int counterClockwise(point2d a, point2d b, point2d c) {
   return (b-a).cross(c-a) > 0.0;
 }
 
+//M is determinant matrix in row major order (length 16)
+inline floatT determinant4by4(floatT* m) {
+  return
+    m[0*4+3] * m[1*4+2] * m[2*4+1] * m[3*4+0] - m[0*4+2] * m[1*4+3] * m[2*4+1] * m[3*4+0] -
+    m[0*4+3] * m[1*4+1] * m[2*4+2] * m[3*4+0] + m[0*4+1] * m[1*4+3] * m[2*4+2] * m[3*4+0] +
+    m[0*4+2] * m[1*4+1] * m[2*4+3] * m[3*4+0] - m[0*4+1] * m[1*4+2] * m[2*4+3] * m[3*4+0] -
+    m[0*4+3] * m[1*4+2] * m[2*4+0] * m[3*4+1] + m[0*4+2] * m[1*4+3] * m[2*4+0] * m[3*4+1] +
+    m[0*4+3] * m[1*4+0] * m[2*4+2] * m[3*4+1] - m[0*4+0] * m[1*4+3] * m[2*4+2] * m[3*4+1] -
+    m[0*4+2] * m[1*4+0] * m[2*4+3] * m[3*4+1] + m[0*4+0] * m[1*4+2] * m[2*4+3] * m[3*4+1] +
+    m[0*4+3] * m[1*4+1] * m[2*4+0] * m[3*4+2] - m[0*4+1] * m[1*4+3] * m[2*4+0] * m[3*4+2] -
+    m[0*4+3] * m[1*4+0] * m[2*4+1] * m[3*4+2] + m[0*4+0] * m[1*4+3] * m[2*4+1] * m[3*4+2] +
+    m[0*4+1] * m[1*4+0] * m[2*4+3] * m[3*4+2] - m[0*4+0] * m[1*4+1] * m[2*4+3] * m[3*4+2] -
+    m[0*4+2] * m[1*4+1] * m[2*4+0] * m[3*4+3] + m[0*4+1] * m[1*4+2] * m[2*4+0] * m[3*4+3] +
+    m[0*4+2] * m[1*4+0] * m[2*4+1] * m[3*4+3] - m[0*4+0] * m[1*4+2] * m[2*4+1] * m[3*4+3] -
+    m[0*4+1] * m[1*4+0] * m[2*4+2] * m[3*4+3] + m[0*4+0] * m[1*4+1] * m[2*4+2] * m[3*4+3];
+}
+
 // A class for sphere
 template <int _dim> class sphere {
 public:
@@ -413,10 +430,11 @@ public:
   pointT center;
   floatT radius;
 
-  //_dim=2 circle constructor
+  //_dim=2 circle constructor, or _dim=3 sphere constructor from 3 points
   sphere(pointT a, pointT b, pointT c) {
-    if (_dim != 2) {
-      cout << "error, this constructor for sphere only works for dim=2, abort" << endl;}
+    //reference: http://www.ambrsoft.com/trigocalc/circle3d.htm
+    if (_dim != 2 && _dim != 3) {
+      cout << "error, this constructor for sphere only works for dim=2 and 3, abort" << endl;}
     auto x1 = a[0]; auto y1 = a[1];
     auto x2 = b[0]; auto y2 = b[1];
     auto x3 = c[0]; auto y3 = c[1];
@@ -429,10 +447,39 @@ public:
     radius = sqrt((B*B+C*C-4*A*D)/(4*A*A));
   }
 
+  //_dim=3 circle constructor
+  sphere(pointT a, pointT b, pointT c, pointT d) {
+    //reference: http://www.ambrsoft.com/TrigoCalc/Sphere/Spher3D_.htm
+    if (_dim != 3) {
+      cout << "error, this constructor for sphere only works for dim=3, abort" << endl;}
+    auto x1 = a[0]; auto y1 = a[1]; auto z1 = a[2];
+    auto x2 = b[0]; auto y2 = b[1]; auto z2 = b[2];
+    auto x3 = c[0]; auto y3 = c[1]; auto z3 = c[2];
+    auto x4 = d[0]; auto y4 = d[1]; auto z4 = d[2];
+    floatT t1 = -(x1*x1+y1*y1+z1*z1);
+    floatT t2 = -(x2*x2+y2*y2+z2*z2);
+    floatT t3 = -(x3*x3+y3*y3+z3*z3);
+    floatT t4 = -(x4*x4+y4*y4+z4*z4);
+    floatT M1[16] = {x1,y1,z1,1,x2,y2,z2,1,x3,y3,z3,1,x4,y4,z4,1};
+    floatT T = determinant4by4(M1);
+    floatT M2[16] = {t1,y1,z1,1,t2,y2,z2,1,t3,y3,z3,1,t4,y4,z4,1};
+    floatT D = determinant4by4(M2)/T;
+    floatT M3[16] = {x1,t1,z1,1,x2,t2,z2,1,x3,t3,z3,1,x4,t4,z4,1};
+    floatT E = determinant4by4(M3)/T;
+    floatT M4[16] = {x1,y1,t1,1,x2,y2,t2,1,x3,y3,t3,1,x4,y4,t4,1};
+    floatT F = determinant4by4(M4)/T;
+    floatT M5[16] = {x1,y1,z1,t1,x2,y2,z2,t2,x3,y3,z3,t3,x4,y4,z4,t4};
+    floatT G = determinant4by4(M5)/T;
+    center.x[0] = -D/2;
+    center.x[1] = -E/2;
+    center.x[2] = -F/2;
+    radius = 0.5*sqrt(D*D+E*E+F*F-4*G);
+  }
+
   //generic constructor 1
   sphere(pointT centerr, floatT radiuss): center(centerr), radius(radiuss) {}
 
-  //generic constructor 2
+  //generic constructor 2, smallest sphere given 2 points
   sphere(pointT a, pointT b) {
     center = a.average(b);
     radius = a.pointDist(b)/2;
