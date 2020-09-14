@@ -35,7 +35,7 @@ void bench(point<dim>* P, intT n) {
   typedef struct nodeT::bcp bcpT;
 
   t0.stop();t0.start();
-  cout << endl << "computes wspd" << endl;
+  cout << endl << "computes wspd for s=2" << endl;
   vector<pairT> out;
   auto wg = wspdNormalSerial<nodeT>(&out);
   wspdSerial<nodeT, wspdNormalSerial<nodeT>>(tree->rootNode(), &wg);
@@ -43,9 +43,9 @@ void bench(point<dim>* P, intT n) {
   cout << "serial wspd-time = " << t0.next() << endl;
 
   t0.stop();t0.start();
-  cout << endl << "computes wspd" << endl;
+  cout << endl << "computes wspd for s=4" << endl;
   auto wgpar = wspdNormalParallel<nodeT>(tree->rootNode()->size());
-  wspdParallel<nodeT, wspdNormalParallel<nodeT>>(tree->rootNode(), &wgpar);
+  wspdParallel<nodeT, wspdNormalParallel<nodeT>>(tree->rootNode(), &wgpar, 4);
   auto out2 = wgpar.collect();
   cout << "#wsp = " << out2->size() << endl;
   cout << "parallel wspd-time = " << t0.next() << endl;

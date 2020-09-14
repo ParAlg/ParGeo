@@ -269,8 +269,7 @@ class kdNode {
   }
 
   //whether well separated with v
-  inline bool wellSeparated(nodeT *v) {
-    static const int s = 2; // separation constant
+  inline bool wellSeparated(nodeT *v, floatT s=2) {
     floatT circleDiam_u = 0;
     floatT circleDiam_v = 0;
     floatT circleDistance = 0;
