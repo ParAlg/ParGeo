@@ -100,11 +100,11 @@ void kdNode<dim, objT>::knnHelper(objT* q, intT k, kbufT *out) {
 }
 
 template<int dim, class objT>
-objT** kdNode<dim, objT>::kNN(objT* q, intT k) {
+objT** kdNode<dim, objT>::kNN(objT* q, intT k, objT** R) {
   kbufT* out = new kbufT(k);
   knnHelper(q, k, out);
   out->sortK();
-  auto R = newA(objT*, k);
+  if(!R) R = newA(objT*, k);
   for(intT i=0; i<k; ++i) R[i] = out->get(i);
   delete out;
   return R;

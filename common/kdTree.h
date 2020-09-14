@@ -108,8 +108,8 @@ class kdTree {
     root->rangeNeighbor(pMin1, pMax1, r, term, doTerm);
   }
 
-  objT** kNN(objT* q, intT k) {
-    return rootNode()->kNN(q, k);
+  objT** kNN(objT* q, intT k, objT** R=NULL) {
+    return rootNode()->kNN(q, k, R);
   }
 
 };

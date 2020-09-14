@@ -209,7 +209,7 @@ class kdNode {
   inline bool hasId() {return id >= 0;}
 
   void kNN(objT* q, intT k, kbufT* out);
-  objT** kNN(objT* q, intT k);
+  objT** kNN(objT* q, intT k, objT** R=NULL);
 
   kdNode(objT** itemss, intT nn, nodeT *space, objT** scratch, intT* flags, intT leafSize=16): items(itemss), n(nn), id(-1) {
     if (n>2000) constructParallel(space, scratch, flags, leafSize);
