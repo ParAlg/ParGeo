@@ -1,5 +1,5 @@
-// This code is part of the project "A Parallel Batch-Dynamic Data Structure
-// for the Closest Pair Problem"
+// This code is part of the project "Fast Parallel Algorithms for
+// Euclidean Minimum SpanningTree and Hierarchical Spatial Clustering"
 // Copyright (c) 2020 Yiqiu Wang, Shangdi Yu, Yan Gu, Julian Shun
 //
 // Permission is hereby granted, free of charge, to any person obtaining a

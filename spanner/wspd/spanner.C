@@ -1,6 +1,4 @@
-// This code is part of the project "A Parallel Batch-Dynamic Data Structure
-// for the Closest Pair Problem"
-// Copyright (c) 2020 Yiqiu Wang, Shangdi Yu, Yan Gu, Julian Shun
+// Copyright (c) 2020 Yiqiu Wang
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the

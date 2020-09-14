@@ -1,4 +1,6 @@
-// Copyright (c) 2020 Yiqiu Wang
+// This code is part of the project "Fast Parallel Algorithms for
+// Euclidean Minimum SpanningTree and Hierarchical Spatial Clustering"
+// Copyright (c) 2020 Yiqiu Wang, Shangdi Yu, Yan Gu, Julian Shun
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the
