@@ -48,11 +48,17 @@ void timeHull(point2d* P, intT n, int rounds, char* outFile) {
 
 
 int main(int argc, char* argv[]) {
-  commandLine P(argc,argv,"[-o <outFile>] [-r <rounds>] <inFile>");
+  commandLine P(argc,argv,"[-o <outFile>] [-r <rounds>] [-csv <#columns>] <inFile>");
   char* iFile = P.getArgument(0);
   char* oFile = P.getOptionValue("-o");
   int rounds = P.getOptionIntValue("-r",1);
+  int csvCol = P.getOptionIntValue("-csv",-1);
 
-  _seq<point2d> PIn = readPointsFromFile<point2d>(iFile);
+  _seq<point2d> PIn;
+  if(csvCol>0) {
+    PIn = readPointsFromFileCSV<point2d>(iFile, csvCol);
+  } else {
+    PIn = readPointsFromFile<point2d>(iFile);}
+
   timeHull(PIn.A, PIn.n, rounds, oFile);
 }

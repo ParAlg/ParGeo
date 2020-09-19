@@ -74,20 +74,18 @@ void timeDelaunay(point2d* pts, intT n, int rounds, char* outFile, int perturb) 
 }
 
 int main(int argc, char* argv[]) {
-  commandLine P(argc,argv,"[-o <outFile>] [-r <rounds>] [-p <perturb points? 0/1>] [-csv <csv total #columns> -scol <csv start column inclusive> -ecol <csv end column exclusive>] [-nmax <#points to feed>] <inFile>");
+  commandLine P(argc,argv,"[-o <outFile>] [-r <rounds>] [-p <perturb points? 0/1>] [-csv #columns> [-nmax <#points>] <inFile>");
   char* iFile = P.getArgument(0);
   char* oFile = P.getOptionValue("-o");
   int rounds = P.getOptionIntValue("-r",1);
   int perturb = P.getOptionIntValue("-p",0);
   int nMax = P.getOptionIntValue("-nmax",-1);
   int csvCol = P.getOptionIntValue("-csv",-1);
-  int csvSCol = P.getOptionIntValue("-scol",-1);
-  int csvECol = P.getOptionIntValue("-ecol",-1);
   bool readCsv = csvCol > 0;
 
   int dim;
   if(!readCsv) dim = readPointsDimensionFromFile(iFile);
-  else dim = csvECol - csvSCol;
+  else dim = csvCol;
 
   printScheduler();
   cout << "perturb points = " << perturb << endl;
@@ -97,7 +95,7 @@ int main(int argc, char* argv[]) {
   } else if (dim == 2) {
     _seq<point<2>> PIn;
     if(!readCsv) PIn = readPointsFromFile<point<2>>(iFile);
-    else PIn = readPointsFromFileCSV<point<2>>(iFile, csvCol, csvSCol, csvECol);
+    else PIn = readPointsFromFileCSV<point<2>>(iFile, csvCol);
     point2d* PP = newA(point2d, PIn.n);
     par_for(intT i=0; i<PIn.n; ++i) PP[i] = point2d(PIn.A[i]);//convert to 2d points
     timeDelaunay<2>(PP, nMax>0? nMax : PIn.n, rounds, oFile, perturb);

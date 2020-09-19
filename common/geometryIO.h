@@ -116,41 +116,19 @@ namespace benchIO {
   }
 
   template <class pointT>
-  void parseCsvPoints(char** Str, pointT* P, intT n, int col, int sCol, int eCol) {
+  void parseCsvPoints(char** Str, pointT* P, intT n, int col) {
     int d = pointT::dim;
     double* a = newA(double,n*d);
     par_for (long i=0; i<n/col; i++) {
-      for (int j=sCol; j<eCol; j++) {
-        a[i*d+j-sCol] = atof(Str[i*col+j]);
+      for (int j=0; j<col; j++) {
+        a[i*d+j] = atof(Str[i*col+j]);
       }
     }
     par_for (long i=0; i<n/col; i++) {
       P[i] = pointT(a+(d*i));
-      //cout << P[i] << endl;
     }
     free(a);
   }
-
-  // void parseNdPoints(char** Str, pointNd* P, long n, int dim) {
-  //   // double* a = newA(double,n*dim);
-  //   // {parallel_for (long i=0; i < dim*n; i++) {
-  //   //   a[i] = atof(Str[i]);
-  //   //   // cout << a[i] << ' ';
-  //   // }}
-  //   {par_for (long i=0; i<n; i++) {
-  //     // P[i].init(a+(dim*i), dim);
-  //     P[i].m_dim = dim;
-  //     for (intT d = 0; d < dim; ++ d) {
-  //       // P[i].m_data[d] = *(a+(dim*i) + d);
-  //       P[i].m_data[d] = atof(Str[dim * i + d]);
-  //       // P[i].m_data[d] = 1;
-  //       // cout << P[i].m_data[d] << ' ';
-  //     }
-  //     // cout << endl;
-  //   }}
-  //   // cout << '\n' << "!!!" << endl;
-  //   // free(a);
-  // }
 
   inline int readPointsDimensionFromFile(char* fname) {
     _seq<char> S = readStringFromFile(fname);
@@ -175,27 +153,22 @@ namespace benchIO {
   }
 
   template <class pointT>
-  _seq<pointT> readPointsFromFileCSV(char* fname, int col, int sCol, int eCol) {
+  _seq<pointT> readPointsFromFileCSV(char* fname, int col) {
     _seq<char> S = readStringFromFile(fname);
-    cout << "S.n = " << S.n << endl;
     words W = stringToWordsCSV(S.A, S.n);
     int d = pointT::dim;
-    if (W.m == 0) {
-      cout << "invalid csv" << endl;
+    if (W.m == 0 || pointT::dim != col) {
+      cout << "invalid csv or dim mismatch" << endl;
       abort();
     }
-    cout << "csv columns: ";
-    for(intT i=sCol; i<eCol; ++i) {
-      cout << W.Strings[i] << " ";
-    }
+    //cout << "csv columns: ";
+    //for(intT i=sCol; i<eCol; ++i) {
+    //  cout << W.Strings[i] << " ";}
     cout << endl;
     long n = (W.m-col);
     pointT *P = newA(pointT, n/col);
-    parseCsvPoints(W.Strings+col, P, n, col, sCol, eCol);
+    parseCsvPoints(W.Strings+col, P, n, col);
     // W.del();
-    cout << "verify P[0] = " << P[0] << endl;
-    cout << "verify P[last] = " << P[n/col-1] << endl;
-    cout << "input n = " << n/col-1 << endl;
     return _seq<pointT>(P, n/col);
   }
 

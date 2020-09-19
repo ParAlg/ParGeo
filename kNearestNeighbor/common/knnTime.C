@@ -71,15 +71,19 @@ void timeBench(point<dim>* pts, intT n, intT k, int rounds, char* outFile, int p
 }
 
 int main(int argc, char* argv[]) {
-  commandLine P(argc,argv,"[-o <outFile>] [-r <rounds>] [-p <perturb points? 0/1>] [-nmax <#points to feed>] <inFile>");
+  commandLine P(argc,argv,"[-o <outFile>] [-r <rounds>] [-p <perturb points? 0/1>] [-csv <#columns>] [-nmax <#points>] <inFile>");
   char* iFile = P.getArgument(0);
   char* oFile = P.getOptionValue("-o");
   int rounds = P.getOptionIntValue("-r",1);
   int perturb = P.getOptionIntValue("-p",0);
   int k = P.getOptionIntValue("-k",2);
   int nMax = P.getOptionIntValue("-nmax",-1);
+  int csvCol = P.getOptionIntValue("-csv",-1);
+  bool readCsv = csvCol > 0;
 
-  int dim = readPointsDimensionFromFile(iFile);
+  int dim;
+  if(!readCsv) dim = readPointsDimensionFromFile(iFile);
+  else dim = csvCol;
 
   printScheduler();
   cout << "perturb points = " << perturb << endl;
@@ -87,35 +91,51 @@ int main(int argc, char* argv[]) {
   if (dim == 1) {
     cout << "dimension 1 not supported, abort" << endl; abort();
   } else if (dim == 2) {
-    _seq<point<2>> PIn = readPointsFromFile<point<2>>(iFile);
+    _seq<point<2>> PIn;
+    if(!readCsv) PIn = readPointsFromFile<point<2>>(iFile);
+    else PIn = readPointsFromFileCSV<point<2>>(iFile, csvCol);
     timeBench<2>(PIn.A, nMax>0? nMax : PIn.n, k, rounds, oFile, perturb);
   }
   else if (dim == 3) {
-    _seq<point<3>> PIn = readPointsFromFile<point<3>>(iFile);
+    _seq<point<3>> PIn;
+    if(!readCsv) PIn = readPointsFromFile<point<3>>(iFile);
+    else PIn = readPointsFromFileCSV<point<3>>(iFile, csvCol);
     timeBench<3>(PIn.A, nMax>0? nMax : PIn.n, k, rounds, oFile, perturb);
   }
   else if (dim == 4) {
-    _seq<point<4>> PIn = readPointsFromFile<point<4>>(iFile);
+    _seq<point<4>> PIn;
+    if(!readCsv) PIn = readPointsFromFile<point<4>>(iFile);
+    else PIn = readPointsFromFileCSV<point<4>>(iFile, csvCol);
     timeBench<4>(PIn.A, nMax>0? nMax : PIn.n, k, rounds, oFile, perturb);
   }
   else if (dim == 5) {
-    _seq<point<5>> PIn = readPointsFromFile<point<5>>(iFile);
+    _seq<point<5>> PIn;
+    if(!readCsv) PIn = readPointsFromFile<point<5>>(iFile);
+    else PIn = readPointsFromFileCSV<point<5>>(iFile, csvCol);
     timeBench<5>(PIn.A, nMax>0? nMax : PIn.n, k, rounds, oFile, perturb);
   }
   else if (dim == 6) {
-    _seq<point<6>> PIn = readPointsFromFile<point<6>>(iFile);
+    _seq<point<6>> PIn;
+    if(!readCsv) PIn = readPointsFromFile<point<6>>(iFile);
+    else PIn = readPointsFromFileCSV<point<6>>(iFile, csvCol);
     timeBench<6>(PIn.A, nMax>0? nMax : PIn.n, k, rounds, oFile, perturb);
   }
   else if (dim == 7) {
-    _seq<point<7>> PIn = readPointsFromFile<point<7>>(iFile);
+    _seq<point<7>> PIn;
+    if(!readCsv) PIn = readPointsFromFile<point<7>>(iFile);
+    else PIn = readPointsFromFileCSV<point<7>>(iFile, csvCol);
     timeBench<7>(PIn.A, nMax>0? nMax : PIn.n, k, rounds, oFile, perturb);
   }
   else if (dim == 8) {
-    _seq<point<8>> PIn = readPointsFromFile<point<8>>(iFile);
+    _seq<point<8>> PIn;
+    if(!readCsv) PIn = readPointsFromFile<point<8>>(iFile);
+    else PIn = readPointsFromFileCSV<point<8>>(iFile, csvCol);
     timeBench<8>(PIn.A, nMax>0? nMax : PIn.n, k, rounds, oFile, perturb);
   }
   else if (dim == 9) {
-    _seq<point<9>> PIn = readPointsFromFile<point<9>>(iFile);
+    _seq<point<9>> PIn;
+    if(!readCsv) PIn = readPointsFromFile<point<9>>(iFile);
+    else PIn = readPointsFromFileCSV<point<9>>(iFile, csvCol);
     timeBench<9>(PIn.A, nMax>0? nMax : PIn.n, k, rounds, oFile, perturb);
   }
   else {

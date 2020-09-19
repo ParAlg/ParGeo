@@ -127,10 +127,10 @@ intT* DBSCAN(point<dim>* P, intT n, floatT epsilon, intT minPts) {
 }
 
 template intT* DBSCAN<2>(point<2>*, intT, floatT, intT);
-// template intT* DBSCAN<3>(point<3>*, intT, floatT, intT);
-// template intT* DBSCAN<4>(point<4>*, intT, floatT, intT);
+template intT* DBSCAN<3>(point<3>*, intT, floatT, intT);
+template intT* DBSCAN<4>(point<4>*, intT, floatT, intT);
 template intT* DBSCAN<5>(point<5>*, intT, floatT, intT);
-// template intT* DBSCAN<6>(point<6>*, intT, floatT, intT);
-// template intT* DBSCAN<7>(point<7>*, intT, floatT, intT);
-// template intT* DBSCAN<8>(point<8>*, intT, floatT, intT);
-// template intT* DBSCAN<9>(point<9>*, intT, floatT, intT);
+template intT* DBSCAN<6>(point<6>*, intT, floatT, intT);
+template intT* DBSCAN<7>(point<7>*, intT, floatT, intT);
+template intT* DBSCAN<8>(point<8>*, intT, floatT, intT);
+template intT* DBSCAN<9>(point<9>*, intT, floatT, intT);

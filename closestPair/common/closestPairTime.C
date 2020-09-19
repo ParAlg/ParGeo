@@ -73,20 +73,18 @@ void timeClosestPair(point<dim>* pts, intT n, int rounds, char* outFile, int per
 }
 
 int main(int argc, char* argv[]) {
-  commandLine P(argc,argv,"[-o <outFile>] [-r <rounds>] [-p <perturb points? 0/1>] [-csv <csv total #columns> -scol <csv start column inclusive> -ecol <csv end column exclusive>] [-nmax <#points to feed>] <inFile>");
+  commandLine P(argc,argv,"[-o <outFile>] [-r <rounds>] [-p <perturb points? 0/1>] [-nmax <#points>] [-csv <#columns>] <inFile>");
   char* iFile = P.getArgument(0);
   char* oFile = P.getOptionValue("-o");
   int rounds = P.getOptionIntValue("-r",1);
   int perturb = P.getOptionIntValue("-p",0);
   int nMax = P.getOptionIntValue("-nmax",-1);
   int csvCol = P.getOptionIntValue("-csv",-1);
-  int csvSCol = P.getOptionIntValue("-scol",-1);
-  int csvECol = P.getOptionIntValue("-ecol",-1);
   bool readCsv = csvCol > 0;
 
   int dim;
   if(!readCsv) dim = readPointsDimensionFromFile(iFile);
-  else dim = csvECol - csvSCol;
+  else dim = csvCol;
 
   printScheduler();
   cout << "perturb points = " << perturb << endl;
@@ -96,49 +94,49 @@ int main(int argc, char* argv[]) {
   } else if (dim == 2) {
     _seq<point<2>> PIn;
     if(!readCsv) PIn = readPointsFromFile<point<2>>(iFile);
-    else PIn = readPointsFromFileCSV<point<2>>(iFile, csvCol, csvSCol, csvECol);
+    else PIn = readPointsFromFileCSV<point<2>>(iFile, csvCol);
     timeClosestPair<2>(PIn.A, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
   }
   else if (dim == 3) {
     _seq<point<3>> PIn;
     if(!readCsv) PIn = readPointsFromFile<point<3>>(iFile);
-    else PIn = readPointsFromFileCSV<point<3>>(iFile, csvCol, csvSCol, csvECol);
+    else PIn = readPointsFromFileCSV<point<3>>(iFile, csvCol);
     timeClosestPair<3>(PIn.A, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
   }
   else if (dim == 4) {
     _seq<point<4>> PIn;
     if(!readCsv) PIn = readPointsFromFile<point<4>>(iFile);
-    else PIn = readPointsFromFileCSV<point<4>>(iFile, csvCol, csvSCol, csvECol);
+    else PIn = readPointsFromFileCSV<point<4>>(iFile, csvCol);
     timeClosestPair<4>(PIn.A, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
   }
   else if (dim == 5) {
     _seq<point<5>> PIn;
     if(!readCsv) PIn = readPointsFromFile<point<5>>(iFile);
-    else PIn = readPointsFromFileCSV<point<5>>(iFile, csvCol, csvSCol, csvECol);
+    else PIn = readPointsFromFileCSV<point<5>>(iFile, csvCol);
     timeClosestPair<5>(PIn.A, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
   }
   else if (dim == 6) {
     _seq<point<6>> PIn;
     if(!readCsv) PIn = readPointsFromFile<point<6>>(iFile);
-    else PIn = readPointsFromFileCSV<point<6>>(iFile, csvCol, csvSCol, csvECol);
+    else PIn = readPointsFromFileCSV<point<6>>(iFile, csvCol);
     timeClosestPair<6>(PIn.A, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
   }
   else if (dim == 7) {
     _seq<point<7>> PIn;
     if(!readCsv) PIn = readPointsFromFile<point<7>>(iFile);
-    else PIn = readPointsFromFileCSV<point<7>>(iFile, csvCol, csvSCol, csvECol);
+    else PIn = readPointsFromFileCSV<point<7>>(iFile, csvCol);
     timeClosestPair<7>(PIn.A, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
   }
   else if (dim == 8) {
     _seq<point<8>> PIn;
     if(!readCsv) PIn = readPointsFromFile<point<8>>(iFile);
-    else PIn = readPointsFromFileCSV<point<8>>(iFile, csvCol, csvSCol, csvECol);
+    else PIn = readPointsFromFileCSV<point<8>>(iFile, csvCol);
     timeClosestPair<8>(PIn.A, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
   }
   else if (dim == 9) {
     _seq<point<9>> PIn;
     if(!readCsv) PIn = readPointsFromFile<point<9>>(iFile);
-    else PIn = readPointsFromFileCSV<point<9>>(iFile, csvCol, csvSCol, csvECol);
+    else PIn = readPointsFromFileCSV<point<9>>(iFile, csvCol);
     timeClosestPair<9>(PIn.A, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
   }
   else {
