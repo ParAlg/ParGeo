@@ -157,6 +157,14 @@ public:
     for (int i=0; i<_dim; ++i) xx += (x[i]-p.x[i])*(x[i]-p.x[i]);
     return sqrt(xx);
   }
+  floatT dot(pointT p2) {
+    floatT r = 0;
+    for(int i=0; i<dim; ++i) r += x[i]*p2[i];
+    return r;}
+  pointT mult(floatT c) {
+    pointT r;
+    for(int i=0; i<dim; ++i) r[i] = x[i]*c;
+    return r;}
 };
 
 template <int dim>
@@ -427,8 +435,12 @@ template <int _dim> class sphere {
 public:
   typedef double floatT;
   typedef point<_dim> pointT;
-  pointT center;
-  floatT radius;
+  pointT ct;
+  floatT rad;
+
+  inline floatT radius() {return rad;}
+  inline pointT center() {return ct;}
+  floatT& operator[] (int i) {return ct[i];}
 
   //_dim=2 circle constructor, or _dim=3 sphere constructor from 3 points
   sphere(pointT a, pointT b, pointT c) {
@@ -442,12 +454,12 @@ public:
     floatT B = (x1*x1+y1*y1)*(y3-y2) + (x2*x2+y2*y2)*(y1-y3) + (x3*x3+y3*y3)*(y2-y1);
     floatT C = (x1*x1+y1*y1)*(x2-x3) + (x2*x2+y2*y2)*(x3-x1) + (x3*x3+y3*y3)*(x1-x2);
     floatT D = (x1*x1+y1*y1)*(x3*y2-x2*y3) + (x2*x2+y2*y2)*(x1*y3-x3*y1) + (x3*x3+y3*y3)*(x2*y1-x1*y2);
-    center.x[0] = -B/(2*A);
-    center.x[1] = -C/(2*A);
-    radius = sqrt((B*B+C*C-4*A*D)/(4*A*A));
+    ct.x[0] = -B/(2*A);
+    ct.x[1] = -C/(2*A);
+    rad = sqrt((B*B+C*C-4*A*D)/(4*A*A));
   }
 
-  //_dim=3 circle constructor
+  //_dim=3 sphere constructor
   sphere(pointT a, pointT b, pointT c, pointT d) {
     //reference: http://www.ambrsoft.com/TrigoCalc/Sphere/Spher3D_.htm
     if (_dim != 3) {
@@ -470,26 +482,28 @@ public:
     floatT F = determinant4by4(M4)/T;
     floatT M5[16] = {x1,y1,z1,t1,x2,y2,z2,t2,x3,y3,z3,t3,x4,y4,z4,t4};
     floatT G = determinant4by4(M5)/T;
-    center.x[0] = -D/2;
-    center.x[1] = -E/2;
-    center.x[2] = -F/2;
-    radius = 0.5*sqrt(D*D+E*E+F*F-4*G);
+    ct.x[0] = -D/2;
+    ct.x[1] = -E/2;
+    ct.x[2] = -F/2;
+    rad = 0.5*sqrt(D*D+E*E+F*F-4*G);
   }
 
   //generic constructor 1
-  sphere(pointT centerr, floatT radiuss): center(centerr), radius(radiuss) {}
+  sphere(pointT centerr, floatT radd): ct(centerr), rad(radd) {}
 
   //generic constructor 2, smallest sphere given 2 points
   sphere(pointT a, pointT b) {
-    center = a.average(b);
-    radius = a.pointDist(b)/2;
+    ct = a.average(b);
+    rad = a.pointDist(b)/2;
   }
 
   //empty constructor
-  sphere(): center(pointT()), radius(-1) {}
+  sphere(): ct(pointT()), rad(-1) {}
+
+  bool isEmpty() {return rad < 0;}
 
   inline bool contain(pointT p) {
-    return p.pointDist(center) <= radius*1.000001;}//todo, sqrt optimize
+    return p.pointDist(ct) <= rad*1.000001;}//todo, sqrt optimize
 };
 
 inline vect3d onParabola(vect2d v) {

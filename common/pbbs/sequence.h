@@ -200,6 +200,33 @@ namespace sequence {
   }
 
   template <class ET, class intT, class G>
+  intT maxIndexSerial(intT s, intT e, G g) {
+    ET r = g(s);
+    intT k = s;
+    for (intT j=s+1; j < e; j++) {
+      ET v = g(j);
+      if (v >= r) { r = v; k = j;}
+    }
+    return k;
+  }
+
+  template <class ET, class intT, class G>
+  intT maxIndex(intT s, intT e, G g) {
+    intT l = nblocks(e-s, _SCAN_BSIZE);
+    if (l <= 2) return maxIndexSerial<ET>(s, e, g);
+    else {
+      intT *Idx = newA(intT,l);
+      blocked_for (i, s, e, _SCAN_BSIZE,
+                   Idx[i] = maxIndexSerial<ET>(s, e, g););
+      intT k = Idx[0];
+      for (intT j=1; j < l; j++)
+        if (g(Idx[j])>= g(k)) k = Idx[j];
+      free(Idx);
+      return k;
+    }
+  }
+
+  template <class ET, class intT, class G>
   intT minIndexSerial(intT s, intT e, G g) {
     ET r = g(s);
     intT k = s;

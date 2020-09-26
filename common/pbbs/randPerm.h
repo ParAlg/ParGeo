@@ -20,6 +20,9 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#ifndef RAND_PERM_H
+#define RAND_PERM_H
+
 #include <iostream>
 #include "parallel.h"
 #include "utils.h"
@@ -84,3 +87,5 @@ void randPerm(E *A, int n) {
   free(H); free(I); free(check); free(hold); free(flags);
   //cout << "wasted = " << wasted << " rounds = " << round  << endl;
 }
+
+#endif
