@@ -19,20 +19,20 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#ifndef MIN_DISC_3D
-#define MIN_DISC_3D
+#ifndef MINI_DISC_3D
+#define MINI_DISC_3D
 
 #include "pbbs/utils.h"
 #include "pbbs/sequence.h"
 #include "geometry.h"
 
 template<int dim>
-sphere<dim> minDisc3DParallel(point<dim>* P, intT n) {
-  return minDisc3DSerial(P, n);//todo
+sphere<dim> miniDisc3DParallel(point<dim>* P, intT n) {
+  return miniDisc3DSerial(P, n);//todo
 }
 
 template<int dim>
-sphere<dim> minDisc3DSerial(point<dim>* P, intT n) {
+sphere<dim> miniDisc3DSerial(point<dim>* P, intT n) {
   typedef point<dim> pointT;
   typedef sphere<dim> sphereT;
 

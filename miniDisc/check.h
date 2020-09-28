@@ -4,6 +4,7 @@
 #include "pbbs/utils.h"
 #include "pbbs/randPerm.h"
 #include "geometry.h"
+#include <string>
 
 // *************************************************************
 //    CHECKER

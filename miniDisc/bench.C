@@ -24,8 +24,8 @@
 #include "pbbs/randPerm.h"
 #include "bench.h"
 #include "geometry.h"
-#include "minDisc2d.h"
-#include "minDisc3d.h"
+#include "miniDisc2d.h"
+#include "miniDisc3d.h"
 #include "check.h"
 
 using namespace std;
@@ -50,22 +50,21 @@ void bench(point<dim>* P, intT n) {
 
   timing t0;t0.start();
   if(!noRandom) {
-    //permutation
     cout << "permuting points" << endl;
     randPerm(P, n);
   }
 
   if (dim == 2) {
     sphere<dim> disc = sphere<dim>();
-    if(serial) disc = minDisc2DSerial(P, n);
-    else disc = minDisc2DParallel(P, n);
+    if(serial) disc = miniDisc2DSerial(P, n);
+    else disc = miniDisc2DParallel(P, n);
     cout << "total-time = " << t0.stop() << endl;
     cout << "disc = " << disc.center() << ", " << disc.radius() << endl;
     check(&disc, P, n);
   } else if (dim == 3) {
     sphere<dim> disc = sphere<dim>();
-    if(serial) disc = minDisc3DSerial(P, n);
-    else disc = minDisc3DParallel(P, n);
+    if(serial) disc = miniDisc3DSerial(P, n);
+    else disc = miniDisc3DParallel(P, n);
     cout << "total-time = " << t0.stop() << endl;
     cout << "disc = " << disc.center() << ", " << disc.radius() << endl;
     check(&disc, P, n);
