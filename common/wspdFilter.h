@@ -28,6 +28,7 @@
 #include "kdNode.h"
 #include "pbbs/unionFind.h"
 #include "pbbs/utils.h"
+#include "pbbs/gettime.h"
 
 template<class nodeT>
 struct rhoUpdateSerial {
@@ -205,10 +206,13 @@ struct wspGetParallel {
 
 template <class treeT, class nodeT>
 inline pair<floatT, vector<typename nodeT::bcp>*> filterWspdParallel(floatT t_beta, floatT t_rho_lo, treeT *t_kdTree, edgeUnionFind *t_mst) {
+  timing t0; t0.start();
   auto myRho = rhoUpdateParallel<nodeT>(t_beta, t_mst);
   wspdParallel<nodeT, rhoUpdateParallel<nodeT>>(t_kdTree->rootNode(), &myRho);
+  cout << "rho-update = " << t0.next() << endl;
   auto mySplitter = wspGetParallel<treeT, nodeT>(t_beta, t_rho_lo, myRho.getRho(), t_kdTree, t_mst);
   wspdParallel<nodeT, wspGetParallel<treeT, nodeT>>(t_kdTree->rootNode(), &mySplitter);
+  cout << "wsp-get = " << t0.stop() << endl;
   return make_pair(myRho.getRho(), mySplitter.collect());
 }
 

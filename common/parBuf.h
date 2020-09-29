@@ -25,6 +25,10 @@
 #include "pbbs/sequence.h"
 #include "pbbs/parallel.h"
 
+#ifdef USEJEMALLOC
+#include <jemalloc/jemalloc.h>
+#endif
+
 template<typename T>
 struct parBuf {
 
