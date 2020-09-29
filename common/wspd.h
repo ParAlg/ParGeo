@@ -69,21 +69,21 @@ inline void findPairParallel(nodeT *u, nodeT *v, opT* f, floatT s) {
       cout << "error, leaves not well separated, abort" << endl;
       abort();
     } else if (u->isLeaf()) {
-      cilk_spawn findPairSerial(v->L(), u, f, s);
-      findPairSerial(v->R(), u, f, s);
+      cilk_spawn findPairParallel(v->L(), u, f, s);
+      findPairParallel(v->R(), u, f, s);
       cilk_sync;
     } else if (v->isLeaf()) {
-      cilk_spawn findPairSerial(u->L(), v, f, s);
-      findPairSerial(u->R(), v, f, s);
+      cilk_spawn findPairParallel(u->L(), v, f, s);
+      findPairParallel(u->R(), v, f, s);
       cilk_sync;
     } else {
       if (u->lMax() > v->lMax()) {
-        cilk_spawn findPairSerial(u->L(), v, f, s);
-        findPairSerial(u->R(), v, f, s);
+        cilk_spawn findPairParallel(u->L(), v, f, s);
+        findPairParallel(u->R(), v, f, s);
         cilk_sync;
       } else {
-        cilk_spawn findPairSerial(v->L(), u, f, s);
-        findPairSerial(v->R(), u, f, s);
+        cilk_spawn findPairParallel(v->L(), u, f, s);
+        findPairParallel(v->R(), u, f, s);
         cilk_sync;
       }
     }}
