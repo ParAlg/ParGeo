@@ -173,10 +173,9 @@ sphere<dim> miniDisc2DParallel(point<dim>* P, intT n, point<dim> pi, intT* flag=
                    else return false;
                  };
   auto cleanUp = [&](pointT* A, intT ci) {
-                   if (ci < 4000)
-                     circle = miniDisc2DParallel(A, ci, pi, A[ci], flag);
-                   else
-                     circle = miniDisc2DParallel2(A, ci, pi, A[ci], flag);
+                     circle = miniDisc2DSerial(A, ci, pi, A[ci]);
+                     //circle = miniDisc2DParallel(A, ci, pi, A[ci], flag);
+                     //circle = miniDisc2DParallel2(A, ci, pi, A[ci], flag);
                  };
   parallel_prefix(P, n, process, cleanUp, false, flag);
   return circle;

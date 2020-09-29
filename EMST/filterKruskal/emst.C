@@ -65,12 +65,21 @@ wEdge<point<dim>>* emst(point<dim>* P, intT n) {
 
   edgeUnionFind *uf = new edgeUnionFind(n);
 
+  floatT wspdTime = 0;
+  floatT kruskalTime = 0;
+  floatT markTime = 0;
+
+  t0.stop();
+
   while (edgesAdded < n-1) {
+    t0.start();
     // auto *out = new vector<bcpT>();
     // floatT tmp = filterWspdSerial<treeT, nodeT>(beta, rhoLo, out, tree, uf);
     auto output = filterWspdParallel<treeT, nodeT>(beta, rhoLo, tree, uf);
     floatT tmp = output.first;//rho hi
     auto out = output.second;//bcp vector
+    wspdTime += t0.stop();
+
     cout << "---" << endl;
     cout << "beta = " << beta << endl;
     cout << "rho = " << rhoLo << " -- " << tmp << endl;
@@ -96,15 +105,23 @@ wEdge<point<dim>>* emst(point<dim>* P, intT n) {
       inline double GetWeight(intT i) {return E[i].dist;}
     };
 
+    t0.start();
     edgesAdded += parKruskal::mst(nodeWrap(&out->at(0), P), n, out->size(), uf);
     cout << "mst edges = " << edgesAdded << endl;
+    kruskalTime += t0.stop();
 
+    t0.start();
     mark(tree->rootNode(), uf, P);
+    markTime += t0.stop();
 
     delete out;
     beta *= 2;
     rhoLo = tmp;
   }
+
+  cout << endl << "wspd-time = " << wspdTime << endl;
+  cout << "kruskal-time = " << kruskalTime << endl;
+  cout << "mark-time = " << markTime << endl;
 
   typedef wEdge<point<dim>> outT;
   auto R = newA(outT, n-1);
