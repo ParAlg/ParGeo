@@ -32,46 +32,54 @@ sphere<dim> miniDisc3DParallel(point<dim>* P, intT n) {
 }
 
 template<int dim>
-sphere<dim> miniDisc3DSerial(point<dim>* P, intT n) {
-  typedef point<dim> pointT;
-  typedef sphere<dim> sphereT;
+sphere<dim> miniDisc3DSerial(point<dim>* P, intT n, point<dim> pi, point<dim> pj, point<dim> pk) {
+  typedef sphere<dim> discT;
 
-  auto sphere = sphereT(P[0], P[1], P[2], P[3]);
-  intT i = 4;
-
-  while (i < n) {
-    bool conflict = false;
-    for (; i<n; ++i) {
-      if (!sphere.contain(P[i])) {
-        conflict = true;
-        break;}
-    }
-
-    if (conflict) {
-      cout << "conflict = " << i << endl;
-
-      sphere = sphereT(P[0], P[1], P[2], P[i]);
-
-      for (intT j=3; j<i; ++j) {//update 1
-        if (!sphere.contain(P[j])) {
-          sphere = sphereT(P[0], P[1], P[i], P[j]);
-
-          for (intT k=2; k<j; ++k) {//update 2
-            if (!sphere.contain(P[k])) {
-              sphere = sphereT(P[0], P[i], P[j], P[k]);
-
-              for (intT l=1; l<k; ++l) {//update 3
-                if (!sphere.contain(P[l])) {
-                  sphere = sphereT(P[i], P[j], P[k], P[l]);
-                }}
-
-            }}
-
-        }}
-
-    }
+  auto disc = discT(pi, pj, pk);
+  for (intT l=0; l<n; ++l) {
+    if (!disc.contain(P[l])) {
+      disc = discT(pi, pj, pk, P[l]);
   }
-  return sphere;
+  return disc;
+  }
+}
+
+template<int dim>
+sphere<dim> miniDisc3DSerial(point<dim>* P, intT n, point<dim> pi, point<dim> pj) {
+  typedef sphere<dim> discT;
+
+  auto disc = discT(pi, pj);
+  for (intT k=0; k<n; ++k) {
+    if (!disc.contain(P[k])) {
+      disc = miniDisc3DSerial(P, k, pi, pj, P[k]);}
+  }
+  return disc;
+}
+
+template<int dim>
+sphere<dim> miniDisc3DSerial(point<dim>* P, intT n, point<dim> pi) {
+  typedef sphere<dim> discT;
+
+  auto disc = discT(P[0], pi);
+  for (intT j=1; j<n; ++j) {
+    if (!disc.contain(P[j])) {
+      disc = miniDisc3DSerial(P, j, pi, P[j]);}
+  }
+  return disc;
+}
+
+//todo
+template<int dim>
+sphere<dim> miniDisc3DSerial(point<dim>* P, intT n) {
+  typedef sphere<dim> discT;
+
+  auto disc = discT(P[0], P[1]);
+  for (intT i=2; i<n; ++i) {
+    if (!disc.contain(P[i])) {
+      cout << "ci = " << i << endl;
+      disc = miniDisc3DSerial(P, i, P[i]);}
+  }
+  return disc;
 }
 
 #endif
