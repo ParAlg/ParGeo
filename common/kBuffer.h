@@ -41,7 +41,6 @@ namespace KBuffer {
 
   template <typename T>
   struct KElem {
-    typedef double floatT;
     
     floatT m_cost;
     T m_entry;
@@ -216,6 +215,30 @@ namespace KBuffer {
 
   };
 
+  template <class T>
+  inline struct KBuffer<T> *allocKBuffer(intT k, intT n) {
+    typedef struct KBuffer<T> bufT;
+    typedef struct KElem<T> elemT;
+    intT bufLen = max((intT)(k * 2), (intT)2);
+    //struct KBuffer<T> *kb = (struct KBuffer<T> *) malloc( ( sizeof(struct KBuffer<T>)*n ));
+    auto kb = newA(bufT, n);
+    //KElem<T> *kb_buffer = (KElem<T> *) malloc( sizeof(KElem<T>) * bufLen * n);
+    auto kb_buffer = newA(elemT, bufLen*n);
+    par_for(intT i=0; i<n; ++i) {
+      kb[i].m_k = k;
+      kb[i].m_ptr = 0;
+      kb[i].m_used = 0;
+      kb[i].m_maxLen = bufLen;
+      kb[i].m_buf = kb_buffer + bufLen*i;
+    }
+    return kb;
+  }
+
+  template <class T>
+  inline void deleteKBuffer(struct KBuffer<T> *in) {
+    free(in[0].m_buf);
+    free(in);
+  }
 }
 
 #endif

@@ -59,6 +59,7 @@ struct rhoUpdateSerial {
   }
 
   floatT getRho() { return rho;}
+  bool wellSeparated(nodeT* u, nodeT* v, int s) {return u->wellSeparated(v,s);}
 };
 
 template<class treeT, class nodeT>
@@ -98,6 +99,7 @@ struct wspGetSerial {
       return false;
     }
   }
+  bool wellSeparated(nodeT* u, nodeT* v, int s) {return u->wellSeparated(v,s);}
 };
 
 template <class treeT, class nodeT>
@@ -140,6 +142,7 @@ struct rhoUpdateParallel {
   }
 
   floatT getRho() { return rho;}
+  bool wellSeparated(nodeT* u, nodeT* v, int s) {return u->wellSeparated(v,s);}
 };
 
 template<class treeT, class nodeT>
@@ -197,6 +200,7 @@ struct wspGetParallel {
       return false;
     }
   }
+  bool wellSeparated(nodeT* u, nodeT* v, int s) {return u->wellSeparated(v,s);}
 };
 
 template <class treeT, class nodeT>

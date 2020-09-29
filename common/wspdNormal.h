@@ -35,7 +35,8 @@ struct wspdNormalSerial {
 
   inline void run(nodeT *u, nodeT *v) {out->emplace_back(u, v);}
   inline bool moveon(nodeT *u, nodeT *v) {return true;}
-  inline bool start(nodeT *t_u) { return true; }
+  inline bool start(nodeT *u) { return true; }
+  inline bool wellSeparated(nodeT *u, nodeT *v, int s) {return u->wellSeparated(v, s);}
 };
 
 template <class nodeT>
@@ -69,6 +70,7 @@ struct wspdNormalParallel {
 
   inline bool moveon(nodeT *u, nodeT *v) {return true;}
   inline bool start(nodeT *t_u) { return true; }
+  inline bool wellSeparated(nodeT *u, nodeT *v, int s) {return u->wellSeparated(v, s);}
 };
 
 #endif

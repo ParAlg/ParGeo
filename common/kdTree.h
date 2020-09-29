@@ -47,11 +47,13 @@ class kdTree {
   typedef kdNode<dim, objT> nodeT;
   objT **items;
   nodeT *root;
+  intT n;
 
   public:
   nodeT* rootNode() {return root;}
+  intT size() {return n;}
 
-  kdTree(objT* P, intT n, bool parallel=true, bool noCoarsen=false) {
+  kdTree(objT* P, intT nn, bool parallel=true, bool noCoarsen=false): n(nn) {
     items = newA(objT*, n);
     par_for(intT i=0; i<n; ++i) {
       items[i]=&P[i];

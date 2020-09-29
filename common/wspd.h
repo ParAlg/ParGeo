@@ -35,7 +35,7 @@ struct wsp {
 template<class nodeT, class opT>
 inline void findPairSerial(nodeT *u, nodeT *v, opT* f, floatT s) {
   if (!f->moveon(u, v)) return;
-  if (u->wellSeparated(v, s)) {
+  if (f->wellSeparated(u, v, s)) {
     f->run(u, v);
   } else {
     if (u->isLeaf() && v->isLeaf()) {
@@ -62,7 +62,7 @@ inline void findPairParallel(nodeT *u, nodeT *v, opT* f, floatT s) {
   if (!f->moveon(u, v)) return;
   if (u->size() + v->size() < 2000) return findPairSerial(u,v,f,s);
 
-  if (u->wellSeparated(v, s)) {
+  if (f->wellSeparated(u, v, s)) {
     f->run(u, v);//need to be thread safe
   } else {
     if (u->isLeaf() && v->isLeaf()) {

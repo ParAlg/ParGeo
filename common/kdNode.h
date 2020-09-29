@@ -202,6 +202,8 @@ class kdNode {
   inline objT* operator[](intT i) {return items[i];}
   inline pointT getMax() {return pMax;}
   inline pointT getMin() {return pMin;}
+  inline floatT getMax(intT i) {return pMax[i];}
+  inline floatT getMin(intT i) {return pMin[i];}
 
   inline intT getId() {return id;}
   inline void setId(intT idd) {id = idd;}
