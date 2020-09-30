@@ -35,6 +35,7 @@ struct wsp {
 template<class nodeT, class opT>
 inline void findPairSerial(nodeT *u, nodeT *v, opT* f, floatT s) {
   if (!f->moveon(u, v)) return;
+
   if (f->wellSeparated(u, v, s)) {
     f->run(u, v);
   } else {

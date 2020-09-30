@@ -358,6 +358,10 @@ class kdNode {
       if (distt < dist) {
         u = uu; v = vv; dist = distt;}
     }
+    void update(objT* uu, objT* vv, floatT distt) {
+      if (distt < dist) {
+        u = uu; v = vv; dist = distt;}
+    }
   };
 
   inline void compBcpH(nodeT* n2, bcp* r) {
