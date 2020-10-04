@@ -25,10 +25,10 @@
 #include "kdTree.h"
 #include "wspd.h"
 #include "unreachableDecomp.h"
+#include "mark.h"
 #include "parallelKruskal.h"
 #include "kNearestNeighbors.h"
 #include "kBuffer.h"
-#include "bccpStar.h"
 #include "pbbs/gettime.h"
 
 using namespace std;
@@ -38,7 +38,7 @@ using namespace std;
 // *************************************************************
 
 /**
- * Computes the HDBSCAN* of P using the WSPD
+ * Computes the HDBSCAN* P using the filter kruskal algorithm.
  * @param P a point array.
  * @param n length of P.
  * @return a weighted edge array of size n-1
@@ -50,15 +50,14 @@ wEdge<point<dim>>* hdbscan(point<dim>* P, intT n, floatT eps, intT minPts) {
   typedef kdNode<dim, pointT> nodeT;
   typedef wsp<nodeT> pairT;
   typedef struct nodeT::bcp bcpT;
-
   //static const bool serial = false;
   cout << "HDBSCAN of " << n << ", dim " << dim << " points" << endl;
   if (n < 2) abort();
 
   timing t0;
   t0.start();
-  bool parallelTree = true;
-  treeT* tree = new treeT(P, n, parallelTree, 1);
+  bool paraTree = true;
+  treeT* tree = new treeT(P, n, paraTree, 1);
   cout << "build-tree-time = " << t0.next() << endl;
 
   floatT* coreDist = newA(floatT, n);
@@ -78,43 +77,54 @@ wEdge<point<dim>>* hdbscan(point<dim>* P, intT n, floatT eps, intT minPts) {
   }
   nodeCD(tree->rootNode(), coreDist, cdMin, cdMax, tree->rootNode(), P);
 
-  auto wgpar = unreachableNormalParallel<dim, nodeT>(tree->rootNode(), cdMin, cdMax);
-  wspdParallel<nodeT, unreachableNormalParallel<dim, nodeT>>(tree->rootNode(), &wgpar);
-  auto out = wgpar.collect();
-
-  // vector<pairT> *out = new vector<pairT>();
-  // auto wg = unreachableNormalSerial<dim, nodeT>(tree->rootNode(), out, cdMin, cdMax);
-  // wspdSerial<nodeT, unreachableNormalSerial<dim, nodeT>>(tree->rootNode(), &wg);
-  cout << "#pairs = " << out->size() << endl;
-  cout << "decomposition-time = " << t0.next() << endl;
-
-  struct indexBcp {
-    intT u,v;
-    floatT dist;
-    indexBcp(intT uu, intT vv, floatT distt): u(uu), v(vv), dist(distt) {};
-  };
-
-  auto bcps = newA(indexBcp, out->size());
-
-  par_for (intT i=0; i<out->size(); ++i) {
-    bcpT bcp = compBcpStar<nodeT, bcpT>(out->at(i).u, out->at(i).v, coreDist, P);
-    bcps[i] = indexBcp(bcp.u-P, bcp.v-P, bcp.dist);
-  }
-  cout << "bcp-time = " << t0.next() << endl;
+  floatT rhoLo = -0.1;
+  floatT beta = 2;
+  intT edgesAdded = 0;
+  intT numEdges = 0;
 
   edgeUnionFind *uf = new edgeUnionFind(n);
 
-  // sampleSort(bcps, out->size(), [&](indexBcp a, indexBcp b) {return a.dist < b.dist;});
-  // for (intT i=0; i<out->size(); ++i) {
-  //   auto edge = bcps[i];
-  //   if (edge.dist > eps) break;
-  //   if (uf->find(edge.u) != uf->find(edge.v)) {
-  //     uf->link(edge.u, edge.v);
-  //   }
-  // }
+  while (edgesAdded < n-1) {
+    //auto *out = new vector<bcpT>();
+    //floatT tmp = filterUnreachSerial<dim, treeT, nodeT, pointT>(beta, rhoLo, out, tree, uf, coreDist, cdMin, cdMax, P);
 
-  parKruskal::mst(parKruskal::bcpWrap<indexBcp>(bcps), n, out->size(), uf);
-  cout << "kruskal-time = " << t0.next() << endl;
+    auto output = filterUnreachParallel<dim, treeT, nodeT, pointT>(beta, rhoLo, tree, uf, coreDist, cdMin, cdMax, P);
+    floatT tmp = output.first;//rho hi
+    auto out = output.second;//bcp vector
+    cout << "---" << endl;
+    cout << "beta = " << beta << endl;
+    cout << "rho = " << rhoLo << " -- " << tmp << endl;
+
+    numEdges += out->size();
+
+    if (out->size() <= 0) {
+      delete out;
+      beta *= 2;
+      rhoLo = tmp;
+      continue;}
+
+    intT edgeCount = out->size();
+    cout << "edges = " << edgeCount << endl;
+
+    struct nodeWrap {
+      bcpT *E;
+      pointT *s;
+      nodeWrap(bcpT *Ein, pointT* ss) : E(Ein), s(ss) {}
+      //index from offset
+      inline intT GetU(intT i) {return E[i].u-s;}
+      inline intT GetV(intT i) {return E[i].v-s;}
+      inline double GetWeight(intT i) {return E[i].dist;}
+    };
+
+    edgesAdded += parKruskal::mst(nodeWrap(&out->at(0), P), n, out->size(), uf);
+    cout << "mst edges = " << edgesAdded << endl;
+
+    mark(tree->rootNode(), uf, P);
+
+    delete out;
+    beta *= 2;
+    rhoLo = tmp;
+  }
 
   typedef wEdge<point<dim>> outT;
   auto R = newA(outT, n-1);
@@ -126,12 +136,10 @@ wEdge<point<dim>>* hdbscan(point<dim>* P, intT n, floatT eps, intT minPts) {
   }
   cout << "copy-time = " << t0.stop() << endl;
 
-  delete uf;
-  free(bcps);
-  delete out;
   free(coreDist);
   free(cdMin);
   free(cdMax);
+  delete uf;
   return R;
 }
 
