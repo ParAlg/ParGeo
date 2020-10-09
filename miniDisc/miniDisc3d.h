@@ -38,10 +38,9 @@ sphere<dim> miniDisc3DSerial(point<dim>* P, intT n, point<dim> pi, point<dim> pj
   auto disc = discT(pi, pj, pk);
   for (intT l=0; l<n; ++l) {
     if (!disc.contain(P[l])) {
-      disc = discT(pi, pj, pk, P[l]);
+      disc = discT(pi, pj, pk, P[l]);}
   }
   return disc;
-  }
 }
 
 template<int dim>

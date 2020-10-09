@@ -36,6 +36,7 @@ sphere<dim> miniDisc2DSerial(point<dim>* P, intT n, point<dim> pi, point<dim> pj
   for (intT i=0; i<n; ++i) {
     if (!circle.contain(P[i])) {
       circle = circleT(pi, pj, P[i]);
+      swap(P[2], P[i]);
     }}
   return circle;
 }
@@ -47,7 +48,9 @@ sphere<dim> miniDisc2DSerial(point<dim>* P, intT n, point<dim> pi) {
   auto circle = circleT(P[0], pi);
   for (intT j=1; j<n; ++j) {
     if (!circle.contain(P[j])) {
-      circle = miniDisc2DSerial(P, j, pi, P[j]);}
+      circle = miniDisc2DSerial(P, j, pi, P[j]);
+      swap(P[0], P[j]);
+    }
   }
   return circle;
 }
@@ -60,7 +63,9 @@ sphere<dim> miniDisc2DSerial(point<dim>* P, intT n) {
   for (intT i=2; i<n; ++i) {
     if (!circle.contain(P[i])) {
       cout << "ci = " << i << endl;
-      circle = miniDisc2DSerial(P, i, P[i]);}
+      circle = miniDisc2DSerial(P, i, P[i]);
+      swap(P[1], P[i]);
+    }
   }
   return circle;
 }
