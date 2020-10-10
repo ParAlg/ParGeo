@@ -431,10 +431,10 @@ inline floatT determinant4by4(floatT* m) {
 }
 
 // A class for sphere
-template <int _dim> class sphere {
+class sphere {
 public:
   typedef double floatT;
-  typedef point<_dim> pointT;
+  typedef point<3> pointT;
   pointT ct;
   floatT rad;
 
@@ -442,28 +442,8 @@ public:
   inline pointT center() {return ct;}
   floatT& operator[] (int i) {return ct[i];}
 
-  //_dim=2 circle constructor, or _dim=3 sphere constructor from 3 points
-  sphere(pointT a, pointT b, pointT c) {
-    //reference: http://www.ambrsoft.com/trigocalc/circle3d.htm
-    if (_dim != 2 && _dim != 3) {
-      cout << "error, this constructor for sphere only works for dim=2 and 3, abort" << endl;}
-    auto x1 = a[0]; auto y1 = a[1];
-    auto x2 = b[0]; auto y2 = b[1];
-    auto x3 = c[0]; auto y3 = c[1];
-    floatT A = x1*(y2-y3) - y1*(x2-x3) + x2*y3 - x3*y2;
-    floatT B = (x1*x1+y1*y1)*(y3-y2) + (x2*x2+y2*y2)*(y1-y3) + (x3*x3+y3*y3)*(y2-y1);
-    floatT C = (x1*x1+y1*y1)*(x2-x3) + (x2*x2+y2*y2)*(x3-x1) + (x3*x3+y3*y3)*(x1-x2);
-    floatT D = (x1*x1+y1*y1)*(x3*y2-x2*y3) + (x2*x2+y2*y2)*(x1*y3-x3*y1) + (x3*x3+y3*y3)*(x2*y1-x1*y2);
-    ct.x[0] = -B/(2*A);
-    ct.x[1] = -C/(2*A);
-    rad = sqrt((B*B+C*C-4*A*D)/(4*A*A));
-  }
-
-  //_dim=3 sphere constructor
   sphere(pointT a, pointT b, pointT c, pointT d) {
     //reference: http://www.ambrsoft.com/TrigoCalc/Sphere/Spher3D_.htm
-    if (_dim != 3) {
-      cout << "error, this constructor for sphere only works for dim=3, abort" << endl;}
     auto x1 = a[0]; auto y1 = a[1]; auto z1 = a[2];
     auto x2 = b[0]; auto y2 = b[1]; auto z2 = b[2];
     auto x3 = c[0]; auto y3 = c[1]; auto z3 = c[2];
@@ -488,14 +468,17 @@ public:
     rad = 0.5*sqrt(D*D+E*E+F*F-4*G);
   }
 
-  //generic constructor 1
-  sphere(pointT centerr, floatT radd): ct(centerr), rad(radd) {}
+  sphere(pointT a, pointT b, pointT c) {
+    cout << "sphere 3 pt constructor in progress" << endl;
+    abort();
+  }
 
-  //generic constructor 2, smallest sphere given 2 points
   sphere(pointT a, pointT b) {
     ct = a.average(b);
     rad = a.pointDist(b)/2;
   }
+
+  sphere(pointT centerr, floatT radd): ct(centerr), rad(radd) {}
 
   //empty constructor
   sphere(): ct(pointT()), rad(-1) {}
@@ -505,6 +488,64 @@ public:
   inline bool contain(pointT p) {
     return p.pointDist(ct) <= rad*1.000001;}//todo, sqrt optimize
 };
+
+// template <int dim>
+// static std::ostream& operator<<(std::ostream& os, sphere v) {
+//   os << "(";
+//   os <<  v.center() << ", r = " << v.radius();
+//   os << ")";
+//   return os;
+// }
+
+// A class for circle
+class circle {
+public:
+  typedef double floatT;
+  typedef point<2> pointT;
+  pointT ct;
+  floatT rad;
+
+  inline floatT radius() {return rad;}
+  inline pointT center() {return ct;}
+  floatT& operator[] (int i) {return ct[i];}
+
+  circle(pointT a, pointT b, pointT c) {
+    //reference: http://www.ambrsoft.com/trigocalc/circle3d.htm
+    auto x1 = a[0]; auto y1 = a[1];
+    auto x2 = b[0]; auto y2 = b[1];
+    auto x3 = c[0]; auto y3 = c[1];
+    floatT A = x1*(y2-y3) - y1*(x2-x3) + x2*y3 - x3*y2;
+    floatT B = (x1*x1+y1*y1)*(y3-y2) + (x2*x2+y2*y2)*(y1-y3) + (x3*x3+y3*y3)*(y2-y1);
+    floatT C = (x1*x1+y1*y1)*(x2-x3) + (x2*x2+y2*y2)*(x3-x1) + (x3*x3+y3*y3)*(x1-x2);
+    floatT D = (x1*x1+y1*y1)*(x3*y2-x2*y3) + (x2*x2+y2*y2)*(x1*y3-x3*y1) + (x3*x3+y3*y3)*(x2*y1-x1*y2);
+    ct.x[0] = -B/(2*A);
+    ct.x[1] = -C/(2*A);
+    rad = sqrt((B*B+C*C-4*A*D)/(4*A*A));
+  }
+
+  circle(pointT a, pointT b) {
+    ct = a.average(b);
+    rad = a.pointDist(b)/2;
+  }
+
+  circle(pointT centerr, floatT radd): ct(centerr), rad(radd) {}
+
+  //empty constructor
+  circle(): ct(pointT()), rad(-1) {}
+
+  bool isEmpty() {return rad < 0;}
+
+  inline bool contain(pointT p) {
+    return p.pointDist(ct) <= rad*1.000001;}//todo, sqrt optimize
+};
+
+// template <int dim>
+// static std::ostream& operator<<(std::ostream& os, circle v) {
+//   os << "(";
+//   os <<  v.center() << ", r = " << v.radius();
+//   os << ")";
+//   return os;
+// }
 
 inline vect3d onParabola(vect2d v) {
   return vect3d(v.x(), v.y(), v.x()*v.x() + v.y()*v.y());}

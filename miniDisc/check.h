@@ -10,8 +10,8 @@
 //    CHECKER
 // *************************************************************
 
-template<int dim>
-bool check(sphere<dim>* circle, point<dim>* P, intT n, bool verbose=true) {
+template<int dim, class discT>
+bool check(discT* circle, point<dim>* P, intT n, bool verbose=true) {
   //code for verifying correctness
   for (intT i=0; i<n; ++i) {
     if(!circle->contain(P[i])) {

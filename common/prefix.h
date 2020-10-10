@@ -38,7 +38,7 @@ template<class T, class F, class G>
 void parallel_prefix(T* A, intT n, F& process, G& cleanUp, bool verbose=false, intT* flag=NULL) {
   if (n < 2000) return serial_prefix(A, n, process, cleanUp);
 
-  static const intT INIT = 1000;
+  static const intT PREFIX = 1000;
   intT prefix;
   intT i = 0;
   intT conflict;
@@ -49,8 +49,11 @@ void parallel_prefix(T* A, intT n, F& process, G& cleanUp, bool verbose=false, i
     freeFlag = true;}
 
   while (i < n) {
-    if (i==0) prefix = min(INIT, n);
-    else prefix = min(i+i, n);
+    if (i==0) prefix = PREFIX;//prefix < n is known
+    else {
+      prefix = min(i+i, n);//prefix to be taken as twice of i
+      prefix = max(prefix, PREFIX);//prefix is too small, use larger, prefix < n is known
+    }
 
     par_for (intT j=i; j<prefix; ++j) {
       if (process(A[j])) flag[j-i] = 1;//conflict

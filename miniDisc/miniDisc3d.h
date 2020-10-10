@@ -26,14 +26,8 @@
 #include "pbbs/sequence.h"
 #include "geometry.h"
 
-template<int dim>
-sphere<dim> miniDisc3DParallel(point<dim>* P, intT n) {
-  return miniDisc3DSerial(P, n);//todo
-}
-
-template<int dim>
-sphere<dim> miniDisc3DSerial(point<dim>* P, intT n, point<dim> pi, point<dim> pj, point<dim> pk) {
-  typedef sphere<dim> discT;
+sphere miniDisc3DSerial(point<3>* P, intT n, point<3> pi, point<3> pj, point<3> pk) {
+  typedef sphere discT;
 
   auto disc = discT(pi, pj, pk);
   for (intT l=0; l<n; ++l) {
@@ -43,9 +37,8 @@ sphere<dim> miniDisc3DSerial(point<dim>* P, intT n, point<dim> pi, point<dim> pj
   return disc;
 }
 
-template<int dim>
-sphere<dim> miniDisc3DSerial(point<dim>* P, intT n, point<dim> pi, point<dim> pj) {
-  typedef sphere<dim> discT;
+sphere miniDisc3DSerial(point<3>* P, intT n, point<3> pi, point<3> pj) {
+  typedef sphere discT;
 
   auto disc = discT(pi, pj);
   for (intT k=0; k<n; ++k) {
@@ -55,9 +48,8 @@ sphere<dim> miniDisc3DSerial(point<dim>* P, intT n, point<dim> pi, point<dim> pj
   return disc;
 }
 
-template<int dim>
-sphere<dim> miniDisc3DSerial(point<dim>* P, intT n, point<dim> pi) {
-  typedef sphere<dim> discT;
+sphere miniDisc3DSerial(point<3>* P, intT n, point<3> pi) {
+  typedef sphere discT;
 
   auto disc = discT(P[0], pi);
   for (intT j=1; j<n; ++j) {
@@ -67,10 +59,8 @@ sphere<dim> miniDisc3DSerial(point<dim>* P, intT n, point<dim> pi) {
   return disc;
 }
 
-//todo
-template<int dim>
-sphere<dim> miniDisc3DSerial(point<dim>* P, intT n) {
-  typedef sphere<dim> discT;
+sphere miniDisc3DSerial(point<3>* P, intT n) {
+  typedef sphere discT;
 
   auto disc = discT(P[0], P[1]);
   for (intT i=2; i<n; ++i) {
@@ -79,6 +69,11 @@ sphere<dim> miniDisc3DSerial(point<dim>* P, intT n) {
       disc = miniDisc3DSerial(P, i, P[i]);}
   }
   return disc;
+}
+
+
+sphere miniDisc3DParallel(point<3>* P, intT n) {
+  miniDisc3DSerial(P, n);
 }
 
 #endif

@@ -34,15 +34,37 @@ using namespace std;
 //    DRIVER
 // *************************************************************
 
-template<int dim>
-void bench(point<dim>* P, intT n) {
-  typedef point<dim> pointT;
+void bench2D(point<2>* P, intT n) {
+  typedef point<2> pointT;
+  typedef circle discT;
   static const bool serial = false;
   static const bool noRandom = true;
-  cout << "smallest enclosing disc, " << n << ", dim " << dim << " points" << endl;
-  if (dim > 3) {
-    cout << "smallest enclosing sphere only supported for dim <= 3" << endl;
+  cout << "smallest enclosing disc, " << n << ", dim 2 points" << endl;
+
+  if (n < 3) {
+    cout << "smallest enclosing sphere needs at least 3 points" << endl;
     abort();}
+
+  timing t0;t0.start();
+  if(!noRandom) {
+    cout << "permuting points" << endl;
+    randPerm(P, n);
+  }
+
+  discT disc = discT();
+  if(serial) disc = miniDisc2DSerial(P, n);
+  else disc = miniDisc2DParallel(P, n);
+  cout << "total-time = " << t0.stop() << endl;
+  cout << "disc = " << disc.center() << ", " << disc.radius() << endl;
+  check<2,discT>(&disc, P, n);
+}
+
+void bench3D(point<3>* P, intT n) {
+  typedef point<3> pointT;
+  typedef sphere discT;
+  static const bool serial = false;
+  static const bool noRandom = true;
+  cout << "smallest enclosing disc, " << n << ", dim 2 points" << endl;
 
   if (n < 4) {
     cout << "smallest enclosing sphere needs at least 4 points" << endl;
@@ -54,32 +76,10 @@ void bench(point<dim>* P, intT n) {
     randPerm(P, n);
   }
 
-  if (dim == 2) {
-    sphere<dim> disc = sphere<dim>();
-    if(serial) disc = miniDisc2DSerial(P, n);
-    else disc = miniDisc2DParallel(P, n);
-    cout << "total-time = " << t0.stop() << endl;
-    cout << "disc = " << disc.center() << ", " << disc.radius() << endl;
-    check(&disc, P, n);
-  } else if (dim == 3) {
-    sphere<dim> disc = sphere<dim>();
-    if(serial) disc = miniDisc3DSerial(P, n);
-    else disc = miniDisc3DParallel(P, n);
-    cout << "total-time = " << t0.stop() << endl;
-    cout << "disc = " << disc.center() << ", " << disc.radius() << endl;
-    check(&disc, P, n);
-  } else {
-    cout << "smallest enclosing sphere only supported for dim <= 3" << endl;
-    abort();
-  }
-
+  discT disc = discT();
+  if(serial) disc = miniDisc3DSerial(P, n);
+  else disc = miniDisc3DParallel(P, n);
+  cout << "total-time = " << t0.stop() << endl;
+  cout << "disc = " << disc.center() << ", " << disc.radius() << endl;
+  check<3,discT>(&disc, P, n);
 }
-
-template void bench<2>(point<2>*, intT);
-template void bench<3>(point<3>*, intT);
-template void bench<4>(point<4>*, intT);
-template void bench<5>(point<5>*, intT);
-template void bench<6>(point<6>*, intT);
-template void bench<7>(point<7>*, intT);
-template void bench<8>(point<8>*, intT);
-template void bench<9>(point<9>*, intT);

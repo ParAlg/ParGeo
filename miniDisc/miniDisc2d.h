@@ -28,9 +28,8 @@
 #include "check.h"
 #include "prefix.h"
 
-template<int dim>
-sphere<dim> miniDisc2DSerial(point<dim>* P, intT n, point<dim> pi, point<dim> pj) {
-  typedef sphere<dim> circleT;
+circle miniDisc2DSerial(point<2>* P, intT n, point<2> pi, point<2> pj) {
+  typedef circle circleT;
   auto circle = circleT(pi, pj);
 
   for (intT i=0; i<n; ++i) {
@@ -41,9 +40,8 @@ sphere<dim> miniDisc2DSerial(point<dim>* P, intT n, point<dim> pi, point<dim> pj
   return circle;
 }
 
-template<int dim>
-sphere<dim> miniDisc2DSerial(point<dim>* P, intT n, point<dim> pi) {
-  typedef sphere<dim> circleT;
+circle miniDisc2DSerial(point<2>* P, intT n, point<2> pi) {
+  typedef circle circleT;
 
   auto circle = circleT(P[0], pi);
   for (intT j=1; j<n; ++j) {
@@ -55,9 +53,8 @@ sphere<dim> miniDisc2DSerial(point<dim>* P, intT n, point<dim> pi) {
   return circle;
 }
 
-template<int dim>
-sphere<dim> miniDisc2DSerial(point<dim>* P, intT n) {
-  typedef sphere<dim> circleT;
+circle miniDisc2DSerial(point<2>* P, intT n) {
+  typedef circle circleT;
 
   auto circle = circleT(P[0], P[1]);
   for (intT i=2; i<n; ++i) {
@@ -71,10 +68,9 @@ sphere<dim> miniDisc2DSerial(point<dim>* P, intT n) {
 }
 
 //take ``vertical'' line (i,j) and get ``left/right'' most circle center
-template<int dim>
-sphere<dim> miniDisc2DParallel2(point<dim>* P, intT n, point<dim> pi, point<dim> pj, intT* flag=NULL) {
-  typedef point<dim> pointT;
-  typedef sphere<dim> circleT;
+circle miniDisc2DParallel2(point<2>* P, intT n, point<2> pi, point<2> pj, intT* flag=NULL) {
+  typedef point<2> pointT;
+  typedef circle circleT;
 
   auto circle = circleT(pi, pj);
 
@@ -134,9 +130,9 @@ sphere<dim> miniDisc2DParallel2(point<dim>* P, intT n, point<dim> pi, point<dim>
     free(centers);
 
     //among two, return the one that passes the check, and prefer smaller radius
-    bool check1 = check<dim>(&circle1, P, n, false);
+    bool check1 = check<2,circleT>(&circle1, P, n, false);
     if (check1 && circle1.radius() < circle2.radius()) return circle1;
-    bool check2 = check<dim>(&circle2, P, n, false);
+    bool check2 = check<2,circleT>(&circle2, P, n, false);
     if (check2 && circle2.radius() < circle1.radius()) return circle2;
 
     if (check1 && check2)
@@ -150,10 +146,9 @@ sphere<dim> miniDisc2DParallel2(point<dim>* P, intT n, point<dim> pi, point<dim>
   }
 }
 
-template<int dim>
-sphere<dim> miniDisc2DParallel(point<dim>* P, intT n, point<dim> pi, point<dim> pj, intT* flag=NULL) {
-  typedef sphere<dim> circleT;
-  typedef point<dim> pointT;
+circle miniDisc2DParallel(point<2>* P, intT n, point<2> pi, point<2> pj, intT* flag=NULL) {
+  typedef circle circleT;
+  typedef point<2> pointT;
 
   auto circle = circleT(pi, pj);
   auto process = [&](pointT p) {
@@ -167,10 +162,9 @@ sphere<dim> miniDisc2DParallel(point<dim>* P, intT n, point<dim> pi, point<dim> 
   return circle;
 }
 
-template<int dim>
-sphere<dim> miniDisc2DParallel(point<dim>* P, intT n, point<dim> pi, intT* flag=NULL) {
-  typedef sphere<dim> circleT;
-  typedef point<dim> pointT;
+circle miniDisc2DParallel(point<2>* P, intT n, point<2> pi, intT* flag=NULL) {
+  typedef circle circleT;
+  typedef point<2> pointT;
 
   auto circle = circleT(P[0], pi);
   auto process = [&](pointT p) {
@@ -186,10 +180,9 @@ sphere<dim> miniDisc2DParallel(point<dim>* P, intT n, point<dim> pi, intT* flag=
   return circle;
 }
 
-template<int dim>
-sphere<dim> miniDisc2DParallel(point<dim>* P, intT n) {
-  typedef sphere<dim> circleT;
-  typedef point<dim> pointT;
+circle miniDisc2DParallel(point<2>* P, intT n) {
+  typedef circle circleT;
+  typedef point<2> pointT;
 
   intT* flag = newA(intT, n+1);
 
