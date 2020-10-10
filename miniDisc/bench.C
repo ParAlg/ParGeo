@@ -37,7 +37,7 @@ using namespace std;
 void bench2D(point<2>* P, intT n) {
   typedef point<2> pointT;
   typedef circle discT;
-  static const bool serial = false;
+  static const bool serial = true;
   static const bool noRandom = true;
   cout << "smallest enclosing disc, " << n << ", dim 2 points" << endl;
 
@@ -56,6 +56,7 @@ void bench2D(point<2>* P, intT n) {
   else disc = miniDisc2DParallel(P, n);
   cout << "total-time = " << t0.stop() << endl;
   cout << "disc = " << disc.center() << ", " << disc.radius() << endl;
+  cout << endl;
   check<2,discT>(&disc, P, n);
 }
 

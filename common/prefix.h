@@ -25,6 +25,7 @@
 #include "pbbs/utils.h"
 #include "pbbs/parallel.h"
 #include "pbbs/sequence.h"
+#include "pbbs/gettime.h"
 
 template<class T, class F, class G>
 void serial_prefix(T* A, intT n, F& process, G& cleanUp) {
@@ -36,9 +37,10 @@ void serial_prefix(T* A, intT n, F& process, G& cleanUp) {
 
 template<class T, class F, class G>
 void parallel_prefix(T* A, intT n, F& process, G& cleanUp, bool verbose=false, intT* flag=NULL) {
-  if (n < 2000) return serial_prefix(A, n, process, cleanUp);
-
   static const intT PREFIX = 1000;
+  static const intT THRESH = 2000;
+  if (n < THRESH) return serial_prefix(A, n, process, cleanUp);
+
   intT prefix;
   intT i = 0;
   intT conflict;
@@ -48,30 +50,70 @@ void parallel_prefix(T* A, intT n, F& process, G& cleanUp, bool verbose=false, i
     flag = newA(intT, n+1);
     freeFlag = true;}
 
+  timing t0;
+  intT serCount = 0;
+  intT serSize = 0;
+  floatT serTime = 0;
+  intT parCount = 0;
+  intT parSize = 0;
+  floatT parTime = 0;
+  floatT parTime2 = 0;
+
   while (i < n) {
     if (i==0) prefix = PREFIX;//prefix < n is known
-    else {
-      prefix = min(i+i, n);//prefix to be taken as twice of i
-      prefix = max(prefix, PREFIX);//prefix is too small, use larger, prefix < n is known
-    }
+    else prefix = min(i*3, n);//prefix to be taken as 3*i
 
-    par_for (intT j=i; j<prefix; ++j) {
-      if (process(A[j])) flag[j-i] = 1;//conflict
-      else flag[j-i] = 0;
-    }
+    //if (verbose) cout << "prefix = " << prefix << endl;
 
-    intT numBad = sequence::prefixSum(flag, 0, prefix-i);
-    flag[prefix-i] = numBad;
-
-    if (numBad > 0) {
-      par_for(intT j=0; j<prefix-i; ++j) {
-        if (flag[j]==0 && flag[j]!=flag[j+1]) conflict = j;}
-      i += conflict;
-      if (verbose) cout << "ci = " << i << endl;
-      cleanUp(A, i);
+    if (prefix < THRESH) {
+      if(verbose) t0.start();
+      serCount += 1;
+      serSize += prefix - i;
+      while (i < prefix) {
+	if (process(A[i])) cleanUp(A, i);
+	i ++;
+      }
+      if(verbose) serTime += t0.stop();
     } else {
-      i = prefix;
+      if(verbose) t0.start();
+      parCount += 1;
+      parSize += prefix - i;
+
+      par_for (intT j=i; j<prefix; ++j) {
+	if (process(A[j])) flag[j-i] = 1;//conflict
+	else flag[j-i] = 0;
+      }
+
+      intT numBad = sequence::prefixSum(flag, 0, prefix-i);
+      flag[prefix-i] = numBad;
+      if(verbose) parTime += t0.stop();
+
+      if (numBad > 0) {
+	if(verbose) t0.start();
+	par_for(intT j=0; j<prefix-i; ++j) {
+	  if (flag[j]==0 && flag[j]!=flag[j+1]) conflict = j;}//change to serial and try
+	i += conflict;
+	if(verbose) parTime += t0.next();
+	//if (verbose) cout << "ci = " << i << endl;
+	cleanUp(A, i);
+	if(verbose) parTime2 += t0.stop();
+      } else {
+	i = prefix;
+      }
+
     }
+  }
+
+  if(verbose) {
+    cout << "serial prefix stats" << endl;
+    cout << " count = " << serCount << endl;
+    cout << " avg size = " << serSize/(floatT)serCount << endl;
+    cout << " total time = " << serTime << endl;
+    cout << "parallel prefix stats" << endl;
+    cout << " count = " << parCount << endl;
+    cout << " avg size = " << parSize/(floatT)parCount << endl;
+    cout << " total time 1 = " << parTime << endl;
+    cout << " total time 2 = " << parTime2 << endl;
   }
 
   if(freeFlag) free(flag);

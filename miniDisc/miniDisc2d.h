@@ -35,7 +35,7 @@ circle miniDisc2DSerial(point<2>* P, intT n, point<2> pi, point<2> pj) {
   for (intT i=0; i<n; ++i) {
     if (!circle.contain(P[i])) {
       circle = circleT(pi, pj, P[i]);
-      swap(P[2], P[i]);
+      swap(P[0], P[i]);
     }}
   return circle;
 }
@@ -47,7 +47,7 @@ circle miniDisc2DSerial(point<2>* P, intT n, point<2> pi) {
   for (intT j=1; j<n; ++j) {
     if (!circle.contain(P[j])) {
       circle = miniDisc2DSerial(P, j, pi, P[j]);
-      swap(P[0], P[j]);
+      swap(P[1], P[j]);
     }
   }
   return circle;
@@ -61,7 +61,7 @@ circle miniDisc2DSerial(point<2>* P, intT n) {
     if (!circle.contain(P[i])) {
       cout << "ci = " << i << endl;
       circle = miniDisc2DSerial(P, i, P[i]);
-      swap(P[1], P[i]);
+      swap(P[2], P[i]);
     }
   }
   return circle;
@@ -152,12 +152,13 @@ circle miniDisc2DParallel(point<2>* P, intT n, point<2> pi, point<2> pj, intT* f
 
   auto circle = circleT(pi, pj);
   auto process = [&](pointT p) {
-                   if (!circle.contain(p)) return true;
-                   else return false;
-                 };
+    if (!circle.contain(p)) return true;
+    else return false;
+  };
   auto cleanUp = [&](pointT* A, intT ci) {
-                   circle = circleT(pi, pj, A[ci]);
-                 };
+    circle = circleT(pi, pj, A[ci]);
+    swap(P[0], P[ci]);
+  };
   parallel_prefix(P, n, process, cleanUp, false, flag);
   return circle;
 }
@@ -168,14 +169,15 @@ circle miniDisc2DParallel(point<2>* P, intT n, point<2> pi, intT* flag=NULL) {
 
   auto circle = circleT(P[0], pi);
   auto process = [&](pointT p) {
-                   if (!circle.contain(p)) return true;
-                   else return false;
-                 };
+    if (!circle.contain(p)) return true;
+    else return false;
+  };
   auto cleanUp = [&](pointT* A, intT ci) {
-                     circle = miniDisc2DSerial(A, ci, pi, A[ci]);
-                     //circle = miniDisc2DParallel(A, ci, pi, A[ci], flag);
-                     //circle = miniDisc2DParallel2(A, ci, pi, A[ci], flag);
-                 };
+    //circle = miniDisc2DSerial(A, ci, pi, A[ci]);
+    circle = miniDisc2DParallel(A, ci, pi, A[ci], flag);
+    //circle = miniDisc2DParallel2(A, ci, pi, A[ci], flag);
+    swap(P[1], P[ci]);
+  };
   parallel_prefix(P, n, process, cleanUp, false, flag);
   return circle;
 }
@@ -188,12 +190,13 @@ circle miniDisc2DParallel(point<2>* P, intT n) {
 
   auto circle = circleT(P[0], P[1]);
   auto process = [&](pointT p) {
-                   if (!circle.contain(p)) return true;
-                   else return false;
-                 };
+    if (!circle.contain(p)) return true;
+    else return false;
+  };
   auto cleanUp = [&](pointT* A, intT ci) {
-                   circle = miniDisc2DParallel(A, ci, A[ci], flag);
-                 };
+    circle = miniDisc2DParallel(A, ci, A[ci], flag);
+    swap(P[2], P[ci]);
+  };
   parallel_prefix(P, n, process, cleanUp, true, flag);
 
   free(flag);
