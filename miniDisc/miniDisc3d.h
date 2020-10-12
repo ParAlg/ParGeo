@@ -43,7 +43,9 @@ sphere miniDisc3DSerial(point<3>* P, intT n, point<3> pi, point<3> pj) {
   auto disc = discT(pi, pj);
   for (intT k=0; k<n; ++k) {
     if (!disc.contain(P[k])) {
-      disc = miniDisc3DSerial(P, k, pi, pj, P[k]);}
+      disc = miniDisc3DSerial(P, k, pi, pj, P[k]);
+      swap(P[0], P[k]);
+    }
   }
   return disc;
 }
@@ -54,7 +56,9 @@ sphere miniDisc3DSerial(point<3>* P, intT n, point<3> pi) {
   auto disc = discT(P[0], pi);
   for (intT j=1; j<n; ++j) {
     if (!disc.contain(P[j])) {
-      disc = miniDisc3DSerial(P, j, pi, P[j]);}
+      disc = miniDisc3DSerial(P, j, pi, P[j]);
+      swap(P[1], P[j]);
+    }
   }
   return disc;
 }
@@ -66,7 +70,9 @@ sphere miniDisc3DSerial(point<3>* P, intT n) {
   for (intT i=2; i<n; ++i) {
     if (!disc.contain(P[i])) {
       cout << "ci = " << i << endl;
-      disc = miniDisc3DSerial(P, i, P[i]);}
+      disc = miniDisc3DSerial(P, i, P[i]);
+      swap(P[2], P[i]);
+    }
   }
   return disc;
 }
@@ -103,7 +109,7 @@ sphere miniDisc3DParallel(point<3>* P, intT n, point<3> pi, point<3> pj, intT* f
   auto cleanUp = [&](pointT* A, intT ci)
     {
      disc = miniDisc3DParallel(A, ci, pi, pj, A[ci], flag);
-     //swap(P[0], P[ci]);
+     swap(P[0], P[ci]);
     };
   parallel_prefix(P, n, process, cleanUp, false, flag);
 
@@ -123,7 +129,7 @@ sphere miniDisc3DParallel(point<3>* P, intT n, point<3> pi, intT* flag) {
   auto cleanUp = [&](pointT* A, intT ci)
     {
      disc = miniDisc3DParallel(A, ci, pi, A[ci], flag);
-     //swap(P[1], P[ci]);
+     swap(P[1], P[ci]);
     };
   parallel_prefix(P, n, process, cleanUp, false, flag);
 
@@ -145,7 +151,7 @@ sphere miniDisc3DParallel(point<3>* P, intT n) {
   auto cleanUp = [&](pointT* A, intT ci)
     {
      disc = miniDisc3DParallel(A, ci, A[ci], flag);
-     //swap(P[2], P[ci]);
+     swap(P[2], P[ci]);
     };
   parallel_prefix(P, n, process, cleanUp, true, flag);
 

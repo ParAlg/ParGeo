@@ -37,7 +37,7 @@ using namespace std;
 void bench2D(point<2>* P, intT n) {
   typedef point<2> pointT;
   typedef circle discT;
-  static const bool serial = true;
+  static const bool serial = false;
   static const bool noRandom = true;
   cout << "smallest enclosing disc, " << n << ", dim 2 points" << endl;
 
