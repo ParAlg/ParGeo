@@ -1,11 +1,13 @@
 #ifndef _BENCH_GEOM_INCLUDED
 #define _BENCH_GEOM_INCLUDED
+
 #include <iostream>
 #include <algorithm>
 #include <math.h>
 #include <iomanip>
 #include <limits>
 #include "pbbs/parallel.h"
+
 using namespace std;
 
 // *************************************************************
@@ -102,7 +104,7 @@ public:
     for (int i=0; i<_dim; ++i) xx[i] = x[i]+op2.x[i];
     return pointT(xx);
   }
-  vectT operator-(pointT op2) {
+  pointT operator-(pointT op2) {
     floatT xx[_dim];
     for (int i=0; i<_dim; ++i) xx[i] = x[i]-op2.x[i];
     return pointT(xx);
@@ -165,6 +167,14 @@ public:
     pointT r;
     for(int i=0; i<dim; ++i) r[i] = x[i]*c;
     return r;}
+  pointT normalize() {
+    auto r = pointT(x);
+    floatT s = 0;
+    for (int i=0; i<dim; ++i) s += x[i]*x[i];
+    s = sqrt(s);
+    for (int i=0; i<dim; ++i) r[i] /= s;
+    return r;
+  }
 };
 
 template <int dim>
@@ -413,7 +423,30 @@ inline int counterClockwise(point2d a, point2d b, point2d c) {
   return (b-a).cross(c-a) > 0.0;
 }
 
-//M is determinant matrix in row major order (length 16)
+//takes row-major 3by3 matrix m
+inline floatT determinant3by3(floatT* m) {
+  return m[0*3+0] * (m[1*3+1] * m[2*3+2] - m[2*3+1] * m[1*3+2]) -
+    m[0*3+1] * (m[1*3+0] * m[2*3+2] - m[1*3+2] * m[2*3+0]) +
+    m[0*3+2] * (m[1*3+0] * m[2*3+1] - m[1*3+1] * m[2*3+0]);
+}
+
+//takes row-major 3by3 matrix m, output replaces m
+inline void inverse3by3(floatT* m) {
+  floatT invDet = 1/determinant3by3(m);
+  floatT mInv[9];
+  mInv[0*3+0] = (m[1*3+1] * m[2*3+2] - m[2*3+1] * m[1*3+2]) * invDet;
+  mInv[0*3+1] = (m[0*3+2] * m[2*3+1] - m[0*3+1] * m[2*3+2]) * invDet;
+  mInv[0*3+2] = (m[0*3+1] * m[1*3+2] - m[0*3+2] * m[1*3+1]) * invDet;
+  mInv[1*3+0] = (m[1*3+2] * m[2*3+0] - m[1*3+0] * m[2*3+2]) * invDet;
+  mInv[1*3+1] = (m[0*3+0] * m[2*3+2] - m[0*3+2] * m[2*3+0]) * invDet;
+  mInv[1*3+2] = (m[1*3+0] * m[0*3+2] - m[0*3+0] * m[1*3+2]) * invDet;
+  mInv[2*3+0] = (m[1*3+0] * m[2*3+1] - m[2*3+0] * m[1*3+1]) * invDet;
+  mInv[2*3+1] = (m[2*3+0] * m[0*3+1] - m[0*3+0] * m[2*3+1]) * invDet;
+  mInv[2*3+2] = (m[0*3+0] * m[1*3+1] - m[1*3+0] * m[0*3+1]) * invDet;
+  for(int i=0; i<9; ++i) m[i] = mInv[i];
+}
+
+//takes row-major 4by4 matrix m
 inline floatT determinant4by4(floatT* m) {
   return
     m[0*4+3] * m[1*4+2] * m[2*4+1] * m[3*4+0] - m[0*4+2] * m[1*4+3] * m[2*4+1] * m[3*4+0] -
@@ -428,6 +461,36 @@ inline floatT determinant4by4(floatT* m) {
     m[0*4+2] * m[1*4+1] * m[2*4+0] * m[3*4+3] + m[0*4+1] * m[1*4+2] * m[2*4+0] * m[3*4+3] +
     m[0*4+2] * m[1*4+0] * m[2*4+1] * m[3*4+3] - m[0*4+0] * m[1*4+2] * m[2*4+1] * m[3*4+3] -
     m[0*4+1] * m[1*4+0] * m[2*4+2] * m[3*4+3] + m[0*4+0] * m[1*4+1] * m[2*4+2] * m[3*4+3];
+}
+
+//m needs to be 3by3 row major, computes m.dot(p)
+template<class pointT>
+point<3> dot3(floatT* m, point<3> p) {
+  point<3> r;
+  r[0] = m[0]*p[0] + m[1]*p[1] + m[2]*p[2];
+  r[1] = m[3]*p[0] + m[4]*p[1] + m[5]*p[2];
+  r[2] = m[6]*p[0] + m[7]*p[1] + m[8]*p[2];
+  return r;
+}
+
+//m needs to be 4by4 row major, computes m.dot(p)
+template<class pointT>
+point<4> dot4(floatT* m, point<4> p) {
+  point<4> r;
+  r[0] = m[0]*p[0] + m[1]*p[1] + m[2]*p[2] + m[3]*p[3];
+  r[1] = m[4]*p[0] + m[5]*p[1] + m[6]*p[2] + m[7]*p[3];
+  r[2] = m[8]*p[0] + m[9]*p[1] + m[10]*p[2] + m[11]*p[3];
+  r[3] = m[12]*p[0] + m[13]*p[1] + m[14]*p[2] + m[15]*p[3];
+  return r;
+}
+
+template<class pointT>
+point<3> crossProduct(point<3> a, point<3> b) {
+  point<3> r;
+  r.updateCoordinate(0, a[1]*b[2]-a[2]*b[1]);
+  r.updateCoordinate(1, a[2]*b[0]-a[0]*b[2]);
+  r.updateCoordinate(2, a[0]*b[1]-a[1]*b[0]);
+  return r;
 }
 
 // A class for sphere
@@ -469,8 +532,33 @@ public:
   }
 
   sphere(pointT a, pointT b, pointT c) {
-    cout << "sphere 3 pt constructor in progress" << endl;
-    abort();
+    //change basis
+    auto v1 = (b-a).normalize();
+    auto v3 = crossProduct<pointT>(c-a,b-a).normalize();
+    auto v2 = crossProduct<pointT>(v1,v3);
+    floatT T[9];
+    T[0] = v1[0]; T[1] = v2[0]; T[2] = v3[0];
+    T[3] = v1[1]; T[4] = v2[1]; T[5] = v3[1];
+    T[6] = v1[2]; T[7] = v2[2]; T[8] = v3[2];
+    floatT Ti[9]; for (int i=0; i<9; ++i) Ti[i] = T[i];
+    inverse3by3(Ti);
+    auto aa = dot3<pointT>(Ti, a);
+    auto bb = dot3<pointT>(Ti, b);
+    auto cc = dot3<pointT>(Ti, c);
+    //2d circle
+    auto x1 = aa[0]; auto y1 = aa[1];
+    auto x2 = bb[0]; auto y2 = bb[1];
+    auto x3 = cc[0]; auto y3 = cc[1];
+    floatT A = x1*(y2-y3) - y1*(x2-x3) + x2*y3 - x3*y2;
+    floatT B = (x1*x1+y1*y1)*(y3-y2) + (x2*x2+y2*y2)*(y1-y3) + (x3*x3+y3*y3)*(y2-y1);
+    floatT C = (x1*x1+y1*y1)*(x2-x3) + (x2*x2+y2*y2)*(x3-x1) + (x3*x3+y3*y3)*(x1-x2);
+    floatT D = (x1*x1+y1*y1)*(x3*y2-x2*y3) + (x2*x2+y2*y2)*(x1*y3-x3*y1) + (x3*x3+y3*y3)*(x2*y1-x1*y2);
+    ct.x[0] = -B/(2*A);
+    ct.x[1] = -C/(2*A);
+    rad = sqrt((B*B+C*C-4*A*D)/(4*A*A));
+    //change back
+    ct.x[2] = aa[2];
+    ct = dot3<pointT>(T, ct);
   }
 
   sphere(pointT a, pointT b) {
@@ -488,14 +576,6 @@ public:
   inline bool contain(pointT p) {
     return p.pointDist(ct) <= rad*1.000001;}//todo, sqrt optimize
 };
-
-// template <int dim>
-// static std::ostream& operator<<(std::ostream& os, sphere v) {
-//   os << "(";
-//   os <<  v.center() << ", r = " << v.radius();
-//   os << ")";
-//   return os;
-// }
 
 // A class for circle
 class circle {
@@ -538,14 +618,6 @@ public:
   inline bool contain(pointT p) {
     return p.pointDist(ct) <= rad*1.000001;}//todo, sqrt optimize
 };
-
-// template <int dim>
-// static std::ostream& operator<<(std::ostream& os, circle v) {
-//   os << "(";
-//   os <<  v.center() << ", r = " << v.radius();
-//   os << ")";
-//   return os;
-// }
 
 inline vect3d onParabola(vect2d v) {
   return vect3d(v.x(), v.y(), v.x()*v.x() + v.y()*v.y());}
@@ -641,4 +713,3 @@ inline point2d triangleCircumcenter(point2d a, point2d b, point2d c) {
 }
 
 #endif // _BENCH_GEOM_INCLUDED
-

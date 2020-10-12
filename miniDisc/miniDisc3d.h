@@ -19,8 +19,8 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#ifndef MINI_DISC_3D
-#define MINI_DISC_3D
+#ifndef MINI_DISC_3D_H
+#define MINI_DISC_3D_H
 
 #include "pbbs/utils.h"
 #include "pbbs/sequence.h"
@@ -71,9 +71,86 @@ sphere miniDisc3DSerial(point<3>* P, intT n) {
   return disc;
 }
 
+sphere miniDisc3DParallel(point<3>* P, intT n, point<3> pi, point<3> pj, point<3> pk, intT* flag) {
+  typedef sphere discT;
+  typedef point<3> pointT;
+
+  auto disc = discT(pi, pj, pk);
+  auto process = [&](pointT p)
+    {
+     if (!disc.contain(p)) return true;
+     else return false;
+    };
+  auto cleanUp = [&](pointT* A, intT ci)
+    {
+     disc = discT(pi, pj, pk, P[ci]);
+    };
+  parallel_prefix(P, n, process, cleanUp, false, flag);
+
+  return disc;
+}
+
+sphere miniDisc3DParallel(point<3>* P, intT n, point<3> pi, point<3> pj, intT* flag) {
+  typedef sphere discT;
+  typedef point<3> pointT;
+
+  auto disc = discT(pi, pj);
+  auto process = [&](pointT p)
+    {
+     if (!disc.contain(p)) return true;
+     else return false;
+    };
+  auto cleanUp = [&](pointT* A, intT ci)
+    {
+     disc = miniDisc3DParallel(A, ci, pi, pj, A[ci], flag);
+     //swap(P[0], P[ci]);
+    };
+  parallel_prefix(P, n, process, cleanUp, false, flag);
+
+  return disc;
+}
+
+sphere miniDisc3DParallel(point<3>* P, intT n, point<3> pi, intT* flag) {
+  typedef sphere discT;
+  typedef point<3> pointT;
+
+  auto disc = discT(P[0], pi);
+  auto process = [&](pointT p)
+    {
+     if (!disc.contain(p)) return true;
+     else return false;
+    };
+  auto cleanUp = [&](pointT* A, intT ci)
+    {
+     disc = miniDisc3DParallel(A, ci, pi, A[ci], flag);
+     //swap(P[1], P[ci]);
+    };
+  parallel_prefix(P, n, process, cleanUp, false, flag);
+
+  return disc;
+}
 
 sphere miniDisc3DParallel(point<3>* P, intT n) {
-  miniDisc3DSerial(P, n);
+  typedef sphere discT;
+  typedef point<3> pointT;
+
+  intT* flag = newA(intT, n+1);
+
+  auto disc = discT(P[0], P[1]);
+  auto process = [&](pointT p)
+    {
+     if (!disc.contain(p)) return true;
+     else return false;
+    };
+  auto cleanUp = [&](pointT* A, intT ci)
+    {
+     disc = miniDisc3DParallel(A, ci, A[ci], flag);
+     //swap(P[2], P[ci]);
+    };
+  parallel_prefix(P, n, process, cleanUp, true, flag);
+
+  free(flag);
+  return disc;
 }
 
 #endif

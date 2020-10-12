@@ -19,8 +19,8 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#ifndef MINI_DISC_2D
-#define MINI_DISC_2D
+#ifndef MINI_DISC_2D_H
+#define MINI_DISC_2D_H
 
 #include "pbbs/utils.h"
 #include "pbbs/sequence.h"
