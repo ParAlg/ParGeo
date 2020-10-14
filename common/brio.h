@@ -27,15 +27,18 @@
 template<int dim, class T>
 void brioSortSerial(T* A, intT n, intT prefix=1000) {
   if (n < prefix) return;
-  spatialSort<dim, T>(A+n/2, n-n/2);
-  brioSortSerial<dim, T>(A, n/2, prefix);
+  intT x = n/2;
+  spatialSortSerial<dim, T>(A+x, n-x);
+  brioSortSerial<dim, T>(A, x, prefix);
 }
 
 template<int dim, class T>
 void brioSort(T* A, intT n, intT prefix=1000) {
   if (n < prefix) return;
-  cilk_spawn spatialSort<dim, T>(A+n/2, n-n/2);
-  brioSort<dim, T>(A, n/2, prefix);
+  if (n < 2000) return brioSortSerial<dim, T>(A, n, prefix);
+  intT x = n/2;
+  cilk_spawn spatialSort<dim, T>(A+x, n-x);
+  brioSort<dim, T>(A, x, prefix);
   cilk_sync;
 }
 

@@ -109,8 +109,8 @@ inline intT splitItemParallel(T* A, intT n, floatT xM, intT k, T* B, intT* flag)
 // T - a spatial data type of k-dim, supports coordinate(i) to get i-th dim
 // cmpT - a spatial comparator that can take in dimension
 template<int dim, class T>
-void spatialSortSerial(T* A, intT n) {
-  if (n < 16) return;
+void spatialSortSerial(T* A, intT n, intT thresh=16) {
+  if (n <= thresh) return;
 
   auto bb = boundingBoxSerial<dim, T>(A, n);
   auto pMin = bb.first; auto pMax = bb.second;
@@ -122,13 +122,13 @@ void spatialSortSerial(T* A, intT n) {
       k = kk;}}
   xM = (pMax[k]+pMin[k])/2;
   intT median = splitItemSerial<dim, T>(A, n, xM, k);
-  spatialSortSerial<dim, T>(A, median);
-  spatialSortSerial<dim, T>(A+median, n-median);
+  spatialSortSerial<dim, T>(A, median, thresh);
+  spatialSortSerial<dim, T>(A+median, n-median, thresh);
 }
 
 template<int dim, class T>
-void spatialSort(T* A, intT n, T* B=NULL, intT* flag=NULL) {
-  if (n < 16) return;
+void spatialSort(T* A, intT n, intT thresh=16, T* B=NULL, intT* flag=NULL) {
+  if (n <= thresh) return;
   if (n < 2000) return spatialSortSerial<dim, T>(A, n);
 
   bool freeB = false;
@@ -152,8 +152,8 @@ void spatialSort(T* A, intT n, T* B=NULL, intT* flag=NULL) {
   xM = (pMax[k]+pMin[k])/2;
   intT median = splitItemParallel<dim, T>(A, n, xM, k, B, flag);
 
-  cilk_spawn spatialSort<dim, T>(A, median, B, flag);
-  spatialSort<dim, T>(A+median, n-median, B+median, flag+median);
+  cilk_spawn spatialSort<dim, T>(A, median, thresh, B, flag);
+  spatialSort<dim, T>(A+median, n-median, thresh, B+median, flag+median);
   cilk_sync;
 
   if(freeB) free(B);

@@ -20,6 +20,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "pbbs/gettime.h"
+#include "pbbs/sampleSort.h"
 #include "geometry.h"
 #include "spatialSort.h"
 #include "brio.h"
@@ -35,15 +36,32 @@ void bench(point<dim>* P, intT n) {
   cout << "test spatialSort " << n << ", dim " << dim << " points" << endl;
   if (n < 2) abort();
 
+  pointT* Q = newA(pointT, n);
+  par_for (int i=0; i<n; ++i) Q[i] = P[i];
+
   timing t0;
   t0.start();
 
-  //for (int i=0; i<n; ++i) cout << P[i] << " "; cout << endl << endl;
-  //spatialSort<dim, pointT>(P, n);
   brioSort<dim, pointT>(P, n, 1000);
-  //for (int i=0; i<n; ++i) cout << P[i] << " "; cout << endl;
-
   cout << "spatial-sort-time = " << t0.stop() << endl;
+
+  auto cmp = [&](pointT a, pointT b)
+             {
+               if (a[0] < b[0]) {
+                 return true;
+               } else {
+                 return false;
+               }
+             };
+  sampleSort(P, n, cmp);
+  sampleSort(Q, n, cmp);
+  for (int i=0; i<n; ++i) {
+    if(Q[i] != P[i]) {
+      cout << "something wrong" << endl;
+      abort();
+    }
+  }
+  free(Q);
 }
 
 template void bench<2>(point<2>*, intT);
