@@ -154,10 +154,15 @@ public:
     for (int i=0; i<_dim; ++i) xx += (x[i]-p.x[i])*(x[i]-p.x[i]);
     return sqrt(xx);
   }
-  floatT dist(pointT p) {
+  inline floatT dist(pointT p) {
     floatT xx=0;
     for (int i=0; i<_dim; ++i) xx += (x[i]-p.x[i])*(x[i]-p.x[i]);
     return sqrt(xx);
+  }
+  inline floatT distSqr(pointT p) {
+    floatT xx=0;
+    for (int i=0; i<_dim; ++i) xx += (x[i]-p.x[i])*(x[i]-p.x[i]);
+    return xx;
   }
   floatT dot(pointT p2) {
     floatT r = 0;
@@ -248,6 +253,8 @@ public:
   point2d(pointT pp): p(pp) {};
   point2d(vect2d v) {p.x[0] = v.x(); p.x[1] = v.y();};
   point2d(floatT* pp) {p.x[0] = pp[0]; p.x[1] = pp[1];};
+  floatT* coordinate() {return p.x;}
+  floatT coordinate(int i) {return p[i];}
   void print() {cout << ":(" << x() << "," << y() << "):";}
   //todo s
   point2d operator+(vect2d op2) {return point2d(x() + op2.x(), y() + op2.y());}//todo

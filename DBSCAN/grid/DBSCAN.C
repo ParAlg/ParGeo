@@ -27,23 +27,18 @@
 #include "grid.h"
 #include "cell.h"
 #include "pbbs/gettime.h"
+#include "pbbs/unionFind.h"
+#include "pbbs/utils.h"
+#include "pbbs/parallel.h"
+#include "kdTree.h"
+#include "kdNode.h"
+#include "coreBccp.h"
+#include "spatialSort.h"
+#include "bruteforce.h"
+
+//todo in-place kdtree (if slow)
 
 using namespace std;
-
-template<int dim>
-struct iPoint {
-  typedef point<dim> pointT;
-  typedef iPoint<dim> iPointT;
-  pointT p;
-  intT i;
-  iPoint(pointT pp, intT ii):p(pp), i(ii) {}
-  inline floatT* coordinate() {return p.coordinate();}
-  inline floatT coordinate(intT i) {return p.coordinate(i);}
-  floatT operator[](int i) {return coordinate(i);}
-  inline floatT pointDist(iPointT p2) {return p.pointDist(p2.p);}
-  inline bool isEmpty() {return p.isEmpty();}
-  inline void setEmpty() {return p.setEmpty();}
-};
 
 // *************************************************************
 //    DRIVER
@@ -60,11 +55,13 @@ struct iPoint {
 template<int dim>
 intT* DBSCAN(point<dim>* P, intT n, floatT epsilon, intT minPts) {
   static const bool serial = false;
+  static const bool checker = true;
 
   typedef point<dim> pointT;
-  typedef iPoint<dim> iPointT;
-  typedef cell<dim, iPointT> cellT;
-  typedef grid<dim, iPointT> gridT;
+  typedef cell<dim, pointT> cellT;
+  typedef grid<dim, pointT> gridT;
+
+  //spatialSort<dim, pointT>(P, n);
 
   cout << "DBSCAN of " << n << ", dim " << dim << " points" << endl;
   cout << "epsilon = " << epsilon << endl;
@@ -73,57 +70,155 @@ intT* DBSCAN(point<dim>* P, intT n, floatT epsilon, intT minPts) {
 
   timing t0; t0.start();
 
-  auto PP = newA(iPointT, n);
-  par_for(intT i=0; i<n; ++i) {
-    PP[i] = iPointT(P[i], i);}
-
   pointT pMin;
   if (serial) pMin = pMinSerial(P, n);
   else pMin = pMinParallel(P, n);
-  auto G = new gridT(n+1, pMin, epsilon/sqrt(dim));
-  if(serial) G->insertSerial(PP, n);
-  else G->insertParallel(PP, n);//todo, buffer
 
+  auto G = new gridT(n+1, pMin, epsilon/sqrt(dim));
+  G->insertParallel(P, n);//todo, buffer
+  cout << "num-cell = " << G->numCell() << endl;
   cout << "compute-grid = " << t0.next() << endl;
 
   //mark core
   intT* coreFlag = newA(intT, n);
   par_for(intT i=0; i<n; ++i) coreFlag[i] = -1;
 
-  auto isCore = [&](iPointT p) {
-                  coreFlag[p.i] = 1;
+  auto isCore = [&](pointT *p) {
+                  coreFlag[p-P] = 1;
+                  return false;
                 };
-  auto fullBox = [&](cellT* c) {
-                   if (c->size() >= minPts) {
-                     c->pointMap(isCore);}
-                 };
-  G->allCellMap(fullBox);
+
+  par_for(intT i=0; i<G->numCell(); ++i) {
+    cellT* c = G->getCell(i);
+    if (c->size() >= minPts) c->pointMap(isCore);
+  }
 
   par_for(intT i=0; i<n; ++i) {
     if (coreFlag[i] < 0) {
       intT count = 0;
-      auto isCore = [&] (iPointT p) {
+      auto isCore = [&] (pointT p) {
                       if(count >= minPts) return true;
-                      if(p.pointDist(PP[i]) <= epsilon) {//todo sqrt opt
+                      if(p.pointDist(P[i]) <= epsilon) {//todo sqrt opt
                         count ++;}
                       return false;};
-      G->nghPointMap(PP[i].coordinate(), isCore);
+      G->nghPointMap(P[i].coordinate(), isCore);
       if (count >= minPts) coreFlag[i] = 1;
       else coreFlag[i] = 0;
     }
   }
 
-  cout << "mark-core = " << t0.next() << endl;
+  cout << "mark-core-time = " << t0.next() << endl;
+
+  if (checker) {
+    auto cfCheck = coreBF<dim, pointT>(P, n, epsilon, minPts);
+    intT numCore = 0;
+    for (intT i=0; i<n; ++i) {
+      if (cfCheck[i] != coreFlag[i]) {
+        cout << "error, core flag mismatch, abort()" << endl;
+        abort();
+      }
+      if(coreFlag[i]) numCore ++;
+    }
+    cout << "num-core = " << numCore << endl;
+    free(cfCheck);
+    cout << "mark-core-correctness-checked = " << t0.next() << endl;
+  }
 
   //cluster core
+  //determine core cells
+  auto ccFlag = newA(intT, G->numCell());
+  par_for(intT i=0; i<G->numCell(); ++i) {
+    auto ci = G->getCell(i);
+    ccFlag[i] = 0;
+    auto hasCore = [&](pointT *p) {
+                     if (coreFlag[p-P]) {
+                       ccFlag[i] = 1;
+                       return true;
+                     }
+                     return false;
+                   };
+    ci->pointMap(hasCore);
+  }
+
+  typedef kdTree<dim, pointT> treeT;
+  typedef kdNode<dim, pointT> nodeT;
+  typedef typename nodeT::bcp bcpT;
+  auto trees = newA(treeT*, G->numCell());
+  par_for(intT i=0; i<G->numCell(); ++i) trees[i] = NULL;
+
+  // auto degCmp = [&](intT i, intT j) {
+  //                 return G->getCell(i)->size() < G->getCell(j)->size();
+  //               };
+  // auto ordering = newA(intT, G->numCell());
+  // par_for(intT i=0; i<G->numCell(); ++i) ordering[i] = i;
+  //sampleSort(ordering, G->numCell(), degCmp);
+
+  auto uf = unionFind(G->numCell());
+
+  floatT bcpTotalTime = 0; timing t1;
+  par_for(intT i=0; i<G->numCell(); ++i) {
+    if (ccFlag[i]) {
+      auto ti = trees[i];
+      auto procTj = [&](cellT* cj) {
+                      intT j = cj - G->getCell(0);
+                      auto tj = trees[j];
+                      if (j < i && ccFlag[j] &&
+                          uf.find(i) != uf.find(j)) {
+                        if(hasEdge<cellT, treeT, bcpT, pointT>(i, j, coreFlag, P, epsilon, G->getCell(0), trees)) {
+                          uf.link(i, j);
+                        }
+                      }
+                      return false;
+                    };
+      //G->nghCellMap(G->getCell(ordering[i]), procTj);
+      G->nghCellMap(G->getCell(i), procTj);
+    }
+  }
+
+  //free tree
+  par_for(intT i=0; i<G->numCell(); ++i) {
+    if (trees[i]) delete trees[i];
+  }
+
   intT* cluster = newA(intT, n);
   par_for(intT i=0; i<n; ++i) cluster[i] = -1;
 
+  par_for(intT i=0; i<G->numCell(); ++i) {
+    auto cid = G->getCell(uf.find(i))->getItem() - P;//id of first point
+    auto clusterCore = [&](pointT* p){
+                         if (coreFlag[p - P])
+                           cluster[p - P] = cid;
+                         return false;
+                       };
+    G->getCell(i)->pointMap(clusterCore);
+  }
+  cout << "cluster-core-time = " << t0.next() << endl;
+
+  if (checker) {
+    auto ccCheck = clusterCoreBF<dim, pointT>(P, n, epsilon, minPts, coreFlag);
+    for (intT i=0; i<n; ++i) {
+      for (intT j=i+1; j<n; ++j) {
+        bool sameClu = (cluster[i] >= 0) && (cluster[i] == cluster[j]);
+        bool sameCluCheck = (ccCheck[i] >= 0) && (ccCheck[i] == ccCheck[j]);
+        if (sameClu != sameCluCheck) {
+          cout << "error, cluster core mismatch, abort()" << endl;
+          abort();
+        }
+      }
+    }
+    free(ccCheck);
+    cout << "cluster-core-correctness-checked = " << t0.next() << endl;
+  }
+
+  //cluster border
+  //assign border point to closest core point
+
+
   free(coreFlag);
+  free(ccFlag);
+  free(trees);
   delete G;
-  free(PP);
-  intT* dummy;
-  return dummy;
+  return cluster;
 }
 
 template intT* DBSCAN<2>(point<2>*, intT, floatT, intT);

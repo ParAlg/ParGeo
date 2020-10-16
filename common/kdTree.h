@@ -65,11 +65,11 @@ class kdTree {
     if (parallel) {
       objT** scratch = newA(objT*, n);
       intT* flags = newA(intT, n);
-      root[0] = nodeT(items, n, root+1, scratch, flags, noCoarsen);
+      root[0] = nodeT(items, n, root+1, scratch, flags, noCoarsen ? 1 : 16);
       free(scratch);
       free(flags);
     } else {
-      root[0] = nodeT(items, n, root+1, noCoarsen);}
+      root[0] = nodeT(items, n, root+1, noCoarsen ? 1 : 16);}
   }
   ~kdTree() {
     free(items);
@@ -100,14 +100,24 @@ class kdTree {
   }
 
   template<class func, class func2>
-  void rangeNeighbor(objT* query, floatT r, func term, func2 doTerm) {
+  vector<objT*>* rangeNeighbor(objT* query, floatT r, func term, func2 doTerm, bool cache=false) {
     pointT pMin1 = pointT();
     pointT pMax1 = pointT();
     floatT* center = query->coordinate();
     for (int i=0; i<dim; ++i) {
       pMin1.updateX(i, center[i]-r);
       pMax1.updateX(i, center[i]+r);}
-    root->rangeNeighbor(pMin1, pMax1, r, term, doTerm);
+    if(cache) {
+      vector<objT*>* accum = new vector<objT*>();
+      root->rangeNeighbor(pMin1, pMax1, r, accum);
+      for (intT i=0; i<accum->size(); ++i) {
+        if(doTerm(accum->at(i))) break;
+      }
+      return accum;
+    } else {
+      root->rangeNeighbor(pMin1, pMax1, r, term, doTerm);
+      return NULL;
+    }
   }
 
   objT** kNN(objT* q, intT k, objT** R=NULL) {

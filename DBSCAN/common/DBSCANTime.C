@@ -82,7 +82,7 @@ int main(int argc, char* argv[]) {
   bool readCsv = csvCol > 0;
 
   int minPts = P.getOptionIntValue("-minpts",1);
-  int epsilon = P.getOptionIntValue("-eps",1);
+  floatT epsilon = P.getOptionDoubleValue("-eps",1);
 
   int dim;
   if(!readCsv) dim = readPointsDimensionFromFile(iFile);
