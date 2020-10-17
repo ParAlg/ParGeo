@@ -70,3 +70,24 @@ intT* clusterCoreBF(pointT* P, intT n, floatT epsilon, intT minPts, intT* coreFl
   // cout << endl;
   return cluster;
 }
+
+template<int dim, class pointT>
+void clusterBorderBF(pointT* P, intT n, floatT epsilon, intT minPts, intT* coreFlag, intT* clusterb) {
+  floatT thresh = epsilon*epsilon;
+  par_for(intT i=0; i<n; ++i) {
+    if (!coreFlag[i]) {
+      intT cid = -1;
+      floatT cDistSqr = floatMax();
+      for(intT j=0; j<n; ++j) {
+        if (coreFlag[j]) {
+          auto dist = P[i].distSqr(P[j]);
+          if (dist <= thresh && dist < cDistSqr) {
+            cid = clusterb[j];
+            cDistSqr = dist;
+          }
+        }
+      }
+      clusterb[i] = cid;
+    }
+  }
+}

@@ -33,7 +33,6 @@
 #include "kdTree.h"
 #include "kdNode.h"
 #include "coreBccp.h"
-#include "spatialSort.h"
 #include "bruteforce.h"
 
 //todo in-place kdtree (if slow)
@@ -54,14 +53,11 @@ using namespace std;
  */
 template<int dim>
 intT* DBSCAN(point<dim>* P, intT n, floatT epsilon, intT minPts) {
-  static const bool serial = false;
-  static const bool checker = true;
+  static const bool checker = false;
 
   typedef point<dim> pointT;
   typedef cell<dim, pointT> cellT;
   typedef grid<dim, pointT> gridT;
-
-  //spatialSort<dim, pointT>(P, n);
 
   cout << "DBSCAN of " << n << ", dim " << dim << " points" << endl;
   cout << "epsilon = " << epsilon << endl;
@@ -70,12 +66,11 @@ intT* DBSCAN(point<dim>* P, intT n, floatT epsilon, intT minPts) {
 
   timing t0; t0.start();
 
-  pointT pMin;
-  if (serial) pMin = pMinSerial(P, n);
-  else pMin = pMinParallel(P, n);
+  floatT epsSqr = epsilon*epsilon;
+  pointT pMin = pMinParallel(P, n);
 
   auto G = new gridT(n+1, pMin, epsilon/sqrt(dim));
-  G->insertParallel(P, n);//todo, buffer
+  G->insertParallel(P, n);
   cout << "num-cell = " << G->numCell() << endl;
   cout << "compute-grid = " << t0.next() << endl;
 
@@ -96,9 +91,9 @@ intT* DBSCAN(point<dim>* P, intT n, floatT epsilon, intT minPts) {
   par_for(intT i=0; i<n; ++i) {
     if (coreFlag[i] < 0) {
       intT count = 0;
-      auto isCore = [&] (pointT p) {
+      auto isCore = [&] (pointT *p) {
                       if(count >= minPts) return true;
-                      if(p.pointDist(P[i]) <= epsilon) {//todo sqrt opt
+                      if(p->distSqr(P[i]) <= epsSqr) {//todo sqrt opt
                         count ++;}
                       return false;};
       G->nghPointMap(P[i].coordinate(), isCore);
@@ -125,7 +120,6 @@ intT* DBSCAN(point<dim>* P, intT n, floatT epsilon, intT minPts) {
   }
 
   //cluster core
-  //determine core cells
   auto ccFlag = newA(intT, G->numCell());
   par_for(intT i=0; i<G->numCell(); ++i) {
     auto ci = G->getCell(i);
@@ -175,7 +169,6 @@ intT* DBSCAN(point<dim>* P, intT n, floatT epsilon, intT minPts) {
     }
   }
 
-  //free tree
   par_for(intT i=0; i<G->numCell(); ++i) {
     if (trees[i]) delete trees[i];
   }
@@ -210,9 +203,47 @@ intT* DBSCAN(point<dim>* P, intT n, floatT epsilon, intT minPts) {
     cout << "cluster-core-correctness-checked = " << t0.next() << endl;
   }
 
-  //cluster border
-  //assign border point to closest core point
+  intT* cbCheck; if (checker) {
+    cbCheck = newA(intT, n);
+    par_for(intT i=0; i<n; ++i) cbCheck[i] = cluster[i];
+  }
 
+  //cluster border to closest core point
+  par_for(intT i=0; i<n; ++i) {
+    if (!coreFlag[i]) {
+      intT cid = -1;
+      floatT cDistSqr = floatMax();
+      auto closestCore = [&] (pointT* p) {
+                           if (coreFlag[p-P]) {
+                             auto dist = p->distSqr(P[i]);
+                             if (dist <= epsSqr && dist < cDistSqr) {
+                               cDistSqr = dist;
+                               cid = cluster[p-P];}
+                           }
+                           return false;};
+      G->nghPointMap(P[i].coordinate(), closestCore);
+      cluster[i] = cid;
+    }
+  }
+  //for (intT i=0; i<n; ++i) cout << cluster[i] << " ";cout << endl << endl;
+  cout << "cluster-border-time = " << t0.next() << endl;
+
+  if (checker) {
+    clusterBorderBF<dim, pointT>(P, n, epsilon, minPts, coreFlag, cbCheck);
+    //for (intT i=0; i<n; ++i) cout << cbCheck[i] << " ";cout << endl << endl;
+    for (intT i=0; i<n; ++i) {
+      for (intT j=i+1; j<n; ++j) {
+        bool sameClu = (cluster[i] >= 0) && (cluster[i] == cluster[j]);
+        bool sameCluCheck = (cbCheck[i] >= 0) && (cbCheck[i] == cbCheck[j]);
+        if (sameClu != sameCluCheck) {
+          cout << "error, cluster border mismatch, abort()" << endl;
+          abort();
+        }
+      }
+    }
+    free(cbCheck);
+    cout << "cluster-border-correctness-checked = " << t0.next() << endl;
+  }
 
   free(coreFlag);
   free(ccFlag);

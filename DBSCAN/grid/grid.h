@@ -1,4 +1,6 @@
-// Copyright (c) 2020 Yiqiu Wang
+// This code is part of the project "Theoretically Efficient and Practical
+// Parallel DBSCAN"
+// Copyright (c) 2020 Yiqiu Wang, Yan Gu, Julian Shun
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the
@@ -65,7 +67,6 @@ struct grid {
   typedef Table<cellHash<dim, objT>,intT> tableT;
   typedef Table<aFloatHash<dim, objT>,intT> objTableT;
   typedef kdTree<dim, cellT> treeT;
-  typedef pointPair<dim> pointPairT;
 
   static const bool noRandom = true;
 
@@ -141,8 +142,9 @@ struct grid {
                    if (!nbr->isEmpty()
                        && nbr->actualSize()>0) {
                      for(intT jj=0;jj<nbr->size();++jj) {
-                       if(!nbr->P[jj].isEmpty()) {
-                         if(f(nbr->P[jj])) return true;}//stop iteration
+                       //if(!nbr->P[jj].isEmpty()) {
+                         if(f(nbr->getItem(jj))) return true;
+                       //}//stop iteration
                      }
                    }
                    return false;};//todo, optimize

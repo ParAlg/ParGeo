@@ -1,6 +1,6 @@
-// This code is part of the project "A Parallel Batch-Dynamic Data Structure
-// for the Closest Pair Problem"
-// Copyright (c) 2020 Yiqiu Wang, Shangdi Yu, Yan Gu, Julian Shun
+// This code is part of the project "Theoretically Efficient and Practical
+// Parallel DBSCAN"
+// Copyright (c) 2020 Yiqiu Wang, Yan Gu, Julian Shun
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the
@@ -29,78 +29,8 @@
 #include "pbbs/sequence.h"
 
 // *************************************************************
-//    Point pair
-// *************************************************************
-
-template<int dim>
-struct pointPair {
-  typedef point<dim> pointT;
-  typedef pointPair<dim> pointPairT;
-  typedef double floatT;
-  floatT dist;
-  pointT u,v;
-  pointPair(): dist(floatMax()) {u=pointT();v=pointT();}
-  pointPair(pointT uu, pointT vv, floatT distt): u(uu), v(vv), dist(distt) {}
-  pointPair(pointT uu, pointT vv): u(uu), v(vv) {
-    dist = u.pointDist(v);}
-  bool isEmpty() {return dist==floatMax();}
-  void closer(pointT uu, pointT vv) {
-    floatT distt = uu.pointDist(vv);
-    if (distt<dist) {
-      u = uu;
-      v = vv;
-      dist = distt;}
-  }
-  void closer(pointT uu, pointT vv, floatT distt) {
-    if (distt<dist) {
-      u = uu;
-      v = vv;
-      dist = distt;}
-  }
-  void closer(pointPairT pair) {
-    if (pair.dist < dist) {
-      u = pair.u;
-      v = pair.v;
-      dist = pair.dist;}
-  }
-  friend bool operator<(pointPairT a, pointPairT b) {
-    if (a.dist == b.dist) {
-      for (int i=0; i<dim; ++i) {
-        if(a.u[i]==b.u[i]) continue;
-        else return a.u[i]<b.u[i];}
-      return false;//
-    }
-    else return a.dist < b.dist;}
-};
-
-//Deprecate 0827
-template<int dim>
-struct getDist {
-  pointPair<dim> *A;
-  getDist(pointPair<dim> *AA): A(AA) {}
-  double operator() (intT i){
-    return A[i].dist;
-  }
-};
-
-template<int dim>
-struct pointPairCmp {
-  typedef pointPair<dim> pointPairT;
-  bool operator() (pointPairT i, pointPairT j){
-    return i.dist < j.dist;
-  }
-};
-
-// *************************************************************
 //    Point manipulation in a grid
 // *************************************************************
-
-template<int dim>
-inline bool samePoint(double* i, double* j) {
-  for (intT ii=0; ii<dim; ++ii) {
-    if (abs(i[ii]-j[ii]) > 0.000001) return false;}
-  return true;
-}
 
 //hash function for float array to a cell
 template<int dim>
@@ -182,41 +112,6 @@ struct aFloatHash {
   //inline int diffPoint(floatT* p1, floatT* p2) {return hashF->comparePoint(p1, p2);}
   bool replaceQ(eType c1, eType c2) {return 1;}
 };
-
-// *************************************************************
-//    Bruteforce
-// *************************************************************
-
-template<int dim>
-pointPair<dim> bruteForceParallel(point<dim>* P, intT n) {
-  static const intT intMax = numeric_limits<intT>::max();
-  pointPair<dim>* A = newA(pointPair<dim>, n*n);
-  par_for(intT i = 0; i < n; ++ i) {
-    for(intT j = 0; j < n; ++ j) {
-      if (i == j) {
-        A[i+j*n] = pointPair<dim>(P[i], P[j], intMax);
-      } else {
-        A[i+j*n] = pointPair<dim>(P[i], P[j]);
-      }
-    }
-  }
-  intT I = sequence::minIndex<double, intT, getDist<dim>>(0, n*n, getDist<dim>(A));
-  auto R = A[I];
-  free(A);
-  return R;
-}
-
-template<int dim>
-pointPair<dim> bruteForceSerial(point<dim>* P, intT n) {
-  static const intT intMax = numeric_limits<intT>::max();
-  pointPair<dim> A = pointPair<dim>(P[0], P[1], intMax);
-  par_for(intT i = 0; i < n; ++ i) {
-    for(intT j = i+1; j < n; ++ j) {
-      A.closer(P[i], P[j]);
-    }
-  }
-  return A;
-}
 
 // *************************************************************
 //   Misc
