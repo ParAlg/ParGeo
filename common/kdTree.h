@@ -99,8 +99,8 @@ class kdTree {
     root->rangeNeighbor(pMin1, pMax1, r, f);
   }
 
-  template<class func, class func2>
-  vector<objT*>* rangeNeighbor(objT* query, floatT r, func term, func2 doTerm, bool cache=false) {
+  template<class vecT, class func, class func2>
+  vecT* rangeNeighbor(objT* query, floatT r, func term, func2 doTerm, bool cache=false, vecT* accum=NULL) {
     pointT pMin1 = pointT();
     pointT pMax1 = pointT();
     floatT* center = query->coordinate();
@@ -108,7 +108,7 @@ class kdTree {
       pMin1.updateX(i, center[i]-r);
       pMax1.updateX(i, center[i]+r);}
     if(cache) {
-      vector<objT*>* accum = new vector<objT*>();
+      if(!accum) accum = new vecT();
       root->rangeNeighbor(pMin1, pMax1, r, accum);
       for (intT i=0; i<accum->size(); ++i) {
         if(doTerm(accum->at(i))) break;

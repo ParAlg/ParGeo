@@ -29,17 +29,12 @@
 #include "shared.h"
 #include "kdTree.h"
 #include "kdNode.h"
+#include "jeAllocator.h"
 #include "pbbs/sequence.h"
 #include "pbbs/ndHash.h"
 #include "pbbs/sampleSort.h"
 #include "pbbs/quickSort.h"
 #include "pbbs/parallel.h"
-
-#ifdef USEJEMALLOC
-#include<jemalloc/jemalloc.h>
-#define jeNewA(__E,__n) (__E*) je_custom_prefix_malloc((__n)*sizeof(__E))
-#define jeFree(__E) je_custom_prefix_free(__E)
-#endif
 
 //a less comparator based on grid
 template<int dim, class pointT, class geoPointT>
@@ -67,6 +62,11 @@ struct grid {
   typedef Table<cellHash<dim, objT>,intT> tableT;
   typedef Table<aFloatHash<dim, objT>,intT> objTableT;
   typedef kdTree<dim, cellT> treeT;
+#ifdef USEJEMALLOC
+  typedef vector<cellT*, je_allocator<intT>> cellBuf;
+#else
+  typedef vector<cellT*> cellBuf;
+#endif
 
   static const bool noRandom = true;
 
@@ -78,10 +78,7 @@ struct grid {
   tableT* table=NULL;
   treeT* tree=NULL;
   intT totalPoints;
-  vector<cellT*> **nbrCache;
-
-  inline void resetCells() {
-    }
+  cellBuf **nbrCache;
 
   /**
   *   Grid constructor.
@@ -93,7 +90,7 @@ struct grid {
     pMin(pMinn), cellCapacity(cellMax), totalPoints(0), r(rr) {
 
     cells = newA(cellT, cellCapacity);
-    nbrCache = newA(vector<cellT*>*, cellCapacity);
+    nbrCache = newA(cellBuf*, cellCapacity);
     intT initSize = dim*dim;
     par_for(intT i=0; i<cellCapacity; ++i) {
       nbrCache[i] = NULL;
@@ -142,9 +139,7 @@ struct grid {
                    if (!nbr->isEmpty()
                        && nbr->actualSize()>0) {
                      for(intT jj=0;jj<nbr->size();++jj) {
-                       //if(!nbr->P[jj].isEmpty()) {
                          if(f(nbr->getItem(jj))) return true;
-                       //}//stop iteration
                      }
                    }
                    return false;};//todo, optimize
@@ -154,7 +149,7 @@ struct grid {
         if(fWrap(accum->at(i))) break;
       }
     } else {
-      nbrCache[bait-cells] = tree->rangeNeighbor(bait, r*2*1.0000001, fStop, fWrap, true);
+      nbrCache[bait-cells] = tree->rangeNeighbor(bait, r*2*1.0000001, fStop, fWrap, true, nbrCache[bait-cells]);
     }
   }
 
@@ -172,7 +167,7 @@ struct grid {
         if(fWrap(accum->at(i))) break;
       }
     } else {
-      nbrCache[bait-cells] = tree->rangeNeighbor(bait, r*2*1.0000001, fStop, fWrap, true);
+      nbrCache[bait-cells] = tree->rangeNeighbor(bait, r*2*1.0000001, fStop, fWrap, true, nbrCache[bait-cells]);
     }
   }
 
