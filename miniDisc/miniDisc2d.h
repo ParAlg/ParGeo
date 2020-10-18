@@ -28,6 +28,8 @@
 #include "check.h"
 #include "prefix.h"
 
+//intT magic = 0;
+
 circle miniDisc2DSerial(point<2>* P, intT n, point<2> pi, point<2> pj) {
   typedef circle circleT;
   auto circle = circleT(pi, pj);
@@ -36,6 +38,8 @@ circle miniDisc2DSerial(point<2>* P, intT n, point<2> pi, point<2> pj) {
     if (!circle.contain(P[i])) {
       circle = circleT(pi, pj, P[i]);
       swap(P[0], P[i]);
+      //swap(P[rand() % 20], P[i]);
+      //swap(P[magic++ % 50], P[i]);
     }}
   return circle;
 }
@@ -48,6 +52,8 @@ circle miniDisc2DSerial(point<2>* P, intT n, point<2> pi) {
     if (!circle.contain(P[j])) {
       circle = miniDisc2DSerial(P, j, pi, P[j]);
       swap(P[1], P[j]);
+      //swap(P[rand() % 20], P[j]);
+      //swap(P[magic++ % 30], P[j]);
     }
   }
   return circle;
@@ -62,6 +68,8 @@ circle miniDisc2DSerial(point<2>* P, intT n) {
       cout << "ci = " << i << endl;
       circle = miniDisc2DSerial(P, i, P[i]);
       swap(P[2], P[i]);
+      //swap(P[rand() % 20], P[i]);
+      //swap(P[magic++ % 20], P[i]);
     }
   }
   return circle;
@@ -182,13 +190,15 @@ circle miniDisc2DParallel(point<2>* P, intT n, point<2> pi, intT* flag=NULL) {
   return circle;
 }
 
+circle miniDisc2DBF(point<2>* P, intT n);
+
 circle miniDisc2DParallel(point<2>* P, intT n) {
   typedef circle circleT;
   typedef point<2> pointT;
-
   intT* flag = newA(intT, n+1);
 
   auto circle = circleT(P[0], P[1]);
+  //auto circle = miniDisc2DBF(P, 10);
   auto process = [&](pointT p) {
     if (!circle.contain(p)) return true;
     else return false;
@@ -198,9 +208,49 @@ circle miniDisc2DParallel(point<2>* P, intT n) {
     swap(P[2], P[ci]);
   };
   parallel_prefix(P, n, process, cleanUp, true, flag);
+  //parallel_prefix(P+10, n-10, process, cleanUp, true, flag);
 
   free(flag);
   return circle;
+}
+
+circle miniDisc2DBF(point<2>* P, intT n) {
+  typedef circle circleT;
+  typedef point<2> pointT;
+
+  auto C = newA(circleT, n*n*n);
+  par_for (intT i=0; i<n*n*n; ++i) C[i] = circleT();
+
+  auto valid = [&](circleT c)
+    {
+     for (intT i=0; i<n; ++i)
+       if (!c.contain(P[i])) return false;
+     return true;
+    };
+
+  //check all possible 3 points
+  par_for (intT i=0; i<n; ++i) {
+    par_for (intT j=i+1; j<n; ++j) {
+      par_for (intT k=j+1; k<n; ++k) {
+        auto c = circle(P[i], P[j], P[k]);
+        if (valid(c))
+          C[i*n*n+j*n+k] = c;
+      }
+    }
+  }
+
+  struct getMin {
+    circleT* C;
+    getMin(circleT* CC): C(CC) {};
+    floatT operator() (intT idx) {
+      if (C[idx].isEmpty()) return floatMax();
+      else return C[idx].radius();
+    }
+  };
+
+  intT iMin = sequence::minIndex<floatT, intT, getMin>(0, n*n*n, getMin(C));
+  free(C);
+  return C[iMin];
 }
 
 #endif
