@@ -37,8 +37,8 @@ void serial_prefix(T* A, intT n, F& process, G& cleanUp) {
 
 template<class T, class F, class G>
 void parallel_prefix(T* A, intT n, F& process, G& cleanUp, bool verbose=false, intT* flag=NULL) {
-  static const intT PREFIX = 1000;
-  static const intT THRESH = 2000;
+  static const intT PREFIX = 200000;
+  static const intT THRESH = 500000;
   if (n < THRESH) return serial_prefix(A, n, process, cleanUp);
 
   intT prefix;
