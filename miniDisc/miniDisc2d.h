@@ -28,8 +28,6 @@
 #include "check.h"
 #include "prefix.h"
 
-//intT magic = 0;
-
 circle miniDisc2DSerial(point<2>* P, intT n, point<2> pi, point<2> pj) {
   typedef circle circleT;
   auto circle = circleT(pi, pj);
@@ -37,9 +35,8 @@ circle miniDisc2DSerial(point<2>* P, intT n, point<2> pi, point<2> pj) {
   for (intT i=0; i<n; ++i) {
     if (!circle.contain(P[i])) {
       circle = circleT(pi, pj, P[i]);
-      swap(P[0], P[i]);
-      //swap(P[rand() % 20], P[i]);
-      //swap(P[magic++ % 50], P[i]);
+      //swap(P[0], P[i]);
+      swap(P[100 + rand() % 100], P[i]);
     }}
   return circle;
 }
@@ -51,9 +48,8 @@ circle miniDisc2DSerial(point<2>* P, intT n, point<2> pi) {
   for (intT j=1; j<n; ++j) {
     if (!circle.contain(P[j])) {
       circle = miniDisc2DSerial(P, j, pi, P[j]);
-      swap(P[1], P[j]);
-      //swap(P[rand() % 20], P[j]);
-      //swap(P[magic++ % 30], P[j]);
+      //swap(P[1], P[j]);
+      swap(P[20 + rand() % 80], P[j]);
     }
   }
   return circle;
@@ -67,9 +63,8 @@ circle miniDisc2DSerial(point<2>* P, intT n) {
     if (!circle.contain(P[i])) {
       cout << "ci = " << i << endl;
       circle = miniDisc2DSerial(P, i, P[i]);
-      swap(P[2], P[i]);
-      //swap(P[rand() % 20], P[i]);
-      //swap(P[magic++ % 20], P[i]);
+      //swap(P[2], P[i]);
+      swap(P[rand() % 20], P[i]);
     }
   }
   return circle;
@@ -166,6 +161,7 @@ circle miniDisc2DParallel(point<2>* P, intT n, point<2> pi, point<2> pj, intT* f
   auto cleanUp = [&](pointT* A, intT ci) {
     circle = circleT(pi, pj, A[ci]);
     swap(P[0], P[ci]);
+    //swap(P[ci % 100 + 100], P[ci]);
   };
   parallel_prefix(P, n, process, cleanUp, false, flag);
   return circle;
@@ -185,6 +181,7 @@ circle miniDisc2DParallel(point<2>* P, intT n, point<2> pi, intT* flag=NULL) {
     circle = miniDisc2DParallel(A, ci, pi, A[ci], flag);
     //circle = miniDisc2DParallel2(A, ci, pi, A[ci], flag);
     swap(P[1], P[ci]);
+    //swap(P[ci % 80 + 20], P[ci]);
   };
   parallel_prefix(P, n, process, cleanUp, false, flag);
   return circle;
@@ -206,6 +203,7 @@ circle miniDisc2DParallel(point<2>* P, intT n) {
   auto cleanUp = [&](pointT* A, intT ci) {
     circle = miniDisc2DParallel(A, ci, A[ci], flag);
     swap(P[2], P[ci]);
+    //swap(P[ci % 20], P[ci]);
   };
   parallel_prefix(P, n, process, cleanUp, true, flag);
   //parallel_prefix(P+10, n-10, process, cleanUp, true, flag);
