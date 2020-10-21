@@ -330,25 +330,25 @@ class kdNode {
   }
 
   //Deprecate
-  // template<class func>
-  // void rangeNeighbor(pointT pMin1, pointT pMax1, floatT r, func* f) {
-  //   if (f->isComplete()) return;
-  //   int relation = boxCompare(pMin1, pMax1, pMin, pMax);
-  //   if (relation == boxInclude) {
-  //     for(intT i=0; i<n; ++i) {
-  //       if (f->checkComplete(items[i])) break;
-  //     }
-  //   } else if (relation == boxOverlap) {
-  //     if (isLeaf()) {
-  //       for(intT i=0; i<n; ++i) {
-  //         if (itemInBox(pMin1, pMax1, items[i])) {
-  //           if (f->checkComplete(items[i])) break;}
-  //       }
-  //     } else {
-  //       left->rangeNeighbor(pMin1, pMax1, r, f);
-  //       right->rangeNeighbor(pMin1, pMax1, r, f);}
-  //   }
-  // }
+  template<class func>
+  void rangeNeighbor2(pointT pMin1, pointT pMax1, floatT r, func* f) {
+    if (f->isComplete()) return;
+    int relation = boxCompare(pMin1, pMax1, pMin, pMax);
+    if (relation == boxInclude) {
+      for(intT i=0; i<n; ++i) {
+        if (f->checkComplete(items[i])) break;
+      }
+    } else if (relation == boxOverlap) {
+      if (isLeaf()) {
+        for(intT i=0; i<n; ++i) {
+          if (itemInBox(pMin1, pMax1, items[i])) {
+            if (f->checkComplete(items[i])) break;}
+        }
+      } else {
+        left->rangeNeighbor2(pMin1, pMax1, r, f);
+        right->rangeNeighbor2(pMin1, pMax1, r, f);}
+    }
+  }
 
   template<class func, class func2>
   void rangeNeighbor(pointT pMin1, pointT pMax1, floatT r, func term, func2 doTerm) {

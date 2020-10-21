@@ -34,6 +34,10 @@
 #include "pbbs/quickSort.h"
 #include "pbbs/gettime.h"
 #include "pbbs/randPerm.h"
+
+#include "kdSort.h"
+#include "brio.h"
+
 using namespace std;
 
 // *************************************************************
@@ -475,7 +479,7 @@ pointPair<dim> incremental(point<dim>* P, intT n, bool serial=false) {
   typedef iPoint<dim> iPointT;
   typedef pointPair<dim> pointPairT;
   static const bool verbose = true;
-  static const bool noRandom = false;
+  static const bool noRandom = true;
   bool useTree = false;
   if(dim>=5) useTree = true;
 
@@ -577,6 +581,16 @@ pair<point<dim>, point<dim>> closestPair(point<dim>* P, intT n) {
   static const bool serial = false;
   cout << "closestPair of " << n << ", dim " << dim << " points" << endl;
   if (n < 2) abort();
+
+  timing t0; t0.start();
+  //brioSort<dim, point<dim>>(P, n, n*0.2);
+  //kdSortMedian<dim, point<dim>>(P, n);
+  //kdSortMiddle<dim, point<dim>>(P, n);
+  //kdSortBFS<dim, point<dim>>(P, n);
+  cout << "spatial-sort-time(included) = " << t0.stop() << endl;
+
+  //brioSort<dim, point<dim>>(P, n);
+  //spatialSort<dim, point<dim>>(P, n);
 
   pointPair<dim> r = incremental<dim>(P, n, serial);
   cout << "incremental " << r.u << ", " << r.v << ", dist " << r.dist << endl << endl;

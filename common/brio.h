@@ -25,7 +25,7 @@
 #include "kdSort.h"
 
 #define spatialSortSerial kdSortMiddleSerial
-#define spatialSort kdSortMiddleBFS
+#define spatialSort kdSortMiddle
 
 template<int dim, class T>
 void brioSortSerial(T* A, intT n, intT prefix=1000) {

@@ -96,7 +96,18 @@ class kdTree {
     for (int i=0; i<dim; ++i) {
       pMin1.updateX(i, center[i]-r);
       pMax1.updateX(i, center[i]+r);}
-    root->rangeNeighbor(pMin1, pMax1, r, f);
+    root->rangeNeighbor2(pMin1, pMax1, r, f);
+  }
+
+  template<class func, class func2>
+  void rangeNeighbor(objT* query, floatT r, func term, func2 doTerm) {
+    pointT pMin1 = pointT();
+    pointT pMax1 = pointT();
+    floatT* center = query->coordinate();
+    for (int i=0; i<dim; ++i) {
+      pMin1.updateX(i, center[i]-r);
+      pMax1.updateX(i, center[i]+r);}
+    root->rangeNeighbor(pMin1, pMax1, r, term, doTerm);
   }
 
   template<class vecT, class func, class func2>
