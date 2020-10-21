@@ -29,6 +29,7 @@ class kdNode {
   typedef double floatT;
   typedef point<dim> pointT;
   typedef kdNode<dim, objT> nodeT;
+  static const int spatialMedian = 1;//toggle spatial or object median
   static const int boxInclude = 0;
   static const int boxOverlap = 1;
   static const int boxExclude = 2;
@@ -131,6 +132,15 @@ class kdNode {
     }
     return true;}
 
+  intT findWidest() {
+    floatT xM = -1;
+    for (int kk=0; kk<dim; ++kk) {
+      if (pMax[kk]-pMin[kk]>xM) {
+        xM = pMax[kk]-pMin[kk];
+        k = kk;}}
+    return k;
+  }
+
   void constructSerial(nodeT *space, intT leafSize) {
     boundingBoxSerial();
     sib = NULL;
@@ -139,14 +149,20 @@ class kdNode {
     } else {
       if (!space[0].isEmpty() || !space[1].isEmpty()) {
         cout << "error, kdNode overwrite, abort" << endl;abort();}
-      floatT xM = -1;
-      for (int kk=0; kk<dim; ++kk) {
-        if (pMax[kk]-pMin[kk]>xM) {
-          xM = pMax[kk]-pMin[kk];
-          k = kk;}}
-      xM = (pMax[k]+pMin[k])/2;
-      intT median = splitItemSerial(xM);
-      if (median == 0 || median == n) {median = n/2;}
+      intT k = findWidest();
+      floatT xM = (pMax[k]+pMin[k])/2;
+
+      intT median;
+      if (spatialMedian) {
+        median = splitItemSerial(xM);
+      } else {
+        auto splitK = [&](objT* a, objT* b) {
+                        return a->coordinate(k) < b->coordinate(k);};
+        median = ceil(n/2.0);
+        nth_element(items, items+median, items + n, splitK);
+      }
+
+      if (median == 0 || median == n) {median = ceil(n/2.0);}
       space[0] = nodeT(items, median, space+1, leafSize);
       space[2*median-1] = nodeT(items+median, n-median, space+2*median, leafSize);
       left = space;
@@ -167,14 +183,20 @@ class kdNode {
     } else {
       if (!space[0].isEmpty() || !space[1].isEmpty()) {
         cout << "error, kdNode overwrite, abort" << endl;abort();}
-      floatT xM = -1;
-      for (int kk=0; kk<dim; ++kk) {
-        if (pMax[kk]-pMin[kk]>xM) {
-          xM = pMax[kk]-pMin[kk];
-          k = kk;}}
-      xM = (pMax[k]+pMin[k])/2;
-      intT median = splitItemParallel(xM, scratch, flags);
-      if (median == 0 || median == n) {median = n/2;}
+      intT k = findWidest();
+      floatT xM = (pMax[k]+pMin[k])/2;
+
+      intT median;
+      if (spatialMedian) {
+        median = splitItemParallel(xM, scratch, flags);
+      } else {
+        auto splitK = [&](objT* a, objT* b) {
+                        return a->coordinate(k) < b->coordinate(k);};
+        median = ceil(n/2.0);
+        nth_element(items, items+median, items + n, splitK);//todo
+      }
+
+      if (median == 0 || median == n) {median = (n/2.0);}
       cilk_spawn buildNode(&space[0], items, median, space+1, scratch, flags, leafSize);
       buildNode(&space[2*median-1], items+median, n-median, space+2*median, scratch+median, flags+median, leafSize);
       cilk_sync;

@@ -22,7 +22,7 @@
 #include "pbbs/gettime.h"
 #include "pbbs/sampleSort.h"
 #include "geometry.h"
-#include "spatialSort.h"
+#include "kdSort.h"
 #include "brio.h"
 using namespace std;
 
@@ -42,7 +42,10 @@ void bench(point<dim>* P, intT n) {
   timing t0;
   t0.start();
 
-  brioSort<dim, pointT>(P, n, 1000);
+  brioSort<dim>(P, n, n*0.2);
+  //kdSortMiddle<dim, pointT>(P, n);
+  //kdSortMedian<dim, pointT>(P, n);
+  //kdSortBFS<dim, pointT>(P, n);
   cout << "spatial-sort-time = " << t0.stop() << endl;
 
   auto cmp = [&](pointT a, pointT b)
