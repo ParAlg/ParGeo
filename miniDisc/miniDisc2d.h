@@ -35,8 +35,8 @@ circle miniDisc2DSerial(point<2>* P, intT n, point<2> pi, point<2> pj) {
   for (intT i=0; i<n; ++i) {
     if (!circle.contain(P[i])) {
       circle = circleT(pi, pj, P[i]);
-      //swap(P[0], P[i]);
-      swap(P[100 + rand() % 100], P[i]);
+      swap(P[0], P[i]);
+      //swap(P[100 + rand() % 100], P[i]);
     }}
   return circle;
 }
@@ -48,8 +48,8 @@ circle miniDisc2DSerial(point<2>* P, intT n, point<2> pi) {
   for (intT j=1; j<n; ++j) {
     if (!circle.contain(P[j])) {
       circle = miniDisc2DSerial(P, j, pi, P[j]);
-      //swap(P[1], P[j]);
-      swap(P[20 + rand() % 80], P[j]);
+      swap(P[1], P[j]);
+      //swap(P[20 + rand() % 80], P[j]);
     }
   }
   return circle;
@@ -63,8 +63,8 @@ circle miniDisc2DSerial(point<2>* P, intT n) {
     if (!circle.contain(P[i])) {
       cout << "ci = " << i << endl;
       circle = miniDisc2DSerial(P, i, P[i]);
-      //swap(P[2], P[i]);
-      swap(P[rand() % 20], P[i]);
+      swap(P[2], P[i]);
+      //swap(P[rand() % 20], P[i]);
     }
   }
   return circle;
