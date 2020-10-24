@@ -21,7 +21,7 @@
 
 #ifndef MINI_DISC_2D_MTF2_H
 #define MINI_DISC_2D_MTF2_H
-n
+
 #include "pbbs/utils.h"
 #include "pbbs/sequence.h"
 #include "geometry.h"

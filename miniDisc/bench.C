@@ -25,8 +25,8 @@
 #include "bench.h"
 #include "geometry.h"
 #include "miniDisc2d.h"
-#include "miniDisc2dMTF.h"
-//#include "miniDisc2dMTF2.h"
+//#include "miniDisc2dMTF.h"
+#include "miniDisc2dMTF2.h"
 #include "miniDisc3d.h"
 #include "check.h"
 
@@ -39,9 +39,9 @@ using namespace std;
 void bench2D(point<2>* P, intT n) {
   typedef point<2> pointT;
   typedef circle discT;
-  static const bool serial = true;
+  static const bool serial = false;
   static const bool noRandom = true;
-  static const bool moveToFront = true;
+  static const bool moveToFront = false;
   cout << "smallest enclosing disc, " << n << ", dim 2 points" << endl;
 
   if (n < 3) {
