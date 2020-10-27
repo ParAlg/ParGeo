@@ -67,212 +67,201 @@ void hilbertSplitMiddleSerial(T* A, intT n, int axe, bool orient, floatT value, 
 }
 
 template<class T>
-void hilbertSplitMiddle(T* A, intT n, int axe, bool orient, floatT value, intT& middle, T* B, intT* flag) {
-  if (n <= 0) middle = n;
+void hilbertSplitMiddle(T* A, intT s, intT e, int axe, bool orient, floatT value, intT& middle, T* B, intT* flag) {
+  if (e-s <= 0) middle = e-s;
 
   auto cmp = [&](T item)
     {
      return orient ? (item[axe] > value) : (item[axe] <= value);
     };
-  middle = splitItem(A, n, cmp, B, flag);
+  middle = splitItem(A+s, e-s, cmp, B, flag);
+  middle += s;//offset
 }
 
 template<int dim, class T>
-void hilbertMiddleHelperSerial(T* A, intT n, vector<bool> start, intT direction, point<dim> mini, point<dim> maxi, intT two_to_dim) {
+void hilbertMiddleHelperSerial(T* A, intT n, bool* startt, intT direction, point<dim> pMin, point<dim> pMax, intT numQuadrant) {
   if (n <= 1) return;
 
   typedef point<dim> pointT;
 
-  pointT med = mini.average(maxi);
-  pointT cmin = mini;
+  pointT med = pMin.average(pMax);
+  pointT cmin = pMin;
   pointT cmax = med;
 
-  std::vector<int> places(two_to_dim +1);
-  std::vector<int> dir(two_to_dim +1);
+  bool start[dim]; for(int i=0; i<dim; ++i) start[i]=startt[i];
+  int places[numQuadrant +1];
+  int dir[numQuadrant +1];
   places[0] = 0;
-  places[two_to_dim] = n;
+  places[numQuadrant] = n;
 
-  int last_dir = (direction + dim) % dim;
-  int current_dir = direction;
-  int current_level_step =two_to_dim;
+  int lastDir = (direction + dim) % dim;
+  int curDir = direction;
+  int levelStep = numQuadrant;
   do{
-    int half_step = current_level_step/2;
+    int halfStep = levelStep/2;
     int left = 0;
-    int middle = half_step;
-    int right = current_level_step;
-    bool orient = start[current_dir];
+    int middle = halfStep;
+    int right = levelStep;
+    bool orient = start[curDir];
 
     do{
-      dir[middle] = current_dir;
-
-      hilbertSplitMiddleSerial(A+places[left], places[right]-places[left], current_dir, orient, med[current_dir], places[middle]);
+      dir[middle] = curDir;
+      hilbertSplitMiddleSerial(A+places[left], places[right]-places[left], curDir, orient, med[curDir], places[middle]);
       places[middle] += places[left];//offset
-
       left = right;
-      right += current_level_step;
-      middle += current_level_step;
+      right += levelStep;
+      middle += levelStep;
       orient = !orient;
-    } while (left < two_to_dim);
+    } while (left < numQuadrant);
 
-    current_level_step = half_step;
-    current_dir = (current_dir+1) % dim;
-  } while (current_dir != last_dir);
+    levelStep = halfStep;
+    curDir = (curDir+1) % dim;
+  } while (curDir != lastDir);
 
-  last_dir = (direction + dim -1) % dim;
+  lastDir = (direction + dim -1) % dim;
 
   if (places[1] != n)
-    hilbertMiddleHelperSerial(A+places[0], places[1]-places[0], start, last_dir, cmin, cmax, two_to_dim);
+    hilbertMiddleHelperSerial(A+places[0], places[1]-places[0], start, lastDir, cmin, cmax, numQuadrant);
 
-  cmin[last_dir] = med[last_dir];
-  cmax[last_dir] = maxi[last_dir];
+  cmin[lastDir] = med[lastDir];
+  cmax[lastDir] = pMax[lastDir];
 
-  for(int i=1; i<two_to_dim-1; i+=2){
+  for(int i=1; i<numQuadrant-1; i+=2){
 
     if (places[i]!=0 || places[i+1]!=n)
-      hilbertMiddleHelperSerial(A+places[i], places[i+1]-places[i], start, dir[i+1], cmin, cmax, two_to_dim);
+      hilbertMiddleHelperSerial(A+places[i], places[i+1]-places[i], start, dir[i+1], cmin, cmax, numQuadrant);
 
-    cmax[dir[i+1]] = (cmin[dir[i+1]] == mini[dir[i+1]])
-      ? maxi[dir[i+1]] : mini[dir[i+1]];
+    cmax[dir[i+1]] = (cmin[dir[i+1]] == pMin[dir[i+1]])
+      ? pMax[dir[i+1]] : pMin[dir[i+1]];
     cmin[dir[i+1]] = med[dir[i+1]];
 
     if (places[i+1]!=0 || places[i+2]!=n)
-      hilbertMiddleHelperSerial(A+places[i+1], places[i+2]-places[i+1], start, dir[i+1], cmin, cmax, two_to_dim);
+      hilbertMiddleHelperSerial(A+places[i+1], places[i+2]-places[i+1], start, dir[i+1], cmin, cmax, numQuadrant);
 
     cmin[dir[i+1]] = cmax[dir[i+1]];
     cmax[dir[i+1]] = med[dir[i+1]];
-    cmax[last_dir] = (cmax[last_dir]==maxi[last_dir])
-      ? mini[last_dir] : maxi[last_dir];
+    cmax[lastDir] = (cmax[lastDir]==pMax[lastDir])
+      ? pMin[lastDir] : pMax[lastDir];
 
     start[dir[i+1]] = !start[dir[i+1]];
-    start[last_dir] = !start[last_dir];
+    start[lastDir] = !start[lastDir];
   }
 
-  if (places[two_to_dim-1]!=0)
-    hilbertMiddleHelperSerial(A+places[two_to_dim-1], places[two_to_dim]-places[two_to_dim-1], start, last_dir, cmin, cmax, two_to_dim);
+  if (places[numQuadrant-1]!=0)
+    hilbertMiddleHelperSerial(A+places[numQuadrant-1], places[numQuadrant]-places[numQuadrant-1], start, lastDir, cmin, cmax, numQuadrant);
 }
 
 template<int dim, class T>
-void hilbertMiddleHelper(T* A, intT n, vector<bool> start, intT direction, point<dim> mini, point<dim> maxi, intT two_to_dim, T* B, intT* flag) {
-  if (n < 2000) return hilbertMiddleHelperSerial(A, n, start, direction, mini, maxi, two_to_dim);
+void hilbertMiddleHelper(T* A, intT n, bool* startt, intT direction, point<dim> pMin, point<dim> pMax, intT numQuadrant, T* B, intT* flag) {
+  if (n <= 1) return;
+  if (n < 2000) return hilbertMiddleHelperSerial(A, n, startt, direction, pMin, pMax, numQuadrant);
 
   static const bool verbose = false;
 
-  if (n <= 1) return;
-
   typedef point<dim> pointT;
 
-  pointT med = mini.average(maxi);
-  pointT cmin = mini;
+  pointT med = pMin.average(pMax);
+  pointT cmin = pMin;
   pointT cmax = med;
 
-  std::vector<int> places(two_to_dim +1);
-  std::vector<int> dir(two_to_dim +1);
+  bool start[dim]; for(int i=0; i<dim; ++i) start[i]=startt[i];
+  int places[numQuadrant +1];
+  int dir[numQuadrant +1];
   places[0] = 0;
-  places[two_to_dim] = n;
+  places[numQuadrant] = n;
 
-  int last_dir = (direction + dim) % dim;
-  int current_dir = direction;
-  int current_level_step =two_to_dim;
+  int lastDir = (direction + dim) % dim;
+  int curDir = direction;
+  int levelStep =numQuadrant;
   do{
-    int half_step = current_level_step/2;
+    int halfStep = levelStep/2;
     int left = 0;
-    int middle = half_step;
-    int right = current_level_step;
-    bool orient = start[current_dir];
+    int middle = halfStep;
+    int right = levelStep;
+    bool orient = start[curDir];
 
     do{
-      dir[middle] = current_dir;
+      dir[middle] = curDir;
 
       if (verbose) {
         cout << "splitting A[" << places[left] << ":" << places[right] << "]" << endl;
-        cout << " split, n = " << places[right]-places[left] << ", orient = " << orient << ", axe = " << current_dir << ", value = " << med[current_dir] << endl;
-        cout << " left = " << left << ", middle = " << middle << ", right = " << right << endl;
+        cout << " split, n = " << places[right]-places[left] << ", orient = " << orient << ", axe = " << curDir << ", value = " << med[curDir] << endl;
       }
 
-      hilbertSplitMiddle(A+places[left], places[right]-places[left], current_dir, orient, med[current_dir], places[middle], B, flag);
-      places[middle] += places[left];//offset
-
-      if(verbose) {
-        cout << "leftSize = " << places[middle]-places[left] << endl;
-        cout << "rightSize = " << places[right]-places[middle] << endl;
-        //for (intT i=places[left]; i<places[middle]; ++i) cout << A[i] << " ";cout << endl << endl;
-        //for (intT i=places[middle]; i<places[right]; ++i) cout << A[i] << " ";cout << endl << endl;
-        cout << "--------------------" << endl;
-      }
+      cilk_spawn hilbertSplitMiddle(A, places[left], places[right],
+                                    curDir, orient, med[curDir], places[middle],
+                                    B+places[left], flag+places[left]);
 
       left = right;
-      right += current_level_step;
-      middle += current_level_step;
+      right += levelStep;
+      middle += levelStep;
       orient = !orient;
-    } while (left < two_to_dim);
+    } while (left < numQuadrant);
+    cilk_sync;
 
-    current_level_step = half_step;
-    current_dir = (current_dir+1) % dim;
-  } while (current_dir != last_dir);
+    levelStep = halfStep;
+    curDir = (curDir+1) % dim;
+  } while (curDir != lastDir);
 
-  last_dir = (direction + dim -1) % dim;
+  lastDir = (direction + dim -1) % dim;
 
   if (places[1] != n) {
-    cilk_spawn hilbertMiddleHelper(A+places[0], places[1]-places[0], start, last_dir, cmin, cmax, two_to_dim, B+places[0], flag+places[0]);
+    cilk_spawn hilbertMiddleHelper(A+places[0], places[1]-places[0], start, lastDir, cmin, cmax, numQuadrant, B+places[0], flag+places[0]);
   }
 
-  cmin[last_dir] = med[last_dir];
-  cmax[last_dir] = maxi[last_dir];
+  cmin[lastDir] = med[lastDir];
+  cmax[lastDir] = pMax[lastDir];
 
-  for(int i=1; i<two_to_dim-1; i+=2){
+  for(int i=1; i<numQuadrant-1; i+=2){
 
     if (places[i]!=0 || places[i+1]!=n) {
-      cilk_spawn hilbertMiddleHelper(A+places[i], places[i+1]-places[i], start, dir[i+1], cmin, cmax, two_to_dim, B+places[i], flag+places[i]);
+      cilk_spawn hilbertMiddleHelper(A+places[i], places[i+1]-places[i], start, dir[i+1], cmin, cmax, numQuadrant, B+places[i], flag+places[i]);
     }
 
-    cmax[dir[i+1]] = (cmin[dir[i+1]] == mini[dir[i+1]])
-      ? maxi[dir[i+1]] : mini[dir[i+1]];
+    cmax[dir[i+1]] = (cmin[dir[i+1]] == pMin[dir[i+1]])
+      ? pMax[dir[i+1]] : pMin[dir[i+1]];
     cmin[dir[i+1]] = med[dir[i+1]];
 
     if (places[i+1]!=0 || places[i+2]!=n) {
-      cilk_spawn hilbertMiddleHelper(A+places[i+1], places[i+2]-places[i+1], start, dir[i+1], cmin, cmax, two_to_dim, B+places[i+1], flag+places[i+1]);
+      cilk_spawn hilbertMiddleHelper(A+places[i+1], places[i+2]-places[i+1], start, dir[i+1], cmin, cmax, numQuadrant, B+places[i+1], flag+places[i+1]);
     }
 
     cmin[dir[i+1]] = cmax[dir[i+1]];
     cmax[dir[i+1]] = med[dir[i+1]];
-    cmax[last_dir] = (cmax[last_dir]==maxi[last_dir])
-      ? mini[last_dir] : maxi[last_dir];
+    cmax[lastDir] = (cmax[lastDir]==pMax[lastDir])
+      ? pMin[lastDir] : pMax[lastDir];
 
-    if(verbose) {
-      cout << "start[" << dir[i+1] << "] = " << !start[dir[i+1]] << endl;
-      cout << "start[" << last_dir << "] = " << !start[last_dir] << endl;}
     start[dir[i+1]] = !start[dir[i+1]];
-    start[last_dir] = !start[last_dir];
+    start[lastDir] = !start[lastDir];
   }
 
-  if (places[two_to_dim-1]!=0) {
-    if(verbose) cout << "last step" << endl;
-    cilk_spawn hilbertMiddleHelper(A+places[two_to_dim-1], places[two_to_dim]-places[two_to_dim-1], start, last_dir, cmin, cmax, two_to_dim, B+places[two_to_dim-1], flag+places[two_to_dim-1]);
+  if (places[numQuadrant-1]!=0) {
+    cilk_spawn hilbertMiddleHelper(A+places[numQuadrant-1], places[numQuadrant]-places[numQuadrant-1], start, lastDir, cmin, cmax, numQuadrant, B+places[numQuadrant-1], flag+places[numQuadrant-1]);
   }
   cilk_sync;
 }
 
 template<int dim, class T>
-  void hilbertMiddle(T* A, intT n) {
+void hilbertMiddle(T* A, intT n) {
   typedef point<dim> pointT;
 
   auto box = boundingBoxParallel<dim, T>(A, n);
-  auto mini = box.first;
-  auto maxi = box.second;
+  auto pMin = box.first;
+  auto pMax = box.second;
 
-  intT two_to_dim = 1;
-  vector<bool> start(dim);
+  intT numQuadrant = 1;
+  bool start[dim];
   for (int i=0; i<dim; ++i) {
     start[i]=false;
-    two_to_dim *= 2;
+    numQuadrant *= 2;
   }
 
   if (n < 2000) {
-    hilbertMiddleHelperSerial<dim, T>(A, n, start, 0, mini, maxi, two_to_dim);
+    hilbertMiddleHelperSerial<dim, T>(A, n, start, 0, pMin, pMax, numQuadrant);
   } else {
     auto B = newA(T, n);
     auto flag = newA(intT, n);
-    hilbertMiddleHelper<dim, T>(A, n, start, 0, mini, maxi, two_to_dim, B, flag);
+    hilbertMiddleHelper<dim, T>(A, n, start, 0, pMin, pMax, numQuadrant, B, flag);
     free(B);
     free(flag);
   }
