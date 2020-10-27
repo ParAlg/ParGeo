@@ -32,43 +32,6 @@
 #include <queue>
 
 template<int dim, class T>
-pair<point<dim>, point<dim>> boundingBoxSerial(T* A, intT n) {
-  typedef point<dim> pointT;
-  auto pMin = pointT(A[0].coordinate());
-  auto pMax = pointT(A[0].coordinate());
-  for(intT i=0; i<n; ++i) {
-    pMin.minCoords(A[i].coordinate());
-    pMax.maxCoords(A[i].coordinate());
-  }
-  return make_pair(pMin, pMax);
-}
-
-template<int dim, class T>
-pair<point<dim>, point<dim>> boundingBoxParallel(T* A, intT n) {
-  typedef point<dim> pointT;
-  intT P = getWorkers()*8;
-  intT blockSize = (n+P-1)/P;
-  pointT localMin[P];
-  pointT localMax[P];
-  for (intT i=0; i<P; ++i) {
-    localMin[i] = pointT(A[0].coordinate());
-    localMax[i] = pointT(A[0].coordinate());}
-  par_for(intT p=0; p<P; ++p) {
-    intT s = p*blockSize;
-    intT e = min((intT)(p+1)*blockSize,n);
-    for (intT j=s; j<e; ++j) {
-      localMin[p].minCoords(A[j].coordinate());
-      localMax[p].maxCoords(A[j].coordinate());}
-  }
-  auto pMin = pointT(A[0].coordinate());
-  auto pMax = pointT(A[0].coordinate());
-  for(intT p=0; p<P; ++p) {
-    pMin.minCoords(localMin[p].x);
-    pMax.maxCoords(localMax[p].x);}
-  return make_pair(pMin, pMax);
-}
-
-template<int dim, class T>
 inline intT splitItemSerial(T* A, intT n, floatT xM, intT k) {
   if (n < 2) {
     cout << "error, spatial sort splitting singleton, abort" << endl;abort();}
