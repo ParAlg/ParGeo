@@ -24,6 +24,7 @@
 #include "geometry.h"
 #include "kdSort.h"
 #include "brio.h"
+#include "hilbert.h"
 using namespace std;
 
 // *************************************************************
@@ -42,10 +43,15 @@ void bench(point<dim>* P, intT n) {
   timing t0;
   t0.start();
 
-  brioSort<dim>(P, n, n*0.2);
+  //for (intT i=0; i<n; ++i) cout << P[i] << " ";cout << endl << endl;
+  hilbertMiddle<dim>(P, n);
+  //brioSort<dim>(P, n, n*0.2);
   //kdSortMiddle<dim, pointT>(P, n);
   //kdSortMedian<dim, pointT>(P, n);
   //kdSortBFS<dim, pointT>(P, n);
+  //for (intT i=0; i<n; ++i) cout << P[i] << endl;cout << endl << endl;
+  //for (intT i=0; i<20; ++i) cout << P[i] << endl;cout << endl << endl;
+  //for (intT i=n-20; i<n; ++i) cout << P[i] << endl;cout << endl << endl;
   cout << "spatial-sort-time = " << t0.stop() << endl;
 
   auto cmp = [&](pointT a, pointT b)
