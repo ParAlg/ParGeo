@@ -25,8 +25,9 @@
 #include "bench.h"
 #include "geometry.h"
 #include "miniDisc2d.h"
-//#include "miniDisc2dMTF.h"
-#include "miniDisc2dMTF2.h"
+#include "miniDisc2dMTF.h"
+//#include "miniDisc2dMTF2.h"
+#include "miniDisc2dPrefix.h"
 #include "miniDisc3d.h"
 #include "check.h"
 
@@ -41,7 +42,7 @@ void bench2D(point<2>* P, intT n) {
   typedef circle discT;
   static const bool serial = false;
   static const bool noRandom = true;
-  static const bool moveToFront = false;
+  static const bool moveToFront = true;
   cout << "smallest enclosing disc, " << n << ", dim 2 points" << endl;
 
   if (n < 3) {
@@ -58,11 +59,14 @@ void bench2D(point<2>* P, intT n) {
   if(serial) {
     if (moveToFront) disc = MTF::miniDisc2DSerial(P, n);
     else disc = miniDisc2DSerial(P, n);
+  } else {
+    disc = miniDisc2DParallel(P, n);
+    //disc = miniDisc2DPrefix(P, n);
   }
-  else disc = miniDisc2DParallel(P, n);
   cout << "total-time = " << t0.stop() << endl;
   cout << "disc = " << disc.center() << ", " << disc.radius() << endl;
   cout << endl;
+
   check<2,discT>(&disc, P, n);
 }
 
