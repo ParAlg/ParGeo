@@ -57,7 +57,9 @@ void parallel_prefix(T* A, intT n, F& process, G& cleanUp, bool verbose=false, i
   intT parCount = 0;
   intT parSize = 0;
   floatT parTime = 0;
+  floatT parTime1 = 0;
   floatT parTime2 = 0;
+  floatT parTime3 = 0;
 
   while (i < n) {
     if (i==0) prefix = PREFIX;//prefix < n is known
@@ -65,7 +67,7 @@ void parallel_prefix(T* A, intT n, F& process, G& cleanUp, bool verbose=false, i
 
     //if (verbose) cout << "prefix = " << prefix << endl;
 
-    if (prefix < THRESH) {
+    if (prefix-i < THRESH) {
       if(verbose) t0.start();
       serCount += 1;
       serSize += prefix - i;
@@ -83,20 +85,21 @@ void parallel_prefix(T* A, intT n, F& process, G& cleanUp, bool verbose=false, i
 	if (process(A[j])) flag[j-i] = 1;//conflict
 	else flag[j-i] = 0;
       }
+      if(verbose) parTime += t0.next();
 
       intT numBad = sequence::prefixSum(flag, 0, prefix-i);
       flag[prefix-i] = numBad;
-      if(verbose) parTime += t0.stop();
+      if(verbose) parTime1 += t0.stop();
 
       if (numBad > 0) {
 	if(verbose) t0.start();
 	par_for(intT j=0; j<prefix-i; ++j) {
-	  if (flag[j]==0 && flag[j]!=flag[j+1]) conflict = j;}//change to serial and try
+	  if (flag[j]==0 && flag[j]!=flag[j+1]) conflict = j;}
 	i += conflict;
-	if(verbose) parTime += t0.next();
+	if(verbose) parTime2 += t0.next();
 	//if (verbose) cout << "ci = " << i << endl;
 	cleanUp(A, i);
-	if(verbose) parTime2 += t0.stop();
+	if(verbose) parTime3 += t0.stop();
       } else {
 	i = prefix;
       }
@@ -113,7 +116,9 @@ void parallel_prefix(T* A, intT n, F& process, G& cleanUp, bool verbose=false, i
     cout << " count = " << parCount << endl;
     cout << " avg size = " << parSize/(floatT)parCount << endl;
     cout << " total time 1 = " << parTime << endl;
-    cout << " total time 2 = " << parTime2 << endl;
+    cout << " total time 2 = " << parTime1 << endl;
+    cout << " total time 3 = " << parTime2 << endl;
+    cout << " total time 4 = " << parTime3 << endl;
   }
 
   if(freeFlag) free(flag);

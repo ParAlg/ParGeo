@@ -11,8 +11,8 @@
 circle miniDisc2DPrefix(point<2>* A, intT n, bool verbose=true, intT* flag=NULL) {
   typedef circle circleT;
 
-  static const intT PREFIX = 2000;
-  static const intT THRESH = 5000;
+  static const intT PREFIX = 2000000;
+  static const intT THRESH = 5000000;
   if (n < THRESH) return miniDisc2DSerial(A, n);
 
   auto circle = circleT(A[0], A[1]);
@@ -43,7 +43,7 @@ circle miniDisc2DPrefix(point<2>* A, intT n, bool verbose=true, intT* flag=NULL)
 
     //if (verbose) cout << "prefix = " << prefix << endl;
 
-    if (prefix < THRESH) {
+    if (prefix-i < THRESH) {
       if(verbose) t0.start();
       serCount += 1;
       serSize += prefix - i;
@@ -73,7 +73,7 @@ circle miniDisc2DPrefix(point<2>* A, intT n, bool verbose=true, intT* flag=NULL)
       if (numBad > 0) {
 	if(verbose) t0.start();
 	par_for(intT j=0; j<prefix-i; ++j) {
-	  if (flag[j]==0 && flag[j]!=flag[j+1]) conflict = j;}//change to serial and try
+	  if (flag[j]==0 && flag[j]!=flag[j+1]) conflict = j;}
 	i += conflict;
 	if(verbose) parTime2 += t0.next();
 	//if (verbose) cout << "ci = " << i << endl;
