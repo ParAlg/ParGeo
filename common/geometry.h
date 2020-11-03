@@ -287,6 +287,7 @@ public:
     return p.pointDist(p2.p);
     //return sqrt((p.x-x)*(p.x-x)+(p.y-y)*(p.y-y));
   }
+  point2d average(point2d p2) {return p.average(p2.p);}
   static const int dim = 2;
 };
 
@@ -498,6 +499,41 @@ point<3> crossProduct(point<3> a, point<3> b) {
   r.updateCoordinate(1, a[2]*b[0]-a[0]*b[2]);
   r.updateCoordinate(2, a[0]*b[1]-a[1]*b[0]);
   return r;
+}
+
+template<class pointT>
+//whether 2d segments (a,b) and (c,d) interesect
+bool intersect2d(point2d a, point2d b, point2d c, point2d d) {
+  floatT M[16];
+  M[0] = a.x(); M[1] = a.y(); M[2] = a.x(); M[3] = 1;
+  M[4] = b.x(); M[5] = b.y(); M[6] = b.x(); M[7] = 1;
+  M[8] = c.x(); M[9] = c.y(); M[10] = c.x(); M[11] = 1;
+  M[12] = d.x(); M[13] = d.y(); M[14] = d.x(); M[15] = 1;
+  floatT num1 = determinant4by4(M);
+  M[0] = a.x(); M[1] = 1; M[2] = a.y(); M[3] = 1;
+  M[4] = b.x(); M[5] = 1; M[6] = b.y(); M[7] = 1;
+  M[8] = c.x(); M[9] = 1; M[10] = c.y(); M[11] = 1;
+  M[12] = d.x(); M[13] = 1; M[14] = d.y(); M[15] = 1;
+  floatT den1 = determinant4by4(M);
+  M[0] = a.x(); M[1] = a.y(); M[2] = a.y(); M[3] = 1;
+  M[4] = b.x(); M[5] = b.y(); M[6] = b.y(); M[7] = 1;
+  M[8] = c.x(); M[9] = c.y(); M[10] = c.y(); M[11] = 1;
+  M[12] = d.x(); M[13] = d.y(); M[14] = d.y(); M[15] = 1;
+  floatT num2 = determinant4by4(M);
+  M[0] = a.x(); M[1] = 1; M[2] = a.y(); M[3] = 1;
+  M[4] = b.x(); M[5] = 1; M[6] = b.y(); M[7] = 1;
+  M[8] = c.x(); M[9] = 1; M[10] = c.y(); M[11] = 1;
+  M[12] = d.x(); M[13] = 1; M[14] = d.y(); M[15] = 1;
+  floatT den2 = determinant4by4(M);
+
+  auto ip = point2d(num1/den1, num2/den2);
+  auto isIn = [&](point2d aa, point2d bb) {
+                return ip.x()<=max(aa.x(),bb.x()) &&
+                  ip.x()>=min(aa.x(),bb.x()) &&
+                  ip.y()<=max(aa.y(),bb.y()) &&
+                  ip.y()>=min(aa.y(),bb.y());
+              };
+  return isIn(a,b) && isIn(c,d);
 }
 
 // A class for sphere

@@ -23,23 +23,34 @@
 #include <algorithm>
 #include <iostream>
 #include "pbbs/utils.h"
+#include "pbbs/gettime.h"
 #include "geometry.h"
 #include "hull.h"
 using namespace std;
+
+struct pointNode;
 
 struct facet {
   facet* next;
   facet* prev;
   point2d p1;
   point2d p2;//(p1->p2) is clockwise
+  vector<pointNode*> seeList;//points that can see facet
   facet(point2d p11, point2d p22): p1(p11), p2(p22) {}
-  bool visibleFrom(point2d p) {return triArea(p1, p2, p) > 0.0;}
+  bool visibleFrom(point2d p) {return triArea(p1, p2, p) > 1e-7;}//todo numerical stability needs better hack
 };
 
 static std::ostream& operator<<(std::ostream& os, const facet f) {
   os << "(" << f.p1 << ", " << f.p2 << ")";
   return os;
 }
+
+struct pointNode {
+  point2d p;
+  facet* seeFacet;//maintain one edge visible, change from time to time
+  //don't have to maintain all, can search pretty easily
+  pointNode(point2d pp): p(pp), seeFacet(NULL) {};
+};
 
 pair<facet*, facet*> findVisible(facet* head, point2d p) {
   while (head->prev->visibleFrom(p)) head = head->prev;
@@ -86,10 +97,14 @@ void printHull(facet* start, facet* end) {
 
 _seq<intT> hull(point2d* P, intT n) {
   static bool verbose = false;
+  static bool brute = true;//slow on bad input, fast on general input
+
+  timing t; t.start();
 
   auto p0 = P[0].x() < P[1].x() ? P[0] : P[1];//left of p1
   auto p1 = P[0].x() < P[1].x() ? P[1] : P[0];
   auto p2 = P[2];
+  auto center = p0.average(p1).average(p2);
 
   facet* H;
   if (triArea(p0, p1, p2) > 0.0) {
@@ -109,28 +124,125 @@ _seq<intT> hull(point2d* P, intT n) {
     f2->next = f0; f0->prev = f2;
     H = f0;
   }
+  if(verbose) {
+    cout << "initial-hull = ";
+    printHull(H, H);
+  }
 
-  for (intT i=3; i<n; ++i) {
-    if(verbose) cout << "---" << endl;
+  pointNode* PN = newA(pointNode, n-3);
+  par_for(intT i=0; i<n-3; ++i) {
+    PN[i] = pointNode(P[i+3]);
+    auto ptr = H;
+    do {
+      if (ptr->visibleFrom(P[i+3])) {
+        PN[i].seeFacet = ptr;
+        ptr->seeList.push_back(&PN[i]);
+      }
+      ptr = ptr->next;
+    } while (ptr != H);
+  }
 
-    auto pr = P[i];
-    if(verbose) cout << i << " pr = " << pr << endl;
+  for (intT i=0; i<n-3; ++i) {
+    if(verbose) cout << "--- " << i << endl;
 
-    auto conflicts = findVisible(H, pr);//bruteforce for now
+    auto pr = PN[i];
+    if(verbose) cout << " pr = " << pr.p << endl;
+
+    if (!pr.seeFacet) continue;//pr is in hull
+
+    pair<facet*, facet*> conflicts;
+    if (brute) {
+      conflicts = findVisible(H, pr.p);
+    } else {
+      conflicts = findVisible(pr.seeFacet, pr.p);
+    }
+
     facet* start = conflicts.first;
     facet*   end = conflicts.second;
+    if (start && end) {
+      //compute new faces
+      facet* new1 = new facet(start->p1, pr.p);
+      facet* new2 = new facet(pr.p, end->p1);
 
-    if (start && end) {//has conflicts
-      facet* new1 = new facet(start->p1, pr);
-      facet* new2 = new facet(pr, end->p1);
+      //go through list of faxcets pending to be deleted
+      if (verbose) {
+        cout << "deleting = ";
+        auto ptr = start;
+        do {
+          cout << *ptr << ", ";
+          ptr = ptr->next;
+        } while (ptr != end);
+        cout << endl;
+      }
+
+      if (!brute) {
+        auto ptr = start;
+        do {
+          //update points that see them
+          for(intT j=0; j<ptr->seeList.size(); ++j) {
+            auto seePt = ptr->seeList[j];
+            if (seePt->seeFacet == ptr) seePt->seeFacet = NULL;
+
+            if (new1->visibleFrom(seePt->p)) {
+              if (!seePt->seeFacet) {
+                seePt->seeFacet = new1;
+              }
+              new1->seeList.push_back(seePt);
+            }
+
+            if (new2->visibleFrom(seePt->p)) {
+              if (!seePt->seeFacet) {
+                seePt->seeFacet = new2;
+              }
+              new2->seeList.push_back(seePt);
+            }
+          }
+
+          ptr = ptr->next;
+        } while (ptr != end);
+      }
+
+      if(verbose) cout << "adding = " << *new1 << ", " << *new2 << endl;
+
+      //update hull
       start->prev->next = new1; new1->prev = start->prev;
       new1->next = new2; new2->prev = new1;
       new2->next = end; end->prev = new2;
       H = new1;
       delHull(start, end);
-      if(verbose) printHull(H, H);
+
+      if(verbose) {
+        cout << "hull = ";
+        printHull(H, H);
+      }
     }
   }
+
+  free(PN);
+  cout << "hull-time = " << t.next() << endl;
+
+  //verify
+  for (intT i=0; i<n; ++i) {
+    auto ptr = H;
+    do {
+      if (ptr->visibleFrom(P[i])) {
+        cout << "wrong hull, " << P[i] << " visible from " << *ptr << endl;
+        cout << "triArea = " << triArea(ptr->p1, ptr->p2, P[i]) << endl;
+        abort();
+      }
+      ptr = ptr->next;
+    } while (ptr != H);
+  }
+  cout << "hull verified, time = " << t.stop() << endl;
+
+  intT hSize = 0;
+  auto ptr = H;
+  do {
+    hSize ++;
+    ptr = ptr->next;
+  } while (ptr != H);
+  cout << "hull size = " << hSize << endl;
+
   intT* I = newA(intT, n);
   return _seq<intT>(I,1);//dummy
 }
