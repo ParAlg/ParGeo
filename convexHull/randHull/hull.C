@@ -98,6 +98,7 @@ void printHull(facet* start, facet* end) {
 _seq<intT> hull(point2d* P, intT n) {
   static bool verbose = false;
   static bool brute = false;
+  static bool verify = false;
 
   timing t; t.start();
 
@@ -219,19 +220,20 @@ _seq<intT> hull(point2d* P, intT n) {
   free(PN);
   cout << "hull-time = " << t.next() << endl;
 
-  //verify
-  for (intT i=0; i<n; ++i) {
-    auto ptr = H;
-    do {
-      if (ptr->visibleFrom(P[i])) {
-        cout << "wrong hull, " << P[i] << " visible from " << *ptr << endl;
-        cout << "triArea = " << triArea(ptr->p1, ptr->p2, P[i]) << endl;
-        abort();
-      }
-      ptr = ptr->next;
-    } while (ptr != H);
+  if (verify) {
+    for (intT i=0; i<n; ++i) {
+      auto ptr = H;
+      do {
+        if (ptr->visibleFrom(P[i])) {
+          cout << "wrong hull, " << P[i] << " visible from " << *ptr << endl;
+          cout << "triArea = " << triArea(ptr->p1, ptr->p2, P[i]) << endl;
+          abort();
+        }
+        ptr = ptr->next;
+      } while (ptr != H);
+    }
+    cout << "hull verified, time = " << t.stop() << endl;
   }
-  cout << "hull verified, time = " << t.stop() << endl;
 
   intT hSize = 0;
   auto ptr = H;
