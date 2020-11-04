@@ -97,14 +97,13 @@ void printHull(facet* start, facet* end) {
 
 _seq<intT> hull(point2d* P, intT n) {
   static bool verbose = false;
-  static bool brute = true;//slow on bad input, fast on general input
+  static bool brute = false;
 
   timing t; t.start();
 
   auto p0 = P[0].x() < P[1].x() ? P[0] : P[1];//left of p1
   auto p1 = P[0].x() < P[1].x() ? P[1] : P[0];
   auto p2 = P[2];
-  auto center = p0.average(p1).average(p2);
 
   facet* H;
   if (triArea(p0, p1, p2) > 0.0) {
@@ -137,6 +136,7 @@ _seq<intT> hull(point2d* P, intT n) {
       if (ptr->visibleFrom(P[i+3])) {
         PN[i].seeFacet = ptr;
         ptr->seeList.push_back(&PN[i]);
+        break;
       }
       ptr = ptr->next;
     } while (ptr != H);
@@ -188,9 +188,7 @@ _seq<intT> hull(point2d* P, intT n) {
                 seePt->seeFacet = new1;
               }
               new1->seeList.push_back(seePt);
-            }
-
-            if (new2->visibleFrom(seePt->p)) {
+            } else if (new2->visibleFrom(seePt->p)) {
               if (!seePt->seeFacet) {
                 seePt->seeFacet = new2;
               }
