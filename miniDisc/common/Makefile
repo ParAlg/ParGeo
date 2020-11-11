@@ -38,8 +38,8 @@ endif
 
 #########
 
-OBJS = bench.o
-BNCHMRK = bench
+OBJS = miniDisc.o
+BNCHMRK = miniDisc
 
 TIME = $(BNCHMRK)Time
 
