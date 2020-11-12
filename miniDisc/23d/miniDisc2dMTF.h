@@ -32,7 +32,7 @@
 #include <fstream>
 #include <string>
 
-static const bool takeSnapshot = true;
+static const bool takeSnapshot = false;
 static const bool mtf = true;
 intT ii = 0;
 intT confCount = 0;
@@ -73,7 +73,7 @@ void snapshot(const char* name, point<2>* P, intT n, intT ci, circle c) {
   myfile.close();
 }
 
-namespace MTF {
+namespace Heuristic {
 
   void moveToFront(point<2>* P, intT j, point<2>* space) {
     // cout << "swap 0 and " << j << endl;
@@ -96,8 +96,8 @@ namespace MTF {
         confCount ++;
         circle = circleT(pi, pj, P[i]);
         if (mtf) {
-          //swap(P[0], P[i]);
-          moveToFront(P, i, PP);
+          swap(P[0], P[i]);
+          //moveToFront(P, i, PP);
         }
       }
     }
@@ -116,33 +116,97 @@ namespace MTF {
         confCount ++;
         circle = miniDisc2DSerial(P, j, pi, idxi, P[j], j, PP);
         if (mtf) {
-          //swap(P[1], P[j]);
-          moveToFront(P, j, PP);
+          swap(P[1], P[j]);
+          //moveToFront(P, j, PP);
         }
       }
     }
     return circle;
   }
 
-  circle miniDisc2DSerial(point<2>* P, intT n) {
+  circle miniDisc2DSerialMTF(point<2>* P, intT n) {
+    typedef circle circleT;
+    typedef point<2> pointT;
+
+    pointT* PP = newA(pointT, n);
+
+    auto circle = circleT(P[0], P[1]);
+
+    auto findPivot = [&] (intT s)
+                     {
+                       floatT rSqr = circle.radius() * circle.radius();
+                       floatT dMax = 0;
+                       intT bestI = -1;
+                       for (intT ii=s; ii<n; ++ii) {
+                         floatT tmp = P[ii].distSqr(circle.center());
+                         if (tmp - rSqr > dMax) { // ||p-c||^2 - r^2
+                           bestI = ii;
+                           dMax = tmp - rSqr;
+                         }
+                       }
+                       return bestI;
+                     };
+
+    for (intT i=0; i<n; ++i) {
+      if (takeSnapshot) {
+        auto fname = "./snapshot/" + std::to_string(ii++) + ".txt";
+        snapshot(fname.c_str(), P, n, i, circle);}
+
+      if (!circle.contain(P[i])) {
+        //pivoting
+        intT ii = findPivot(i);
+        swap(P[ii],P[i]);
+
+        confCount ++;
+        cout << "ci = " << i << ", " << P[i] << endl;
+        circle = miniDisc2DSerial(P, i, P[i], i, PP);
+        if (mtf) {
+          swap(P[2], P[i]);
+          //moveToFront(P, i, PP);
+        }
+      }
+    }
+
+    cout << "#conflicts = " << confCount << endl;
+    free(PP);
+    return circle;
+  }
+
+  circle miniDisc2DSerialPivot(point<2>* P, intT n) {
     typedef circle circleT;
     typedef point<2> pointT;
     pointT* PP = newA(pointT, n);
 
     auto circle = circleT(P[0], P[1]);
 
-    for (intT i=0; i<n; ++i) {
+    auto findPivot = [&] ()
+                     {
+                       floatT rSqr = circle.radius() * circle.radius();
+                       floatT dMax = 0;
+                       intT bestI = -1;
+                       for (intT ii=0; ii<n; ++ii) {
+                         floatT tmp = P[ii].distSqr(circle.center());
+                         if (tmp - rSqr > dMax) { // ||p-c||^2 - r^2
+                           bestI = ii;
+                           dMax = tmp - rSqr;
+                         }
+                       }
+                       return bestI;
+                     };
+
+    while(1) {
+      intT i = findPivot();
+      if (i < 0) break;
+
       if (takeSnapshot) {
         auto fname = "./snapshot/" + std::to_string(ii++) + ".txt";
         snapshot(fname.c_str(), P, n, i, circle);}
+
       if (!circle.contain(P[i])) {
         confCount ++;
         cout << "ci = " << i << ", " << P[i] << endl;
         circle = miniDisc2DSerial(P, i, P[i], i, PP);
-        if (mtf) {
-          //swap(P[2], P[i]);
-          moveToFront(P, i, PP);
-        }
+        if (mtf) swap(P[2], P[i]);
       }
     }
 
