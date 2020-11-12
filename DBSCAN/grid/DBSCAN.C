@@ -36,6 +36,8 @@
 #include "bruteforce.h"
 
 //todo in-place kdtree (if slow)
+//todo cluster core slow for large eps todo check again
+//todo jemalloc
 
 using namespace std;
 
@@ -158,7 +160,7 @@ intT* DBSCAN(point<dim>* P, intT n, floatT epsilon, intT minPts) {
                       auto tj = trees[j];
                       if (j < i && ccFlag[j] &&
                           uf.find(i) != uf.find(j)) {
-                        if(hasEdge<cellT, treeT, bcpT, pointT>(i, j, coreFlag, P, epsilon, G->getCell(0), trees)) {
+                        if(hasEdge<cellT, treeT, pointT>(i, j, coreFlag, P, epsilon, G->getCell(0), trees)) {
                           uf.link(i, j);
                         }
                       }

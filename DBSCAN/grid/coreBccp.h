@@ -29,9 +29,9 @@
 #include "pbbs/parallel.h"
 #include "pbbs/utils.h"
 
-template<class nodeT, class bcpT, class objT>
-inline void compBcpCoreH(nodeT* n1, nodeT* n2, bcpT* r, intT* coreFlag, objT* P) {
-  if (n1->nodeDistance(n2) > r->dist) return;
+template<class nodeT, class objT>
+inline void compBcpCoreHSerial(nodeT* n1, nodeT* n2, floatT* r, intT* coreFlag, objT* P) {
+  if (n1->nodeDistance(n2) > *r) return;
 
   if (n1->isLeaf() && n2->isLeaf()) {//basecase
     for (intT i=0; i<n1->size(); ++i) {
@@ -40,7 +40,54 @@ inline void compBcpCoreH(nodeT* n1, nodeT* n2, bcpT* r, intT* coreFlag, objT* P)
         auto pj = n2->getItem(j);
         if (coreFlag[pi - P] && coreFlag[pj - P]) {
           floatT dist = pi->dist(*pj);
-          r->update(n1->getItem(i), n2->getItem(j), dist);
+          r[0] = min(r[0], dist);
+        }
+      }
+    }
+  } else {//recursive, todo consider call order, might help
+    if (n1->isLeaf()) {
+      if (n1->nodeDistance(n2->L()) < n1->nodeDistance(n2->R())) {
+        compBcpCoreHSerial(n1, n2->L(), r, coreFlag, P);
+        compBcpCoreHSerial(n1, n2->R(), r, coreFlag, P);
+      } else {
+        compBcpCoreHSerial(n1, n2->R(), r, coreFlag, P);
+        compBcpCoreHSerial(n1, n2->L(), r, coreFlag, P);
+      }
+    } else if (n2->isLeaf()) {
+      if (n2->nodeDistance(n1->L()) < n2->nodeDistance(n1->R())) {
+        compBcpCoreHSerial(n2, n1->L(), r, coreFlag, P);
+        compBcpCoreHSerial(n2, n1->R(), r, coreFlag, P);
+      } else {
+        compBcpCoreHSerial(n2, n1->R(), r, coreFlag, P);
+        compBcpCoreHSerial(n2, n1->L(), r, coreFlag, P);
+      }
+    } else {
+      pair<nodeT*, nodeT*> ordering[4];
+      ordering[0] = make_pair(n2->L(), n1->L());
+      ordering[1] = make_pair(n2->R(), n1->L());
+      ordering[2] = make_pair(n2->L(), n1->R());
+      ordering[3] = make_pair(n2->R(), n1->R());
+      auto bbd = [&](pair<nodeT*,nodeT*> p1, pair<nodeT*,nodeT*> p2) {
+                   return p1.first->nodeDistance(p1.second) < p2.first->nodeDistance(p2.second);};
+      quickSortSerial(ordering, 4, bbd);
+      for (intT o=0; o<4; ++o) {
+        compBcpCoreHSerial(ordering[o].first, ordering[o].second, r, coreFlag, P);}
+    }
+  }
+}
+
+template<class nodeT, class objT>
+inline void compBcpCoreHBase(nodeT* n1, nodeT* n2, floatT* r, intT* coreFlag, objT* P) {
+  if (n1->nodeDistance(n2) > *r) return;
+
+  if (n1->isLeaf() && n2->isLeaf()) {//basecase
+    for (intT i=0; i<n1->size(); ++i) {
+      for (intT j=0; j<n2->size(); ++j) {
+        auto pi = n1->getItem(i);
+        auto pj = n2->getItem(j);
+        if (coreFlag[pi - P] && coreFlag[pj - P]) {
+          floatT dist = pi->dist(*pj);
+          utils::writeMin(r, dist);
         }
       }
     }
@@ -76,7 +123,47 @@ inline void compBcpCoreH(nodeT* n1, nodeT* n2, bcpT* r, intT* coreFlag, objT* P)
   }
 }
 
-template<class cellT, class treeT, class bcpT, class objT>
+template<class nodeT, class objT>
+inline void compBcpCoreH(nodeT* n1, nodeT* n2, floatT* r, intT* coreFlag, objT* P) {
+  if (n1->nodeDistance(n2) > *r) return;
+
+  if ((n1->isLeaf() && n2->isLeaf()) || (n1->size()+n2->size() < 2000)) {
+    return compBcpCoreHBase(n1, n2, r, coreFlag, P);
+  } else {//recursive, todo consider call order, might help
+    if (n1->isLeaf()) {
+      if (n1->nodeDistance(n2->L()) < n1->nodeDistance(n2->R())) {
+        cilk_spawn compBcpCoreH(n1, n2->L(), r, coreFlag, P);
+        cilk_spawn compBcpCoreH(n1, n2->R(), r, coreFlag, P);
+      } else {
+        cilk_spawn compBcpCoreH(n1, n2->R(), r, coreFlag, P);
+        cilk_spawn compBcpCoreH(n1, n2->L(), r, coreFlag, P);
+      }
+    } else if (n2->isLeaf()) {
+      if (n2->nodeDistance(n1->L()) < n2->nodeDistance(n1->R())) {
+        cilk_spawn compBcpCoreH(n2, n1->L(), r, coreFlag, P);
+        cilk_spawn compBcpCoreH(n2, n1->R(), r, coreFlag, P);
+      } else {
+        cilk_spawn compBcpCoreH(n2, n1->R(), r, coreFlag, P);
+        cilk_spawn compBcpCoreH(n2, n1->L(), r, coreFlag, P);
+      }
+      cilk_sync;
+    } else {
+      pair<nodeT*, nodeT*> ordering[4];
+      ordering[0] = make_pair(n2->L(), n1->L());
+      ordering[1] = make_pair(n2->R(), n1->L());
+      ordering[2] = make_pair(n2->L(), n1->R());
+      ordering[3] = make_pair(n2->R(), n1->R());
+      auto bbd = [&](pair<nodeT*,nodeT*> p1, pair<nodeT*,nodeT*> p2) {
+                   return p1.first->nodeDistance(p1.second) < p2.first->nodeDistance(p2.second);};
+      quickSortSerial(ordering, 4, bbd);
+      for (intT o=0; o<4; ++o) {
+        cilk_spawn compBcpCoreH(ordering[o].first, ordering[o].second, r, coreFlag, P);}
+      cilk_sync;
+    }
+  }
+}
+
+template<class cellT, class treeT, class objT>
 inline bool hasEdge(intT n1, intT n2, intT* coreFlag, objT* P, floatT epsilon, cellT* cells, treeT** trees) {
 
   if (cells[n1].size() + cells[n2].size() <= 32) {
@@ -92,13 +179,13 @@ inline bool hasEdge(intT n1, intT n2, intT* coreFlag, objT* P, floatT epsilon, c
     return false;
   }
 
-  auto r = bcpT();
   if (!trees[n1])
-    trees[n1] = new treeT(cells[n1].getItem(), cells[n1].size(), false);//todo allocation
+    trees[n1] = new treeT(cells[n1].getItem(), cells[n1].size(), false);//todo allocation, parallel
   if (!trees[n2]) 
-    trees[n2] = new treeT(cells[n2].getItem(), cells[n2].size(), false);//todo allocation
+    trees[n2] = new treeT(cells[n2].getItem(), cells[n2].size(), false);//todo allocation, parallel
+  floatT r = floatMax();
   compBcpCoreH(trees[n1]->rootNode(), trees[n2]->rootNode(), &r, coreFlag, P);
-  return r.dist <= epsilon;
+  return r <= epsilon;
 }
 
 #endif
