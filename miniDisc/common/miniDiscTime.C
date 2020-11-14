@@ -48,38 +48,22 @@ uint64_t hash64(uint64_t u)
   return v;
 }
 
-void timeBench2D(point<2>* pts, intT n, int rounds, char* outFile, int perturb) {
+template<int dim>
+void timeBench(point<dim>* pts, intT n, int rounds, char* outFile, int perturb) {
   cout << "nmax = " << n << endl;
   if (perturb) {
     par_for(intT i=0; i<n; ++i) {
-      double myRand = pts[i][0] / 10000;
-      pts[i].x[0] += -myRand + 2*myRand*hash64(i)/numeric_limits<unsigned long>::max();
-      myRand = pts[i][1] / 10000;
-      pts[i].x[1] += -myRand + 2*myRand*hash64(i)/numeric_limits<unsigned long>::max();}
-  }
-
-  pair<point<2>, point<2>> R;
-  for (int i=0; i < rounds; i++) {
-    timing t0; t0.start();
-    bench2D(pts, n);
-    cout << "timing = " << t0.stop() << endl;}
-  cout << endl;
-}
-
-void timeBench3D(point<3>* pts, intT n, int rounds, char* outFile, int perturb) {
-  cout << "nmax = " << n << endl;
-  if (perturb) {
-    par_for(intT i=0; i<n; ++i) {
-      for (int j=0; j<3; ++i) {
+      for(intT j=0; j<dim; ++j) {
         double myRand = pts[i][j] / 10000;
-        pts[i].x[j] += -myRand + 2*myRand*hash64(i)/numeric_limits<unsigned long>::max();}
+        pts[i].x[j] += -myRand + 2*myRand*hash64(i)/numeric_limits<unsigned long>::max();
+      }
     }
   }
 
-  pair<point<3>, point<3>> R;
+  pair<point<dim>, point<dim>> R;
   for (int i=0; i < rounds; i++) {
     timing t0; t0.start();
-    bench3D(pts, n);
+    miniDisc<dim>(pts, n);
     cout << "timing = " << t0.stop() << endl;}
   cout << endl;
 }
@@ -107,13 +91,49 @@ int main(int argc, char* argv[]) {
     _seq<point<2>> PIn;
     if(!readCsv) PIn = readPointsFromFile<point<2>>(iFile);
     else PIn = readPointsFromFileCSV<point<2>>(iFile, csvCol);
-    timeBench2D(PIn.A, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
+    timeBench<2>(PIn.A, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
   }
   else if (dim == 3) {
     _seq<point<3>> PIn;
     if(!readCsv) PIn = readPointsFromFile<point<3>>(iFile);
     else PIn = readPointsFromFileCSV<point<3>>(iFile, csvCol);
-    timeBench3D(PIn.A, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
+    timeBench<3>(PIn.A, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
+  }
+  else if (dim == 4) {
+    _seq<point<4>> PIn;
+    if(!readCsv) PIn = readPointsFromFile<point<4>>(iFile);
+    else PIn = readPointsFromFileCSV<point<4>>(iFile, csvCol);
+    timeBench<4>(PIn.A, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
+  }
+  else if (dim == 5) {
+    _seq<point<5>> PIn;
+    if(!readCsv) PIn = readPointsFromFile<point<5>>(iFile);
+    else PIn = readPointsFromFileCSV<point<5>>(iFile, csvCol);
+    timeBench<5>(PIn.A, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
+  }
+  else if (dim == 6) {
+    _seq<point<6>> PIn;
+    if(!readCsv) PIn = readPointsFromFile<point<6>>(iFile);
+    else PIn = readPointsFromFileCSV<point<6>>(iFile, csvCol);
+    timeBench<6>(PIn.A, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
+  }
+  else if (dim == 7) {
+    _seq<point<7>> PIn;
+    if(!readCsv) PIn = readPointsFromFile<point<7>>(iFile);
+    else PIn = readPointsFromFileCSV<point<7>>(iFile, csvCol);
+    timeBench<7>(PIn.A, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
+  }
+  else if (dim == 8) {
+    _seq<point<8>> PIn;
+    if(!readCsv) PIn = readPointsFromFile<point<8>>(iFile);
+    else PIn = readPointsFromFileCSV<point<8>>(iFile, csvCol);
+    timeBench<8>(PIn.A, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
+  }
+  else if (dim == 9) {
+    _seq<point<9>> PIn;
+    if(!readCsv) PIn = readPointsFromFile<point<9>>(iFile);
+    else PIn = readPointsFromFileCSV<point<9>>(iFile, csvCol);
+    timeBench<9>(PIn.A, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
   }
   else {
     cout << "dimension " << dim << " not yet supported, abort" << endl; abort();

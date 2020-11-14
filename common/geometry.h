@@ -431,6 +431,22 @@ inline int counterClockwise(point2d a, point2d b, point2d c) {
   return (b-a).cross(c-a) > 0.0;
 }
 
+//takes row-major 2by2 matrix m
+inline floatT determinant2by2(floatT* m) {
+  return m[0]*m[3] - m[1]*m[2];
+}
+
+//takes row-major 2by2 matrix m, output replaces m
+inline void inverse2by2(floatT* m) {
+  auto coeff = 1/determinant2by2(m);
+  floatT mInv[4];
+  mInv[0] = m[3]*coeff;
+  mInv[1] = -m[1]*coeff;
+  mInv[2] = -m[2]*coeff;
+  mInv[3] = m[0]*coeff;
+  m[0] = mInv[0]; m[1] = mInv[1]; m[2] = mInv[2]; m[3] = mInv[3];
+}
+
 //takes row-major 3by3 matrix m
 inline floatT determinant3by3(floatT* m) {
   return m[0*3+0] * (m[1*3+1] * m[2*3+2] - m[2*3+1] * m[1*3+2]) -
@@ -660,6 +676,129 @@ public:
 
   inline bool contain(pointT p) {
     return p.pointDist(ct) <= rad*1.000001;}//todo, sqrt optimize
+};
+
+template <int dim>
+class ball {
+  typedef point<dim> pointT;
+
+  intT d;//number of supporting points
+  floatT AInv[dim*dim];
+  pointT P[dim+1];
+  floatT Q[dim];
+  floatT La[dim];
+
+  pointT c;
+  floatT r;
+
+  void recompute() {
+    for(int i=0; i<dim; ++i) c[i] = 0;
+    for(int i=1; i<d; ++i) {
+      c = c + (P[i] - P[0]).mult(La[i-1]);
+    }
+    r = sqrt(c.dot(c));
+    c = c+P[0];
+  }
+
+public:
+  pointT center() {return c;}
+  floatT radius() {return r;}
+
+  void twoPointConstruct() {
+    c = P[0].average(P[1]);
+    r = P[0].dist(P[1])/2;
+  }
+
+  void threePointConstruct() {
+    floatT* A = AInv;
+    for(int i=1; i<d; ++i) {
+      auto Q1 = P[i] - P[0];
+      Q[i-1] = Q1.dot(Q1);
+      for (int j=1; j<d; ++j) {
+        auto Q2 = P[j] - P[0];
+        A[(i-1)*(d-1)+(j-1)] = 2*Q1.dot(Q2);
+      }
+    }
+
+    //we knew d=3, and A is 2x2
+    inverse2by2(A);//A=AInv
+
+    //Lambda=AInv.dot(Q)
+    for(int i=0; i<(d-1); ++i) {
+      La[i] = 0;
+      for(int j=0; j<(d-1); ++j) {
+        La[i] += AInv[i*(d-1)+j]*Q[j];}
+    }
+    recompute();
+  }
+
+  ball(pointT* PP, intT dd): d(dd) {
+    for(int i=0; i<d; ++i) P[i] = PP[i];
+    if (d == 2) twoPointConstruct();
+    else if (d == 3) threePointConstruct();
+    else if (d > 3) {
+      threePointConstruct();
+      for (intT i=3; i<dd; ++i) grow(PP[i]);
+    } else {
+      cout << "error, ball wrong dimension, abort" << endl;abort();
+    }
+  }
+
+  void grow(pointT q) {
+    if (d+1 > dim+1) {
+      cout << "error, ball max points exceeded, abort()";
+      cout << "d+1 = " << d+1 << endl; abort();
+    }
+
+    P[d] = q;
+    d += 1;
+    if (d == 3) {
+      return threePointConstruct();
+    }
+
+    //expand inverse of A, recompute center and radius
+    floatT mu[d-2];
+    floatT tmp[d-2];//the Q vector
+    point<dim> Qm = P[d-1] - P[0];
+
+    for(int j=1; j<d-1; ++j) {
+      tmp[j-1] = 2*(P[j]-P[0]).dot(Qm);}
+
+    //mu=AInv.dot([2*Q1.dot(Qm) ... 2*Qm-1.dot(Qm)])
+    for(int i=0; i<(d-2); ++i) {
+      mu[i] = 0;
+      for(int j=0; j<(d-2); ++j) {
+        mu[i] += AInv[i*(d-2)+j]*tmp[j];}
+    }
+
+    //z=
+    floatT tmp2 = 0;
+    for(int i=0; i<(d-2); ++i) tmp2 += tmp[i]*mu[i];
+    floatT z = 2*Qm.dot(Qm) - tmp2;
+
+    floatT newAInv[dim*dim];
+    for (int i=0; i<d-2; ++i) {
+      for (int j=0; j<d-2; ++j) {
+        newAInv[i*(d-1)+j] = AInv[i*(d-2)+j] + mu[i]*mu[j]/z;}
+    }
+    for (int i=0; i<d-2; ++i) {
+      newAInv[i*(d-1)+d-2] = -mu[i]/z;
+      newAInv[(d-2)*(d-1)+i] = -mu[i]/z;
+    }
+    newAInv[(d-2)*(d-1)+(d-2)] = 1/z;
+    for(int i=0; i<(d-1)*(d-1); ++i) {
+      AInv[i] = newAInv[i];}
+
+    //Lambda=AInv.dot(Q)
+    Q[d-2] = (P[d-1]-P[0]).dot(P[d-1]-P[0]);//update Q
+    for(int i=0; i<(d-1); ++i) {
+      La[i] = 0;
+      for(int j=0; j<(d-1); ++j) {
+        La[i] += AInv[i*(d-1)+j]*Q[j];}
+    }
+    recompute();
+  }
+
 };
 
 inline vect3d onParabola(vect2d v) {
