@@ -19,6 +19,7 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#include <vector>
 #include "pbbs/gettime.h"
 #include "pbbs/utils.h"
 #include "pbbs/randPerm.h"
@@ -28,22 +29,55 @@
 
 using namespace std;
 
-// *************************************************************
-//    DRIVER
-// *************************************************************
+template<int dim>
+ball<dim> miniDiscImpl(point<dim>* P, intT n, vector<point<dim>>& support, ball<dim> B) {
+  typedef ball<dim> ballT;
+  typedef point<dim> pointT;
+
+  if (B.isEmpty()) {
+    if (support.size() == 0) {
+      B = ballT(P, 2);
+    } else if (support.size() == 1) {
+      support.push_back(P[0]);
+      B = ballT(&support[0], support.size());
+      support.pop_back();
+    } else { //>=2
+      B = ballT(&support[0], support.size());
+    }
+  }
+
+  if (B.size() == dim+1) {
+    return B;
+  }
+
+  for (intT i=0; i<n; ++i) {
+    //cout << "i = " << i << endl;
+    if (!B.contain(P[i])) {
+      if (support.size() == B.size()) B.grow(P[i]);
+      else B = ballT();
+      support.push_back(P[i]);
+      B = miniDiscImpl(P, i, support, B);
+      support.pop_back();
+      //todo move to front
+      //swap(P[dim-support.size()], P[i]);
+      //swap(P[i], P[i-1]);
+    }
+  }
+
+  return B;
+}
 
 template<int dim>
-void miniDiscCaller(point<dim>* P, intT n) {
+void miniDisc(point<dim>* P, intT n) {
   typedef point<dim> pointT;
   typedef circle discT;
-  static const bool serial = false;
-  static const bool noRandom = true;
-  static const bool moveToFront = true;
-  cout << "smallest enclosing disc, " << n << ", dim " << dim << " points" << endl;
+  typedef ball<dim> ballT;
 
-  if (n < 3) {
-    cout << "smallest enclosing sphere needs at least 3 points" << endl;
-    abort();}
+  //static const bool serial = true;
+  static const bool noRandom = true;
+  //static const bool moveToFront = true;
+
+  cout << "smallest enclosing disc, " << n << ", dim " << dim << " points" << endl;
 
   timing t0;t0.start();
   if(!noRandom) {
@@ -51,42 +85,14 @@ void miniDiscCaller(point<dim>* P, intT n) {
     randPerm(P, n);
   }
 
-  // auto p1 = point<3>(P[0].coordinate());
-  // auto p2 = point<3>(P[1].coordinate());
-  // auto p3 = point<3>(P[2].coordinate());
-  // auto p4 = point<3>(P[3].coordinate());
-  // cout << "p1 = " << p1 << endl;
-  // cout << "p2 = " << p2 << endl;
-  // cout << "p3 = " << p3 << endl;
-  // cout << "p4 = " << p4 << endl;
-  // cout << ">> sphere2" << endl;
-  // sphere S = sphere(p1, p2);
-  // cout << S.radius() << ", center " << S.center() << endl;
-  // cout << ">> sphere3" << endl;
-  // S = sphere(p1, p2, p3);
-  // cout << S.radius() << ", center " << S.center() << endl;
-  // cout << ">> sphere4" << endl;
-  // S = sphere(p1, p2, p3, p4);
-  // cout << S.radius() << ", center " << S.center() << endl;
-
-  cout<< ">> grow ball" << endl;
-  ball<dim> B = ball<dim>(P, 2);
-  cout << B.radius() << ", center " << B.center() << endl;
-  for (int i=2; i<dim+1; ++i) {
-    B.grow(P[i]);
-    cout << B.radius() << ", center " << B.center() << endl;
-  }
+  auto support = vector<pointT>();
+  auto D = miniDiscImpl(P, n, support, ballT());
+  cout << D.radius() << ", center = " << D.center() << endl;
 
   cout << "total-time = " << t0.stop() << endl;
-  //cout << "disc = " << disc.center() << ", " << disc.radius() << endl;
   cout << endl;
 
-  //check<2,discT>(&disc, P, n);
-}
-
-template<int dim>
-void miniDisc(point<dim>* P, intT n) {
-  return miniDiscCaller(P, n);
+  check<dim,ballT>(&D, P, n);
 }
 
 template void miniDisc<2>(point<2>*, intT);

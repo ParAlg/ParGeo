@@ -701,8 +701,13 @@ class ball {
   }
 
 public:
-  pointT center() {return c;}
-  floatT radius() {return r;}
+  inline pointT center() {return c;}
+  inline pointT* support() {return P;}
+  inline floatT radius() {return r;}
+  inline intT size() {return d;}
+  inline bool contain(pointT p) {
+    return p.pointDist(center()) <= radius()*1.000001;}//todo, sqrt optimize
+  inline bool isEmpty() {return size() <= 0;}
 
   void twoPointConstruct() {
     c = P[0].average(P[1]);
@@ -732,11 +737,15 @@ public:
     recompute();
   }
 
+  ball(): d(0) {}
   ball(pointT* PP, intT dd): d(dd) {
     for(int i=0; i<d; ++i) P[i] = PP[i];
-    if (d == 2) twoPointConstruct();
+    if (d <= 1) {
+      cout << "error, cannot construct ball on <=1 point, abort" << endl;abort();
+    } else if (d == 2) twoPointConstruct();
     else if (d == 3) threePointConstruct();
     else if (d > 3) {
+      d = 3;
       threePointConstruct();
       for (intT i=3; i<dd; ++i) grow(PP[i]);
     } else {
@@ -746,7 +755,7 @@ public:
 
   void grow(pointT q) {
     if (d+1 > dim+1) {
-      cout << "error, ball max points exceeded, abort()";
+      cout << "error, ball max points exceeded, abort()" << endl;
       cout << "d+1 = " << d+1 << endl; abort();
     }
 
