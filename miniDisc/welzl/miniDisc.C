@@ -30,10 +30,10 @@
 using namespace std;
 
 template<int dim>
-ball<dim> miniDiscImpl(point<dim>* P, intT n, vector<point<dim>>& support, ball<dim> B) {
+ball<dim> support2Ball(point<dim>* P, vector<point<dim>>& support) {
   typedef ball<dim> ballT;
-  typedef point<dim> pointT;
 
+  ballT B;
   if (B.isEmpty()) {
     if (support.size() == 0) {
       B = ballT(P, 2);
@@ -45,22 +45,102 @@ ball<dim> miniDiscImpl(point<dim>* P, intT n, vector<point<dim>>& support, ball<
       B = ballT(&support[0], support.size());
     }
   }
+  return B;
+}
+
+template<int dim>
+ball<dim> miniDiscPlain(point<dim>* P, intT n, vector<point<dim>>& support, ball<dim> B) {
+  typedef ball<dim> ballT;
+  typedef point<dim> pointT;
+
+  B = support2Ball(P, support);
 
   if (B.size() == dim+1) {
     return B;
   }
 
   for (intT i=0; i<n; ++i) {
-    //cout << "i = " << i << endl;
+
     if (!B.contain(P[i])) {
       if (support.size() == B.size()) B.grow(P[i]);
       else B = ballT();
       support.push_back(P[i]);
-      B = miniDiscImpl(P, i, support, B);
+      B = miniDiscPlain(P, i, support, B);
       support.pop_back();
-      //todo move to front
-      //swap(P[dim-support.size()], P[i]);
-      //swap(P[i], P[i-1]);
+    }
+  }
+
+  return B;
+}
+
+template<int dim>
+ball<dim> miniDiscMtf(point<dim>* P, intT n, vector<point<dim>>& support, ball<dim> B) {
+  typedef ball<dim> ballT;
+  typedef point<dim> pointT;
+
+  B = support2Ball(P, support);
+
+  if (B.size() == dim+1) {
+    return B;
+  }
+
+  for (intT i=0; i<n; ++i) {
+
+    if (!B.contain(P[i])) {
+      if (support.size() == B.size()) B.grow(P[i]);
+      else B = ballT();
+      support.push_back(P[i]);
+      B = miniDiscMtf(P, i, support, B);
+      support.pop_back();
+
+      if (i > dim-support.size()) {
+        swap(P[dim-support.size()], P[i]);}
+    }
+  }
+
+  return B;
+}
+
+template<int dim>
+ball<dim> miniDiscPivot(point<dim>* P, intT n, vector<point<dim>>& support, ball<dim> B) {
+  typedef ball<dim> ballT;
+  typedef point<dim> pointT;
+
+  B = support2Ball(P, support);
+
+  if (B.size() == dim+1) {
+    return B;
+  }
+
+  auto findPivot = [&] (intT s)
+                   {
+                     floatT rSqr = B.radius() * B.radius();
+                     floatT dMax = 0;
+                     intT bestI = -1;
+                     for (intT ii=s; ii<n; ++ii) {
+                       floatT tmp = P[ii].distSqr(B.center());
+                       if (tmp - rSqr > dMax) { // ||p-c||^2 - r^2
+                         bestI = ii;
+                         dMax = tmp - rSqr;
+                       }
+                     }
+                     return bestI;
+                   };
+
+  for (intT i=0; i<n; ++i) {
+
+    if (!B.contain(P[i])) {
+      intT ii = findPivot(i+1);
+      if (ii > i) swap(P[ii], P[i]);
+
+      if (support.size() == B.size()) B.grow(P[i]);
+      else B = ballT();
+      support.push_back(P[i]);
+      B = miniDiscMtf(P, i, support, B);
+      support.pop_back();
+
+      if (i > dim-support.size()) {
+        swap(P[dim-support.size()], P[i]);}
     }
   }
 
@@ -73,23 +153,51 @@ void miniDisc(point<dim>* P, intT n) {
   typedef circle discT;
   typedef ball<dim> ballT;
 
-  //static const bool serial = true;
-  static const bool noRandom = true;
-  //static const bool moveToFront = true;
+  static const bool preprocess = false;
+
+  /*
+    - 0: plain
+    - 1: mtf only
+    - 2: pivot + mtf
+   */
+  static const int method = 2;
 
   cout << "smallest enclosing disc, " << n << ", dim " << dim << " points" << endl;
 
   timing t0;t0.start();
-  if(!noRandom) {
-    cout << "permuting points" << endl;
+  if(preprocess) {
     randPerm(P, n);
+    cout << "preprocess-time = " << t0.next() << endl;
   }
 
-  auto support = vector<pointT>();
-  auto D = miniDiscImpl(P, n, support, ballT());
+  ballT D;
+  switch (method) {
+  case 0: {
+    cout << "method = plain" << endl;
+    auto support = vector<pointT>();
+    D = miniDiscPlain(P, n, support, ballT());
+    break;
+  }
+  case 1: {
+    cout << "method = mtf" << endl;
+    auto support = vector<pointT>();
+    D = miniDiscMtf(P, n, support, ballT());
+    break;
+  }
+  case 2: {
+    cout << "method = mtf+pivot" << endl;
+    auto support = vector<pointT>();
+    D = miniDiscPivot(P, n, support, ballT());
+    break;
+  }
+  default:
+    cout << "invalid method, abort" << endl; abort();
+  }
+
+  cout << "seb-time = " << t0.stop() << endl;
+
   cout << D.radius() << ", center = " << D.center() << endl;
 
-  cout << "total-time = " << t0.stop() << endl;
   cout << endl;
 
   check<dim,ballT>(&D, P, n);
