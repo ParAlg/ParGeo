@@ -148,6 +148,70 @@ ball<dim> miniDiscPivot(point<dim>* P, intT n, vector<point<dim>>& support, ball
 }
 
 template<int dim>
+bool ortScan(point<dim> c, floatT rSqr, point<dim>* P, intT n, vector<point<dim>>& support, floatT* dist) {
+  typedef point<dim> pointT;
+
+  intT dd = intT(pow(2.0, dim));
+  intT idx[dd];
+  for(intT i=0; i<dd; ++i) idx[i] = -1;
+
+  for (intT i=0; i<n; ++i) {
+    floatT dSqr = P[i].distSqr(c);
+    if (dSqr > rSqr+1e-6) {//numerical stability
+      intT o = c.quadrant(P[i]);
+      if (dSqr > dist[o]) {
+        dist[o] = dSqr;
+        idx[o] = i;}
+    }
+  }
+
+  bool hasOut = false;
+  for(intT i=0; i<dd; ++i) {
+    if (idx[i] != -1) {
+      hasOut = true;
+      support.push_back(P[idx[i]]);
+    }
+  }
+  return hasOut;
+}
+
+template<int dim>
+ball<dim> miniDiscOrt(point<dim>* P, intT n) {
+  typedef ball<dim> ballT;
+  typedef point<dim> pointT;
+
+  intT sample = dim*3;
+  ballT B;
+  if (sample > n) {
+    vector<pointT> support;
+    return miniDiscPlain(P, sample, support, B);
+  } else {
+    vector<pointT> support;
+    B = miniDiscPlain(P, sample, support, B);
+  }
+
+  intT dd = intT(pow(2.0, dim));
+  floatT dist[dd];
+  for(intT i=0; i<dd; ++i) dist[i] = -1;
+
+  while (1) {
+    vector<pointT> support;
+    for(intT i=0; i<B.size(); ++i) {
+      support.push_back(B.support()[i]);}
+
+    bool found = ortScan<dim>(B.center(), B.radius()*B.radius(), P, n, support, dist);
+
+    if (!found) {
+      return B;
+    } else {
+      auto supportNew = vector<pointT>();
+      B = miniDiscPlain(&support[0], support.size(), supportNew, ballT());
+    }
+  }
+  return B;
+}
+
+template<int dim>
 void miniDisc(point<dim>* P, intT n) {
   typedef point<dim> pointT;
   typedef circle discT;
@@ -157,10 +221,11 @@ void miniDisc(point<dim>* P, intT n) {
 
   /*
     - 0: plain
-    - 1: mtf only
+    - 1: mtf
     - 2: pivot + mtf
+    - 3: orthant scan
    */
-  static const int method = 2;
+  static const int method = 3;
 
   cout << "smallest enclosing disc, " << n << ", dim " << dim << " points" << endl;
 
@@ -188,6 +253,11 @@ void miniDisc(point<dim>* P, intT n) {
     cout << "method = mtf+pivot" << endl;
     auto support = vector<pointT>();
     D = miniDiscPivot(P, n, support, ballT());
+    break;
+  }
+  case 3: {
+    cout << "method = orthant-scan" << endl;
+    D = miniDiscOrt(P, n);
     break;
   }
   default:
