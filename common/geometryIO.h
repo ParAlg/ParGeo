@@ -56,6 +56,26 @@ inline void xToString(char* s, point3d a) {
   xToString(s+lx+ly+2, a.z());
 }
 
+template<int dim>
+inline int xToStringLen(point<dim> a) {
+  intT s = 0;
+  for (int i=0; i<dim; ++i) s += xToStringLen(a[i]);
+  return s+dim-1;
+}
+
+template<int dim>
+inline void xToString(char* s, point<dim> a) {
+  char* ss = s;
+  for (int i=0; i<dim; ++i) {
+    int li = xToStringLen(a[i]);
+    xToString(ss, a[i]);
+    if (i != dim-1) {
+      ss[li] = ' ';
+      ss += li+1;
+    }
+  }
+}
+
 inline int xToStringLen(triangle a) {
   return xToStringLen(a.C[0]) + xToStringLen(a.C[1]) + xToStringLen(a.C[2]) + 2;
 }
@@ -99,7 +119,8 @@ namespace benchIO {
 
   template <class pointT>
   int writePointsToFile(pointT* P, intT n, char* fname) {
-    string Header = (pointT::dim == 2) ? HeaderPoint2d : HeaderPoint3d;
+    //string Header = (pointT::dim == 2) ? HeaderPoint2d : HeaderPoint3d;
+    string Header = headerPoint(pointT::dim);
     int r = writeArrayToFile(Header, P, n, fname);
     return r;
   }

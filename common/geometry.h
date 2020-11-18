@@ -109,6 +109,11 @@ public:
     for (int i=0; i<_dim; ++i) xx[i] = x[i]-op2.x[i];
     return pointT(xx);
   }
+  pointT operator/(floatT dv) {
+    floatT xx[_dim];
+    for (int i=0; i<_dim; ++i) xx[i] = x[i]/dv;
+    return pointT(xx);
+  }
   floatT& operator[](int i) {return x[i];}
   friend bool operator==(pointT a, pointT b) {
     for (intT ii=0; ii<dim; ++ii) {
@@ -920,7 +925,7 @@ pair<point<dim>, point<dim>> boundingBoxParallel(T* A, intT n) {
   typedef point<dim> pointT;
   intT P = getWorkers()*8;
   intT blockSize = (n+P-1)/P;
-  pointT localMin[P];
+  pointT localMin[P];//todo make bigger, not on the same line
   pointT localMax[P];
   for (intT i=0; i<P; ++i) {
     localMin[i] = pointT(A[0].coordinate());
