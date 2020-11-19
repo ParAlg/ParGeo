@@ -262,6 +262,7 @@ public:
   floatT coordinate(int i) {return p[i];}
   void print() {cout << ":(" << x() << "," << y() << "):";}
   //todo s
+  point2d operator/(floatT dd) {return point2d(x()/dd, y()/dd);}//todo
   point2d operator+(vect2d op2) {return point2d(x() + op2.x(), y() + op2.y());}//todo
   vect2d operator-(point2d op2) {return vect2d(x() - op2.x(), y() - op2.y());}
   floatT& operator[] (int i) {return p[i];};
@@ -288,9 +289,15 @@ public:
     // return ((x() - hsize > pt.x()) || (x() + hsize < pt.x()) ||
     //         (y() - hsize > pt.y()) || (y() + hsize < pt.y()));
   }
-  floatT pointDist(point2d p2) {
+  floatT pointDist(point2d p2) {//deprecate 2020.11
     return p.pointDist(p2.p);
     //return sqrt((p.x-x)*(p.x-x)+(p.y-y)*(p.y-y));
+  }
+  floatT dist(point2d p2) {
+    return p.dist(p2.p);
+  }
+  floatT distSqr(point2d p2) {
+    return p.distSqr(p2.p);
   }
   point2d average(point2d p2) {return p.average(p2.p);}
   static const int dim = 2;

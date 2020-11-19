@@ -24,6 +24,7 @@
 #include <iostream>
 #include "pbbs/utils.h"
 #include "pbbs/gettime.h"
+#include "pbbs/sequence.h"
 #include "geometry.h"
 #include "hull.h"
 using namespace std;
@@ -37,7 +38,7 @@ struct facet {
   point2d p2;//(p1->p2) is clockwise
   vector<pointNode*> seeList;//points that can see facet
   facet(point2d p11, point2d p22): p1(p11), p2(p22) {}
-  bool visibleFrom(point2d p) {return triArea(p1, p2, p) > 1e-7;}//todo numerical stability needs better hack
+  bool visibleFrom(point2d p) {return triArea(p1, p2, p) > 1e-10;}//todo numerical stability needs better hack
 };
 
 static std::ostream& operator<<(std::ostream& os, const facet f) {
@@ -50,6 +51,7 @@ struct pointNode {
   facet* seeFacet;//maintain one edge visible, change from time to time
   //don't have to maintain all, can search pretty easily
   pointNode(point2d pp): p(pp), seeFacet(NULL) {};
+  pointNode() {};
 };
 
 pair<facet*, facet*> findVisible(facet* head, point2d p) {
@@ -97,8 +99,9 @@ void printHull(facet* start, facet* end) {
 
 _seq<intT> hull(point2d* P, intT n) {
   static bool verbose = false;
-  static bool brute = false;
+  static bool brute = false;//visibility check
   static bool verify = false;
+  static bool localPivot = false;
 
   timing t; t.start();
 
@@ -143,13 +146,40 @@ _seq<intT> hull(point2d* P, intT n) {
     } while (ptr != H);
   }
 
-  for (intT i=0; i<n-3; ++i) {
-    if(verbose) cout << "--- " << i << endl;
+  auto findPivot = [&](facet* H)
+		   {
+		     auto f = H;
+		     while (f->seeList.size()<=0 && f->next!=H) f = f->next;
+		     if (f->seeList.size() <= 0) return (pointNode*)NULL;
+		     point2d l = f->p1;
+		     point2d r = f->p2;
+		     auto triangArea = [&](intT idx)
+				       {
+					 return triArea(l, r, f->seeList[idx]->p);
+				       };
+		     intT idx = sequence::maxIndex<double>((intT)0, (intT)f->seeList.size(), greater<floatT>(), triangArea);
+		     return f->seeList[idx];
+		   };
 
-    auto pr = PN[i];
+  intT i = 0;
+  while(1) {
+    if(verbose) cout << "--- iter" << i << endl;
+
+    pointNode pr;
+    if (localPivot) {
+      pointNode* prp = findPivot(H);
+      if (!prp) break;
+      pr = *prp;
+    } else {
+      if (i>=n-3) break;
+      pr = PN[i];
+      if (!pr.seeFacet) {
+	i++;
+	continue;}
+    }
+    i++;
+
     if(verbose) cout << " pr = " << pr.p << endl;
-
-    if (!pr.seeFacet) continue;//pr is in hull
 
     pair<facet*, facet*> conflicts;
     if (brute) {
