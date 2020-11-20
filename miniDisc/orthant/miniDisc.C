@@ -39,15 +39,19 @@ bool ortScanSerial(point<dim> c, floatT rSqr, point<dim>* P, intT n, vector<poin
   intT idx[dd];
   for(intT i=0; i<dd; ++i) idx[i] = -1;
 
+  intT confCount = 0;
   for (intT i=0; i<n; ++i) {
     floatT dSqr = P[i].distSqr(c);
     if (dSqr > rSqr+1e-6) {//numerical stability
+      confCount ++;
       intT o = c.quadrant(P[i]);
       if (dSqr > dist[o]) {
         dist[o] = dSqr;
         idx[o] = i;}
     }
   }
+  if (confCount > 0)
+    cout << "conflicts = " << confCount << "/" << n << endl;
 
   bool hasOut = false;
   for(intT i=0; i<dd; ++i) {
@@ -90,6 +94,65 @@ ball<dim> miniDiscOrtSerial(point<dim>* P, intT n) {
     } else {
       auto supportNew = vector<pointT>();
       B = miniDiscPlainSerial(&support[0], support.size(), supportNew, ballT());
+      for(intT i=0; i<dd; ++i) dist[i] = -1;
+    }
+  }
+  return B;
+}
+
+template<int dim>
+ball<dim> miniDiscSamplingOrtSerial(point<dim>* P, intT n) {
+  typedef ball<dim> ballT;
+  typedef point<dim> pointT;
+
+  intT sample = dim*3;
+  ballT B;
+  if (sample > n) {
+    vector<pointT> support;
+    return miniDiscPlainSerial(P, sample, support, B);
+  } else {
+    vector<pointT> support;
+    B = miniDiscPlainSerial(P, sample, support, B);
+  }
+
+  intT dd = intT(pow(2.0, dim));
+  floatT dist[dd];
+  for(intT i=0; i<dd; ++i) dist[i] = -1;
+
+  intT scanned = 0;
+  intT step = n/100;
+  while (scanned < n) {
+    vector<pointT> support;
+    for(intT i=0; i<B.size(); ++i) {
+      support.push_back(B.support()[i]);}
+
+    bool found = ortScanSerial<dim>(B.center(), B.radius()*B.radius(), P+scanned, step, support, dist);
+    scanned += step;
+
+    if (!found) {
+      break;
+    } else {
+      auto supportNew = vector<pointT>();
+      B = miniDiscPlainSerial(&support[0], support.size(), supportNew, ballT());
+      for(intT i=0; i<dd; ++i) dist[i] = -1;
+    }
+  }
+
+  cout << "---" << endl;
+
+  while (1) {
+    vector<pointT> support;
+    for(intT i=0; i<B.size(); ++i) {
+      support.push_back(B.support()[i]);}
+
+    bool found = ortScanSerial<dim>(B.center(), B.radius()*B.radius(), P, n, support, dist);
+
+    if (!found) {
+      return B;
+    } else {
+      auto supportNew = vector<pointT>();
+      B = miniDiscPlainSerial(&support[0], support.size(), supportNew, ballT());
+      for(intT i=0; i<dd; ++i) dist[i] = -1;
     }
   }
   return B;
@@ -197,7 +260,7 @@ void miniDisc(point<dim>* P, intT n) {
   typedef ball<dim> ballT;
 
   static const bool preprocess = false;
-  static const bool serial = false;
+  static const bool serial = true;
 
   cout << "smallest enclosing disc, " << n << ", dim " << dim << " points" << endl;
 
@@ -209,9 +272,10 @@ void miniDisc(point<dim>* P, intT n) {
 
   ballT D;
   cout << "method = orthant-scan" << endl;
-  if (serial)
+  if (serial) {
     D = miniDiscOrtSerial(P, n);
-  else
+    //D = miniDiscSamplingOrtSerial(P, n);
+  } else
     D = miniDiscOrt(P, n);
 
   cout << "seb-time = " << t0.stop() << endl;
