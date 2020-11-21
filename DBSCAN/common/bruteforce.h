@@ -23,8 +23,6 @@
 
 #include "DBSCAN.h"
 
-#include "coreBccp.h"
-
 template<int dim, class pointT>
 intT* coreBF(pointT* P, intT n, floatT epsilon, intT minPts) {
   intT* coreFlag = newA(intT, n);
