@@ -29,16 +29,15 @@
 #include "pbbs/parallel.h"
 using namespace benchIO;
 
-//these few functions are for triangle io
-
 inline int xToStringLen(point2d a) {
   return xToStringLen(a.x()) + xToStringLen(a.y()) + 1;
 }
 
-inline void xToString(char* s, point2d a) {
+inline void xToString(char* s, point2d a, bool comma=false) {
   int l = xToStringLen(a.x());
   xToString(s, a.x());
-  s[l] = ' ';
+  if(comma) s[l] = ',';
+  else s[l] = ' ';
   xToString(s+l+1, a.y());
 }
 
@@ -46,13 +45,15 @@ inline int xToStringLen(point3d a) {
   return xToStringLen(a.x()) + xToStringLen(a.y()) + xToStringLen(a.z()) + 2;
 }
 
-inline void xToString(char* s, point3d a) {
+inline void xToString(char* s, point3d a, bool comma=false) {
   int lx = xToStringLen(a.x());
   int ly = xToStringLen(a.y());
   xToString(s, a.x());
-  s[lx] = ' ';
+  if(comma) s[lx] = ',';
+  else s[lx] = ' ';
   xToString(s+lx+1, a.y());
-  s[lx+ly+1] = ' ';
+  if(comma) s[lx+ly+1] = ',';
+  else s[lx+ly+1] = ' ';
   xToString(s+lx+ly+2, a.z());
 }
 
@@ -64,13 +65,14 @@ inline int xToStringLen(point<dim> a) {
 }
 
 template<int dim>
-inline void xToString(char* s, point<dim> a) {
+inline void xToString(char* s, point<dim> a, bool comma=false) {
   char* ss = s;
   for (int i=0; i<dim; ++i) {
     int li = xToStringLen(a[i]);
     xToString(ss, a[i]);
     if (i != dim-1) {
-      ss[li] = ' ';
+      if(comma) ss[li] = ',';
+      else ss[li] = ' ';
       ss += li+1;
     }
   }
@@ -80,13 +82,15 @@ inline int xToStringLen(triangle a) {
   return xToStringLen(a.C[0]) + xToStringLen(a.C[1]) + xToStringLen(a.C[2]) + 2;
 }
 
-inline void xToString(char* s, triangle a) {
+inline void xToString(char* s, triangle a, bool comma=false) {
   int lx = xToStringLen(a.C[0]);
   int ly = xToStringLen(a.C[1]);
   xToString(s, a.C[0]);
-  s[lx] = ' ';
+  if(comma) s[lx] = ',';
+  else s[lx] = ' ';
   xToString(s+lx+1, a.C[1]);
-  s[lx+ly+1] = ' ';
+  if(comma) s[lx+ly+1] = ',';
+  else s[lx+ly+1] = ' ';
   xToString(s+lx+ly+2, a.C[2]);
 }
 
@@ -119,9 +123,29 @@ namespace benchIO {
 
   template <class pointT>
   int writePointsToFile(pointT* P, intT n, char* fname) {
-    //string Header = (pointT::dim == 2) ? HeaderPoint2d : HeaderPoint3d;
     string Header = headerPoint(pointT::dim);
     int r = writeArrayToFile(Header, P, n, fname);
+    return r;
+  }
+
+  inline string headerPointCSV(int dim) {
+    if (dim < 2 || dim > 9) {
+      cout << "headerPoint unsupported dimension, abort" << dim << endl; abort();
+    }
+    string header;
+    for(int i=0; i<dim; ++i) {
+      header.push_back('d');
+      header.push_back('0'+i);
+      header.push_back(',');
+    }
+    header.pop_back();
+    return header;
+  }
+
+  template <class pointT>
+  int writePointsToFileCSV(pointT* P, intT n, char* fname) {
+    string Header = headerPointCSV(pointT::dim);
+    int r = writeArrayToFileCSV(Header, P, n, fname);
     return r;
   }
 
@@ -130,9 +154,9 @@ namespace benchIO {
     int d = pointT::dim;
     double* a = newA(double,n*d);
     {par_for (long i=0; i<d*n; i++)
-  a[i] = atof(Str[i]);}
+	a[i] = atof(Str[i]);}
     {par_for (long i=0; i<n; i++)
-  P[i] = pointT(a+(d*i));}
+	P[i] = pointT(a+(d*i));}
     free(a);
   }
 
@@ -182,14 +206,10 @@ namespace benchIO {
       cout << "invalid csv or dim mismatch" << endl;
       abort();
     }
-    //cout << "csv columns: ";
-    //for(intT i=sCol; i<eCol; ++i) {
-    //  cout << W.Strings[i] << " ";}
-    cout << endl;
     long n = (W.m-col);
     pointT *P = newA(pointT, n/col);
     parseCsvPoints(W.Strings+col, P, n, col);
-    // W.del();
+    W.del();
     return _seq<pointT>(P, n/col);
   }
 
@@ -209,7 +229,7 @@ namespace benchIO {
     char *targetString = W->Strings[0];
     intT myPt = 18;
     while (isNumber(targetString[myPt])) myPt ++;
-    targetString[myPt] = '\0'; // TODO Support 10+
+    targetString[myPt] = '\0'; // todo Support 10+
     d = atoi(&targetString[18]);
     return d;
   }

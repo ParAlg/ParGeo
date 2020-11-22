@@ -71,22 +71,18 @@ namespace benchIO {
 
   struct toLong { long operator() (bool v) {return (long) v;} };
 
-  // parallel code for converting a string to words
   words stringToWords(char *Str, long n) {
     par_for(long i=0; i<n; i++)
       if (isSpace(Str[i])) Str[i] = 0; 
 
-    // mark start of words
     bool *FL = newA(bool,n);
     FL[0] = Str[0];
     par_for(long i=1; i<n; i++) FL[i] = Str[i] && !Str[i-1];
-    
-    // offset for each start of word
+
     _seq<long> Off = sequence::packIndex<long>(FL, n);
     long m = Off.n;
     long *offsets = Off.A;
 
-    // pointer to each start of word
     char **SA = newA(char*, m);
     par_for(long j=0; j<m; j++) SA[j] = Str+offsets[j];
 
@@ -112,19 +108,16 @@ namespace benchIO {
       }
     }
 
-    // mark start of words
     bool *FL = newA(bool,n);
-    FL[0] = Str[0]; // no header in csv, no need
+    FL[0] = Str[0];
     par_for(long i=1; i<n; i++) {
       FL[i] = Str[i] && !Str[i-1];
     }
-    
-    // offset for each start of word
+
     _seq<long> Off = sequence::packIndex<long>(FL, n);
     long m = Off.n;
     long *offsets = Off.A;
 
-    // pointer to each start of word
     char **SA = newA(char*, m);
     par_for(long j=0; j<m; j++) {
       SA[j] = Str+offsets[j];
@@ -164,21 +157,22 @@ namespace benchIO {
   inline void xToString(char* s, char* a) { sprintf(s,"%s",a);}
 
   template <class A, class B>
-  inline int xToStringLen(pair<A,B> a) { 
+  inline int xToStringLen(pair<A,B> a) {
     return xToStringLen(a.first) + xToStringLen(a.second) + 1;
   }
   template <class A, class B>
-  inline void xToString(char* s, pair<A,B> a) { 
+  inline void xToString(char* s, pair<A,B> a, bool comma=false) {
     int l = xToStringLen(a.first);
     xToString(s,a.first);
-    s[l] = ' ';
+    if(comma) s[l] = ',';
+    else s[l] = ' ';
     xToString(s+l+1,a.second);
   }
 
   struct notZero { bool operator() (char A) {return A > 0;}};
 
   template <class T>
-  _seq<char> arrayToString(T* A, long n) {
+  _seq<char> arrayToString(T* A, long n, bool comma=false) {
     long* L = newA(long,n);
     {par_for(long i=0; i<n; i++) L[i] = xToStringLen(A[i])+1;}
     long m = sequence::scan(L,L,n,utils::addF<long>(),(long) 0);
@@ -186,10 +180,10 @@ namespace benchIO {
     par_for(long j=0; j<m; j++)
       B[j] = 0;
     par_for(long i=0; i<n-1; i++) {
-      xToString(B + L[i],A[i]);
+      xToString(B + L[i],A[i],comma);
       B[L[i+1] - 1] = '\n';
     }
-    xToString(B + L[n-1],A[n-1]);
+    xToString(B + L[n-1],A[n-1],comma);
     B[m-1] = '\n';
     free(L);
     char* C = newA(char,m+1);
@@ -200,13 +194,13 @@ namespace benchIO {
   }
 
   template <class T>
-  void writeArrayToStream(ofstream& os, T* A, long n) {
+  void writeArrayToStream(ofstream& os, T* A, long n, bool comma=false) {
     long BSIZE = 1000000;
     long offset = 0;
     while (offset < n) {
       // Generates a string for a sequence of size at most BSIZE
       // and then wrties it to the output stream
-      _seq<char> S = arrayToString(A+offset,min(BSIZE,n-offset));
+      _seq<char> S = arrayToString(A+offset,min(BSIZE,n-offset),comma);
       os.write(S.A, S.n);
       S.del();
       offset += BSIZE;
@@ -214,7 +208,7 @@ namespace benchIO {
   }
 
   template <class T>
-    int writeArrayToFile(string header, T* A, long n, char* fileName) {
+  int writeArrayToFile(string header, T* A, long n, char* fileName) {
     ofstream file (fileName, ios::out | ios::binary);
     if (!file.is_open()) {
       std::cout << "Unable to open file: " << fileName << std::endl;
@@ -222,6 +216,20 @@ namespace benchIO {
     }
     file << header << endl;
     writeArrayToStream(file, A, n);
+    file.close();
+    return 0;
+  }
+
+  template <class T>
+  int writeArrayToFileCSV(string header, T* A, long n, char* fileName) {
+    ofstream file (fileName, ios::out | ios::binary);
+    if (!file.is_open()) {
+      std::cout << "Unable to open file: " << fileName << std::endl;
+      return 1;
+    }
+    file << header << endl;
+    bool comma = true;
+    writeArrayToStream(file, A, n, comma);
     file.close();
     return 0;
   }
@@ -235,8 +243,6 @@ namespace benchIO {
     long end = file.tellg();
     file.seekg (0, ios::beg);
     long n = end - file.tellg();
-    // initializes in parallel
-    //char* bytes = newArray(n+1, (char) 0);
     char* bytes = newA(char, n+1);
     par_for(long i=0; i < n+1; i++) bytes[i] = 0;
     file.read (bytes,n);
