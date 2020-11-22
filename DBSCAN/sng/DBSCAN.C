@@ -38,7 +38,7 @@ intT* coreSNG_BF(pointT* P, intT n, floatT epsilon, intT minPts, floatT s) {
   par_for (intT i=0; i<n; ++i) {
     coreFlag[i] = 0;
     for (intT j=0; j<ns; ++j) {
-      if (P[i].dist(P[j]) <= epsilon) {
+      if (P[i].dist(P[utils::hash(i*n+j)%ns]) <= epsilon) {
         coreFlag[i] ++;
       }}
   }
@@ -63,8 +63,9 @@ intT* clusterCoreSNG_BF(pointT* P, intT n, floatT epsilon, intT minPts, floatT s
   auto uf = unionFind(n);
   par_for (intT i=0; i<n; ++i) {
     for (intT j=0; j<ns; ++j) {
-      if (coreFlag[i] && coreFlag[j] && P[i].dist(P[j]) <= epsilon) {
-        uf.link(i,j);
+      intT jj = utils::hash(i*n+j)%ns;
+      if (coreFlag[i] && coreFlag[jj] && P[i].dist(P[jj]) <= epsilon) {
+        uf.link(i,jj);
       }}
   }
   intT* cluster = newA(intT, n);
@@ -87,10 +88,11 @@ void clusterBorderSNG_BF(pointT* P, intT n, floatT epsilon, intT minPts, floatT 
       intT cid = -1;
       floatT cDistSqr = floatMax();
       for(intT j=0; j<ns; ++j) {
-        if (coreFlag[j]) {
-          auto dist = P[i].distSqr(P[j]);
+        intT jj = utils::hash(i*n+j)%ns;
+        if (coreFlag[jj]) {
+          auto dist = P[i].distSqr(P[jj]);
           if (dist <= thresh && dist < cDistSqr) {
-            cid = clusterb[j];
+            cid = clusterb[jj];
             cDistSqr = dist;
           }
         }
