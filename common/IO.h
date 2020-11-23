@@ -139,22 +139,22 @@ namespace benchIO {
   }
 
   inline int xToStringLen(long a) { return 21;}
-  inline void xToString(char* s, long a) { sprintf(s,"%ld",a);}
+  inline void xToString(char* s, long a, bool comma=false) { sprintf(s,"%ld",a);}
 
   inline int xToStringLen(unsigned long a) { return 21;}
-  inline void xToString(char* s, unsigned long a) { sprintf(s,"%lu",a);}
+  inline void xToString(char* s, unsigned long a, bool comma=false) { sprintf(s,"%lu",a);}
 
   inline uint xToStringLen(uint a) { return 12;}
-  inline void xToString(char* s, uint a) { sprintf(s,"%u",a);}
+  inline void xToString(char* s, uint a, bool comma=false) { sprintf(s,"%u",a);}
 
   inline int xToStringLen(int a) { return 12;}
-  inline void xToString(char* s, int a) { sprintf(s,"%d",a);}
+  inline void xToString(char* s, int a, bool comma=false) { sprintf(s,"%d",a);}
 
   inline int xToStringLen(double a) { return 18;}
-  inline void xToString(char* s, double a) { sprintf(s,"%.11le", a);}
+  inline void xToString(char* s, double a, bool comma=false) { sprintf(s,"%.11le", a);}
 
   inline int xToStringLen(char* a) { return strlen(a)+1;}
-  inline void xToString(char* s, char* a) { sprintf(s,"%s",a);}
+  inline void xToString(char* s, char* a, bool comma=false) { sprintf(s,"%s",a);}
 
   template <class A, class B>
   inline int xToStringLen(pair<A,B> a) {

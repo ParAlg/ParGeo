@@ -114,6 +114,11 @@ public:
     for (int i=0; i<_dim; ++i) xx[i] = x[i]/dv;
     return pointT(xx);
   }
+  pointT operator*(floatT dv) {
+    floatT xx[_dim];
+    for (int i=0; i<_dim; ++i) xx[i] = x[i]*dv;
+    return pointT(xx);
+  }
   floatT& operator[](int i) {return x[i];}
   friend bool operator==(pointT a, pointT b) {
     for (intT ii=0; ii<dim; ++ii) {
