@@ -42,10 +42,10 @@ bool ortScanSerial(point<dim> c, floatT rSqr, point<dim>* P, intT n, vector<poin
   intT confCount = 0;
   for (intT i=0; i<n; ++i) {
     floatT dSqr = P[i].distSqr(c);
-    if (dSqr > rSqr+1e-6) {//numerical stability
+    if (dSqr > rSqr*1.00001) {//numerical stability
       confCount ++;
       intT o = c.quadrant(P[i]);
-      if (dSqr > dist[o]) {
+      if (dSqr > dist[o]*1.00001) {//numerical stability
         dist[o] = dSqr;
         idx[o] = i;}
     }
@@ -182,9 +182,9 @@ bool ortScan(point<dim> c, floatT rSqr, point<dim>* A, intT n, vector<point<dim>
     floatT* locDist = dist + p*dd;
     for (intT i=s; i<e; ++i) {
       floatT dSqr = A[i].distSqr(c);
-      if (dSqr > rSqr+1e-6) {//numerical stability
+      if (dSqr > rSqr*1.000001) {//numerical stability
         intT o = c.quadrant(A[i]);
-        if (dSqr > locDist[o]) {
+        if (dSqr > locDist[o]*1.000001) {//numerical stability
           locDist[o] = dSqr;
           locIdx[o] = i;}
       }
@@ -248,6 +248,7 @@ ball<dim> miniDiscOrt(point<dim>* P, intT n) {
     } else {
       auto supportNew = vector<pointT>();
       B = miniDiscPlain(&support[0], support.size(), supportNew, ballT());
+      for(intT i=0; i<dd; ++i) dist[i] = -1;
     }
   }
   return B;
@@ -260,7 +261,7 @@ void miniDisc(point<dim>* P, intT n) {
   typedef ball<dim> ballT;
 
   static const bool preprocess = false;
-  static const bool serial = true;
+  static const bool serial = false;
 
   cout << "smallest enclosing disc, " << n << ", dim " << dim << " points" << endl;
 
