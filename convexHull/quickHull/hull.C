@@ -24,63 +24,9 @@
 #include "pbbs/parallel.h"
 #include "pbbs/sequence.h"
 #include "geometry.h"
+#include "serialQuick.h"
 using namespace std;
 using namespace sequence;
-
-template <class ET, class F>
-pair<intT,intT> split(ET* A, intT n, F lf, F rf) {
-  intT ll = 0, lm = 0;
-  intT rm = n-1, rr = n-1;
-  while (1) {
-    while ((lm <= rm) && !(rf(A[lm]) > 0)) {
-      if (lf(A[lm]) > 0) A[ll++] = A[lm];
-      lm++;
-    }
-    while ((rm >= lm) && !(lf(A[rm]) > 0)) {
-      if (rf(A[rm]) > 0) A[rr--] = A[rm];
-      rm--;
-    }
-    if (lm >= rm) break; 
-    ET tmp = A[lm++];
-    A[ll++] = A[rm--];
-    A[rr--] = tmp;
-  }
-  intT n1 = ll;
-  intT n2 = n-rr-1;
-  return pair<intT,intT>(n1,n2);
-}
-
-struct aboveLine {
-  intT l, r;
-  point2d* P;
-  aboveLine(point2d* _P, intT _l, intT _r) : P(_P), l(_l), r(_r) {}
-  bool operator() (intT i) {return triArea(P[l], P[r], P[i]) > 0.0;}
-};
-
-intT serialQuickHull(intT* I, point2d* P, intT n, intT l, intT r) {
-  if (n < 2) return n;
-  intT maxP = I[0];
-  double maxArea = triArea(P[l],P[r],P[maxP]);
-  for (intT i=1; i < n; i++) {
-    intT j = I[i];
-    double a = triArea(P[l],P[r],P[j]);
-    if (a > maxArea) {
-      maxArea = a;
-      maxP = j;
-    }
-  }
-
-  pair<intT,intT> nn = split(I, n, aboveLine(P,l,maxP), aboveLine(P,maxP,r));
-  intT n1 = nn.first;
-  intT n2 = nn.second;
-
-  intT m1, m2;
-  m1 = serialQuickHull(I,      P, n1, l,   maxP);
-  m2 = serialQuickHull(I+n-n2, P, n2, maxP,r);
-  for (intT i=0; i < m2; i++) I[i+m1+1] = I[i+n-n2];
-  I[m1] = maxP;
-  return m1+1+m2;
-}
 
 struct triangArea {
   intT l, r;
@@ -92,7 +38,7 @@ struct triangArea {
 
 intT quickHull(intT* I, intT* Itmp, point2d* P, intT n, intT l, intT r, intT depth) {
   if (n < 10000 || depth == 0) 
-    return serialQuickHull(I, P, n, l, r);
+    return serialQuickHullHelper(I, P, n, l, r);
   else {
 
     intT idx = maxIndex<double>((intT)0,n,greater<double>(),triangArea(I,P,l,r));
@@ -130,9 +76,8 @@ struct minMaxIndex {
   }
 };
     
-#define DEPTH 10
-
 _seq<intT> hullInternal(point2d* P, intT n) {
+  static const intT DEPTH = 10;
   pair<intT,intT> minMax = reduce<pair<intT,intT> >((intT)0,n,minMaxIndex(P), makePair());
   intT l = minMax.first;
   intT r = minMax.second;
@@ -161,6 +106,8 @@ _seq<intT> hullInternal(point2d* P, intT n) {
   free(I);
   Itmp[0] = l;
   Itmp[m1+1] = r;
+
+  //check(P, Itmp, m1+2+m2);
   return _seq<intT>(Itmp, m1+2+m2);
 }
 
