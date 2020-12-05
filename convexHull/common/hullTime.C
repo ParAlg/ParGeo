@@ -54,6 +54,8 @@ int main(int argc, char* argv[]) {
   int rounds = P.getOptionIntValue("-r",1);
   int csvCol = P.getOptionIntValue("-csv",-1);
 
+  printScheduler();
+
   _seq<point2d> PIn;
   if(csvCol>0) {
     PIn = readPointsFromFileCSV<point2d>(iFile, csvCol);

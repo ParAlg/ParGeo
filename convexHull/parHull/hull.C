@@ -32,16 +32,17 @@ using namespace sequence;
 
 _seq<intT> hull(point2d* P, intT n) {
   auto procs = getWorkers();
+  timing t; t.start();
 
   if (n < 2000 || procs <= 1) {
     intT* I = newA(intT, n);
     for (intT i=0; i < n; i++) I[i] = i;
     intT m = serialQuickHull(I, P, n);
+    cout << "hull-time = " << t.stop() << endl;
+
     check(P, n, I, m);
     return _seq<intT>(I, m);
   }
-
-  timing t; t.start();
 
   intT blk = n/procs;
   intT M[procs+1];
@@ -55,8 +56,8 @@ _seq<intT> hull(point2d* P, intT n) {
       M[i] = serialQuickHull(I+o, P+o, blk);
       //check(P+o, blk, I+o, M[i]);
     } else {
-      for(intT j=0; j<blk; ++j) I[j+o] = j;
       intT blkLast = max(blk, n-blk*(procs-1));
+      for(intT j=0; j<blkLast; ++j) I[j+o] = j;
       M[i] = serialQuickHull(I+o, P+o, blkLast);
       //check(P+o, blkLast, I+o, M[i]);
     }

@@ -23,5 +23,9 @@
 #include "parQuick.h"
 
 _seq<intT> hull(point2d* P, intT n) {
-  return hullInternal(P,n);
+  timing t; t.start();
+  auto CH = hullInternal(P,n);
+  cout << "hull-time = " << t.stop() << endl;
+  check(P, n, CH.A, CH.n);
+  return CH;
 }
