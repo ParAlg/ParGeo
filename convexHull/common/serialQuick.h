@@ -103,11 +103,25 @@ intT serialQuickHull(intT* I, point2d* P, intT n) {
   return m1+2+m2;
 }
 
-void check(point2d* P, intT* I, intT m) {
+void check(point2d* P, intT n, intT* I, intT m) {
   cout << "hull size = " << m << endl;
-  // for(intT i=0; i<
-  // auto al = aboveLine(P, );
-  // cout << "hull checked" << endl;
+  intT nume = 0;
+  for(intT i=0; i<m; ++i) {
+    auto al = aboveLine(P, I[i], I[(i+1)%m]);
+    for(intT j=0; j<n; ++j) {
+      if(al(j)) {
+	floatT error = triArea(P[I[i]], P[I[(i+1)%m]], P[j]);
+	if (error > 1e-7) {
+	  cout << "incorrect hull, point out = " << P[i] << endl;
+	  cout << "error = " << error << endl;
+	  abort();
+	} else nume++;
+      }}
+  }
+  if (nume > 0)
+    cout << "warning, found " << nume << " small numerical errors" << endl;
+  else
+    cout << "hull correct" << endl;
 }
 
 #endif

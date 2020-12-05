@@ -23,6 +23,7 @@
 #include <algorithm>
 #include "pbbs/parallel.h"
 #include "pbbs/sequence.h"
+#include "pbbs/gettime.h"
 #include "geometry.h"
 #include "serialQuick.h"
 using namespace std;
@@ -78,6 +79,8 @@ struct minMaxIndex {
     
 _seq<intT> hullInternal(point2d* P, intT n) {
   static const intT DEPTH = 10;
+  timing t; t.start();
+
   pair<intT,intT> minMax = reduce<pair<intT,intT> >((intT)0,n,minMaxIndex(P), makePair());
   intT l = minMax.first;
   intT r = minMax.second;
@@ -107,7 +110,9 @@ _seq<intT> hullInternal(point2d* P, intT n) {
   Itmp[0] = l;
   Itmp[m1+1] = r;
 
-  //check(P, Itmp, m1+2+m2);
+  cout << "hull-time = " << t.stop() << endl;
+
+  check(P, n, Itmp, m1+2+m2);
   return _seq<intT>(Itmp, m1+2+m2);
 }
 

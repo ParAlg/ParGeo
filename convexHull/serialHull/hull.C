@@ -22,17 +22,19 @@
 
 #include <algorithm>
 #include "pbbs/utils.h"
+#include "pbbs/gettime.h"
 #include "geometry.h"
 #include "hull.h"
 #include "serialQuick.h"
 using namespace std;
 
 _seq<intT> hull(point2d* P, intT n) {
+  timing t; t.start();
   intT* I = newA(intT, n);
   for (intT i=0; i < n; i++) I[i] = i;
   intT m = serialQuickHull(I, P, n);
+  cout << "hull-time = " << t.stop() << endl;
 
-  //check(P, I, m);
+  check(P, n, I, m);
   return _seq<intT>(I, m);
 }
-
