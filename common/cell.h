@@ -107,15 +107,17 @@ struct cell {
 #else
     auto newP = newA(objT, capacity);
 #endif
-    if (numPoints > 2000) {
-      par_for(intT i=0; i<numPoints; ++i) {newP[i]=P[i];}
-    }
-    else {for(intT i=0; i<numPoints; ++i) newP[i] = P[i];}
+    /* if (numPoints > 2000) { */
+    /*   par_for(intT i=0; i<numPoints; ++i) {newP[i]=P[i];} */
+    /* } */
+    /* else {for(intT i=0; i<numPoints; ++i) newP[i] = P[i];} */
+    granular_for(0, numPoints, 2000, [&](intT i){newP[i]=P[i];});
 
-    if (capacity-numPoints > 2000) {
-      par_for(intT i=numPoints; i<capacity; ++i) {newP[i].setEmpty();}
-    }
-    else {for(intT i=numPoints; i<capacity; ++i) newP[i].setEmpty();}
+    /* if (capacity-numPoints > 2000) { */
+    /*   par_for(intT i=numPoints; i<capacity; ++i) {newP[i].setEmpty();} */
+    /* } */
+    /* else {for(intT i=numPoints; i<capacity; ++i) newP[i].setEmpty();} */
+    granular_for(numPoints, capacity, 2000, [&](intT i){newP[i].setEmpty();});
     swap(newP, P);
     if (oldCapacity>0) {
 #ifdef USEJEMALLOC

@@ -942,13 +942,13 @@ pair<point<dim>, point<dim>> boundingBoxParallel(T* A, intT n) {
   for (intT i=0; i<P; ++i) {
     localMin[i] = pointT(A[0].coordinate());
     localMax[i] = pointT(A[0].coordinate());}
-  par_for(intT p=0; p<P; ++p) {
-    intT s = p*blockSize;
-    intT e = min((intT)(p+1)*blockSize,n);
-    for (intT j=s; j<e; ++j) {
-      localMin[p].minCoords(A[j].coordinate());
-      localMax[p].maxCoords(A[j].coordinate());}
-  }
+  parallel_for(0, P, [&](intT p) {
+      intT s = p*blockSize;
+      intT e = min((intT)(p+1)*blockSize,n);
+      for (intT j=s; j<e; ++j) {
+	localMin[p].minCoords(A[j].coordinate());
+	localMax[p].maxCoords(A[j].coordinate());}
+    });
   auto pMin = pointT(A[0].coordinate());
   auto pMax = pointT(A[0].coordinate());
   for(intT p=0; p<P; ++p) {

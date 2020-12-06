@@ -81,7 +81,7 @@ struct grid {
   intT totalPoints;
 
   inline void resetCells() {
-    par_for(intT i=0; i<cellCapacity; ++i) {cells[i].init();}
+    parallel_for(0, cellCapacity, [&](intT i) {cells[i].init();});
     numCells = 0;}
 
   /**
@@ -102,7 +102,7 @@ struct grid {
   }
 
   ~grid() {
-    par_for(intT i=0; i<numCells; ++i) {cells[i].del();}
+    parallel_for(0, numCells, [&](intT i) {cells[i].del();});
     free(cells);
     if(myHash) delete myHash;
     if(table) {
@@ -152,13 +152,13 @@ struct grid {
     if(!flag) {
       flag = newA(intT, nn+1);
       freeFlag=true;}
-    par_for(intT i=0; i<nn; ++i) {
-      flag[i] = 0;
-      auto fSize = [&](cellT& c) {
-                     flag[i] += c.actualSize();
-                     return false;};
-      nghCellMap(PP[i].coordinate(), fSize);
-    }
+    parallel_for(0, nn, [&](intT i) {
+	flag[i] = 0;
+	auto fSize = [&](cellT& c) {
+	  flag[i] += c.actualSize();
+	  return false;};
+	nghCellMap(PP[i].coordinate(), fSize);
+      });
     intT total = sequence::prefixSum(flag, 0, nn);
     if(freeFlag) free(flag);
     return total;}
@@ -310,11 +310,11 @@ struct grid {
       flag=newA(intT, nn+1);
       freeFlag=true;}
 
-    par_for(intT i=0; i<nn; ++i) {
-      flag[i] = 0;
-      auto fSum = [&](cellT& c) {flag[i]+=c.actualSize();return false;};
-      nghCellMap(PP[i].coordinate(), fSum);
-    }
+    parallel_for(0, nn, [&](intT i) {
+	flag[i] = 0;
+	auto fSum = [&](cellT& c) {flag[i]+=c.actualSize();return false;};
+	nghCellMap(PP[i].coordinate(), fSum);
+      });
     intT nNbrs = sequence::prefixSum(flag, 0, nn);
     if(nNbrs <= 0) {
       if(freeFlag) {
@@ -324,14 +324,14 @@ struct grid {
     flag[nn] = nNbrs;
 
     objT** pointers = newA(objT*, nNbrs);
-    par_for(intT i=0; i<nn; ++i) {
-      intT ii=0;
-      auto fGetPt = [&](objT& q) {
-                      if(filter(q)) pointers[flag[i]+(ii++)]=&q;
-                      else pointers[flag[i]+(ii++)]=NULL;
-                      return false;};
-      nghPointMap(PP[i].coordinate(), fGetPt);
-    }
+    parallel_for(0, nn, [&](intT i) {
+	intT ii=0;
+	auto fGetPt = [&](objT& q) {
+	  if(filter(q)) pointers[flag[i]+(ii++)]=&q;
+	  else pointers[flag[i]+(ii++)]=NULL;
+	  return false;};
+	nghPointMap(PP[i].coordinate(), fGetPt);
+      });
 
     if (noRandom) {
       auto pLess = [&](objT *a, objT *b) {
@@ -351,10 +351,10 @@ struct grid {
 
     if(pointers[0]) flag2[0] = 1;
     else flag2[0] = 0;
-    par_for(intT i=1; i<nNbrs; ++i) {
-      if(pointers[i] && pointers[i] != pointers[i-1]) flag2[i] = 1;
-      else flag2[i] = 0;
-    }
+    parallel_for(1, nNbrs, [&](intT i) {
+	if(pointers[i] && pointers[i] != pointers[i-1]) flag2[i] = 1;
+	else flag2[i] = 0;
+      });
     intT nPts = sequence::prefixSum(flag2, 0, nNbrs);
     flag2[nNbrs] = nPts;
 
@@ -365,9 +365,9 @@ struct grid {
       return 0;
     }
 
-    par_for(intT i=0; i<nNbrs; ++i){
-      if(flag2[i] != flag2[i+1]) map(flag2[i], *(pointers[i]));
-    }
+    parallel_for(0, nNbrs, [&](intT i) {
+	if(flag2[i] != flag2[i+1]) map(flag2[i], *(pointers[i]));
+      });
     free(pointers);
     if(freeFlag) free(flag);
     free(flag2);
@@ -421,25 +421,23 @@ struct grid {
     auto fInsert = [&] (objT& p) {
                      if(filter(p)) pTable.insert(&p);
                      return false;};
-    par_for(intT i=0; i<nn; ++i) {
-      if (i==0 || table->hashStruct.diffCell(PP[i].coordinate(), PP[i-1].coordinate())) {//short circuit
-        nghPointMap(PP[i].coordinate(), fInsert);}
-    }
+    parallel_for(0, nn, [&](intT i) {
+	if (i==0 || table->hashStruct.diffCell(PP[i].coordinate(), PP[i-1].coordinate())) {//short circuit
+	  nghPointMap(PP[i].coordinate(), fInsert);}
+      });
 
     auto P0 = pTable.entries();
     pTable.del();
-    par_for(intT i=0; i<P0.n; ++i) {
-      map(i, *P0.A[i]);
-    }
+    parallel_for(0, P0.n, [&](intT i) {
+	map(i, *P0.A[i]);});
     free(P0.A);
     return P0.n;
   }
 
   template<class mapFuncT>
   inline void allCellMap(mapFuncT f) {
-    par_for(intT i=0; i<numCells; ++i) {
-      if (!cells[i].isEmpty()) f(&cells[i]);
-    }
+    parallel_for(0, numCells, [&](intT i) {
+	if (!cells[i].isEmpty()) f(&cells[i]);});
   }
 
   /**
@@ -472,18 +470,17 @@ struct grid {
     if (!counts) {
       counts = newA(intT, numCells+1);
       freeCounts = true;}
-    par_for(intT i=0; i<numCells; ++i) {
-      counts[i]=cells[i].actualSize();
-    }
+    parallel_for(0, numCells, [&](intT i) {
+	counts[i]=cells[i].actualSize();});
     intT nPoints = sequence::prefixSum(counts, 0, numCells);
-    par_for(intT i=0; i<numCells; ++i) {
-      auto c = &cells[i];
-      intT jj=0;
-      for (intT j=0; j<c->size(); ++j) {
-        if (!c->P[j].isEmpty()) {
-          f(counts[i]+jj, c->P[j]);
-          jj++;}
-      }}
+    parallel_for(0, numCells, [&](intT i) {
+	auto c = &cells[i];
+	intT jj=0;
+	for (intT j=0; j<c->size(); ++j) {
+	  if (!c->P[j].isEmpty()) {
+	    f(counts[i]+jj, c->P[j]);
+	    jj++;}
+	}});
     if(freeCounts) free(counts);
     return nPoints;
   }
@@ -553,32 +550,32 @@ struct grid {
     auto pLess = [&] (objT a, objT b) {
                    return pointGridCmp<dim, objT, geoPointT>(a, b, pMin, r);};
     sampleSort(PP, nn, pLess);
-    par_for(intT i=0; i<nn; ++i) {
-      if (i==0 || table->hashStruct.diffCell(PP[i].coordinate(), PP[i-1].coordinate())) {//short circuit
-        auto bait = cellT(PP[i].coordinate());
-        if (!table->find(&bait)->isEmpty())
-          flag[i]=1;
-        else
-          flag[i]=0;
-      } else flag[i]=0;
-    }
+    parallel_for(0, nn, [&](intT i) {
+	if (i==0 || table->hashStruct.diffCell(PP[i].coordinate(), PP[i-1].coordinate())) {//short circuit
+	  auto bait = cellT(PP[i].coordinate());
+	  if (!table->find(&bait)->isEmpty())
+	    flag[i]=1;
+	  else
+	    flag[i]=0;
+	} else flag[i]=0;
+      });
     intT numDelCells = sequence::prefixSum(flag, 0, nn);
     flag[nn] = numDelCells;
 
     intT* flag2 = flag+nn+1;
-    par_for(intT i=0; i<nn; ++i) {
-      if (flag[i] != flag[i+1]) {
-        auto bait = cellT(PP[i].coordinate());
-        cellT* c = table->find(&bait);
-        auto tmp = c->actualSize();
-        intT j=0;
-        do {
-          c->erase(PP[i+j]);
-          j++;
-        } while (i+j<nn && flag[i+j]==flag[i+j+1]);
-        flag2[i] = tmp - c->actualSize();
-      } else flag2[i] = 0;
-    }
+    parallel_for(0, nn, [&](intT i) {
+	if (flag[i] != flag[i+1]) {
+	  auto bait = cellT(PP[i].coordinate());
+	  cellT* c = table->find(&bait);
+	  auto tmp = c->actualSize();
+	  intT j=0;
+	  do {
+	    c->erase(PP[i+j]);
+	    j++;
+	  } while (i+j<nn && flag[i+j]==flag[i+j+1]);
+	  flag2[i] = tmp - c->actualSize();
+	} else flag2[i] = 0;
+      });
     totalPoints -= sequence::prefixSum(flag2, 0, nn);
 
     if (returnNeighbors) {
@@ -662,19 +659,19 @@ struct grid {
     } else {
       flag[0] = 0;
       flag2[0] = 1;}
-    par_for(intT i=1; i<nn; ++i) {
-      if (table->hashStruct.diffCell(PP[i].coordinate(), PP[i-1].coordinate())) {
-        auto bait = cellT(PP[i].coordinate());
-        if (!table->find(&bait)->isEmpty()) {
-          flag[i] = 1;
-          flag2[i] = 0;
-        } else {
-          flag[i] = 0;
-          flag2[i] = 1;}
-      } else {
-        flag[i] = 0;
-        flag2[i] = 0;}
-    }
+    parallel_for(1, nn, [&](intT i) {
+	if (table->hashStruct.diffCell(PP[i].coordinate(), PP[i-1].coordinate())) {
+	  auto bait = cellT(PP[i].coordinate());
+	  if (!table->find(&bait)->isEmpty()) {
+	    flag[i] = 1;
+	    flag2[i] = 0;
+	  } else {
+	    flag[i] = 0;
+	    flag2[i] = 1;}
+	} else {
+	  flag[i] = 0;
+	  flag2[i] = 0;}
+      });
     intT numOldCells = sequence::prefixSum(flag, 0, nn);
     flag[nn] = numOldCells;
     intT numNewCells = sequence::prefixSum(flag2, 0, nn);
@@ -686,40 +683,40 @@ struct grid {
     if(!flag3) {
       flag3 = newA(intT, nn);
       freeFlag3 = true;}
-    par_for(intT i=0; i<nn; ++i) {
-      //old cell
-      if (flag[i] != flag[i+1]) {
-        auto bait = cellT(PP[i].coordinate());
-        auto c = table->find(&bait );
-        intT tmp = c->actualSize();
-        intT jj=0;
-        do {
-          c->insert(PP[i+jj]);
-          jj++;
-        } while(i+jj<nn
-                && flag[i+jj]==flag[i+jj+1]
-                && flag2[i+jj]==flag2[i+jj+1]);
-        flag3[i] = c->actualSize()-tmp;
-      }
+    parallel_for(0, nn, [&](intT i) {
+	//old cell
+	if (flag[i] != flag[i+1]) {
+	  auto bait = cellT(PP[i].coordinate());
+	  auto c = table->find(&bait );
+	  intT tmp = c->actualSize();
+	  intT jj=0;
+	  do {
+	    c->insert(PP[i+jj]);
+	    jj++;
+	  } while(i+jj<nn
+		  && flag[i+jj]==flag[i+jj+1]
+		  && flag2[i+jj]==flag2[i+jj+1]);
+	  flag3[i] = c->actualSize()-tmp;
+	}
 
-      //new cell
-      else if (flag2[i] != flag2[i+1]) {
-        auto c = &cells[numCells+flag2[i]];
-        intT tmp = c->actualSize();
-        intT jj=0;
-        do {
-          c->insert(PP[i+jj]);
-          jj++;
-        } while(i+jj<nn
-                && flag[i+jj]==flag[i+jj+1]
-                && flag2[i+jj]==flag2[i+jj+1]);
-        c->computeCoord(pMin, r);
-        flag3[i] = c->actualSize()-tmp;
-        table->insert(c);
-      }
+	//new cell
+	else if (flag2[i] != flag2[i+1]) {
+	  auto c = &cells[numCells+flag2[i]];
+	  intT tmp = c->actualSize();
+	  intT jj=0;
+	  do {
+	    c->insert(PP[i+jj]);
+	    jj++;
+	  } while(i+jj<nn
+		  && flag[i+jj]==flag[i+jj+1]
+		  && flag2[i+jj]==flag2[i+jj+1]);
+	  c->computeCoord(pMin, r);
+	  flag3[i] = c->actualSize()-tmp;
+	  table->insert(c);
+	}
 
-      else flag3[i] = 0;
-    }
+	else flag3[i] = 0;
+      });
 
     if(useTree) {
       tree->insert(&cells[numCells], numNewCells);
@@ -772,16 +769,16 @@ struct grid {
     if(!flag) {
       flag=newA(intT, nn+1);
       freeFlag=true;}
-    par_for(intT i=0; i<nn; ++i) {
-      if(isSparse(PP[i])) flag[i]=1;
-      else flag[i]=0;
-    }
+    parallel_for(0, nn, [&](intT i) {
+	if(isSparse(PP[i])) flag[i]=1;
+	else flag[i]=0;
+      });
     intT ii = sequence::prefixSum(flag, 0, nn);
     flag[nn] = ii;
     if(!P1) P1=newA(objT, nn);
-    par_for(intT i=0; i<nn; ++i) {
-      if(flag[i] != flag[i+1]) P1[flag[i]]=PP[i];
-    }
+    parallel_for(0, nn, [&](intT i) {
+	if(flag[i] != flag[i+1]) P1[flag[i]]=PP[i];
+      });
     if(freeFlag) free(flag);
     return _seq<objT>(P1,ii);}
 

@@ -85,15 +85,15 @@ class dynamicKdNode {
     for (intT i=0; i<P; ++i) {
       localMin[i] = pointT(newItems[first]->coordinate());
       localMax[i] = pointT(newItems[first]->coordinate());}
-    par_for(intT p=0; p<P; ++p) {
-      intT s = p*blockSize;
-      intT e = min((intT)(p+1)*blockSize,nn);
-      for (intT j=s; j<e; ++j) {
-        if (newItems[j]) {
-          localMin[p].minCoords(newItems[j]->coordinate());
-          localMax[p].maxCoords(newItems[j]->coordinate());}
-      }
-    }
+    parallel_for(0, P, [&](intT p) {
+	intT s = p*blockSize;
+	intT e = min((intT)(p+1)*blockSize,nn);
+	for (intT j=s; j<e; ++j) {
+	  if (newItems[j]) {
+	    localMin[p].minCoords(newItems[j]->coordinate());
+	    localMax[p].maxCoords(newItems[j]->coordinate());}
+	}
+      });
     for(intT p=0; p<P; ++p) {
       pMin.minCoords(localMin[p].x);
       pMax.maxCoords(localMax[p].x);}
@@ -145,20 +145,19 @@ class dynamicKdNode {
       flags = newA(intT, nn);
       freeFlag = true;}
 
-    par_for(intT i=0; i<nn; ++i) {
-      if (itemss[i] && itemss[i]->coordinate(split.k)<split.x) flags[i]=1;
-      else flags[i] = 0;
-    }
+    parallel_for(0, nn, [&](intT i){
+	if (itemss[i] && itemss[i]->coordinate(split.k)<split.x) flags[i]=1;
+	else flags[i] = 0;
+      });
     intT leftSize = sequence::prefixSum(flags,0,nn);
-    par_for(intT i=0; i<nn-1; ++i) {
-      if (flags[i] != flags[i+1]) scratch[flags[i]] = itemss[i];
-      if (i-flags[i] != i+1-flags[i+1]) scratch[leftSize+i-flags[i]] = itemss[i];
-    }
+    parallel_for(0, nn-1, [&](intT i){
+	if (flags[i] != flags[i+1]) scratch[flags[i]] = itemss[i];
+	if (i-flags[i] != i+1-flags[i+1]) scratch[leftSize+i-flags[i]] = itemss[i];
+      });
     if (flags[nn-1] != leftSize) scratch[flags[nn-1]] = itemss[nn-1];
     if (nn-1-flags[nn-1] != nn-leftSize) scratch[leftSize+nn-1-flags[nn-1]] = itemss[nn-1];
-    par_for(intT i=0; i<nn; ++i) {
-      itemss[i] = scratch[i];
-    }
+    parallel_for(0, nn, [&](intT i){
+      itemss[i] = scratch[i];});
 
     if(freeScratch) free(scratch);
     if(freeFlag) free(flags);
@@ -217,10 +216,10 @@ class dynamicKdNode {
   }
 
   //cilk_spawn requires function
-  void buildLeftNode(objT** itemss, intT nn, objT** scratchh, intT* flagss) {
-    left = new nodeT(itemss, nn, scratchh, flagss);}
-  void buildRightNode(objT** itemss, intT nn, objT** scratchh, intT* flagss) {
-    right = new nodeT(itemss, nn, scratchh, flagss);}
+  /* void buildLeftNode(objT** itemss, intT nn, objT** scratchh, intT* flagss) { */
+  /*   left = new nodeT(itemss, nn, scratchh, flagss);} */
+  /* void buildRightNode(objT** itemss, intT nn, objT** scratchh, intT* flagss) { */
+  /*   right = new nodeT(itemss, nn, scratchh, flagss);} */
   void constructParallel(objT** itemss, intT nn, objT** scratch, intT* flags) {
     pMin = pointT(itemss[0]->coordinate());
     pMax = pointT(itemss[0]->coordinate());
@@ -248,9 +247,14 @@ class dynamicKdNode {
       } else {
         leaf = false;
         numItems = nn;
-        cilk_spawn buildLeftNode(itemss, median, scratch, flags);
-        buildRightNode(itemss+median, nn-median, scratch+median, flags+median);
-        cilk_sync;
+        /* cilk_spawn buildLeftNode(itemss, median, scratch, flags); */
+        /* buildRightNode(itemss+median, nn-median, scratch+median, flags+median); */
+        /* cilk_sync; */
+	par_do([&](){
+		 left = new nodeT(itemss, median, scratch, flags);
+	       },[&](){
+		 right = new nodeT(itemss+median, nn-median, scratch+median, flags+median);
+	       });
       }
     }
   }
@@ -276,21 +280,21 @@ class dynamicKdNode {
       flags = newA(intT, numItems);
       freeFlag = true;}
 
-    par_for(intT i=0; i<numItems; ++i) {scratch[i] = items[i];}
-    par_for(intT i=0; i<numItems; ++i) {
-      if (items[i]) flags[i] = 1;
-      else flags[i] = 0;
-    }
+    parallel_for(0, numItems, [&](intT i){
+	scratch[i] = items[i];});
+    parallel_for(0, numItems, [&](intT i){
+	if (items[i]) flags[i] = 1;
+	else flags[i] = 0;
+      });
     intT valid = sequence::prefixSum(flags,0,numItems);
-    par_for(intT i=0; i<numItems-1; ++i) {
-      if (flags[i]!=flags[i+1]) {
-        items[flags[i]] = scratch[i];}
-    }
+    parallel_for(0; numItems-1, [&](intT i){
+	if (flags[i]!=flags[i+1]) {
+	  items[flags[i]] = scratch[i];}
+      });
     intT i=numItems-1;
     if (flags[i]!=valid) items[flags[i]] = scratch[i];
-    par_for(intT i=valid; i<capacity; ++i) {
-      items[i] = NULL;
-    }
+    parallel_for(valid, capacity, [&](intT i){
+	items[i] = NULL;});
     numItems = valid;
     numErased = 0;
 
@@ -322,8 +326,10 @@ class dynamicKdNode {
     capacity = max(want, numItems);
     if (capacity <= 0) capacity = 10;
     auto newItems = newA(objT*, capacity);
-    par_for(intT i=0; i<numItems; ++i) {newItems[i]=items[i];}
-    par_for(intT i=numItems; i<capacity; ++i) {newItems[i]=NULL;}
+    parallel_for(0, numItems, [&](intT i) {
+	newItems[i]=items[i];});
+    parallel_for(numItems, capacity, [&](intT i) {
+	newItems[i]=NULL;});
     swap(newItems, items);
     if (oldCapacity>0) free(newItems);
   }
@@ -332,9 +338,10 @@ class dynamicKdNode {
   void collectItems(objT** buffer) {
     if(!isLeaf()) {
       if(actualSize() > 2000) {
-        cilk_spawn left->collectItems(buffer);
-        right->collectItems(buffer+left->actualSize());
-        cilk_sync;
+        /* cilk_spawn left->collectItems(buffer); */
+        /* right->collectItems(buffer+left->actualSize()); */
+        /* cilk_sync; */
+	par_do([&](){left->collectItems(buffer);}, [&](){right->collectItems(buffer+left->actualSize());});
       } else {
         left->collectItems(buffer);
         right->collectItems(buffer+left->actualSize());
@@ -413,9 +420,10 @@ class dynamicKdNode {
         left->rebuildRecurse();
         right->rebuildRecurse();
       } else {
-        cilk_spawn left->rebuildRecurse();
-        right->rebuildRecurse();
-        cilk_sync;
+        /* cilk_spawn left->rebuildRecurse(); */
+        /* right->rebuildRecurse(); */
+        /* cilk_sync; */
+	par_do([&](){left->rebuildRecurse();}, [&](){right->rebuildRecurse();});
       }
     }
   }
@@ -436,9 +444,10 @@ class dynamicKdNode {
         left->erase(itemss, median);
         right->erase(itemss+median, nn-median);
       } else {
-        cilk_spawn left->erase(itemss, median);
-        right->erase(itemss+median, nn-median);
-        cilk_sync;
+        /* cilk_spawn left->erase(itemss, median); */
+        /* right->erase(itemss+median, nn-median); */
+        /* cilk_sync; */
+	par_do([&](){left->erase(itemss, median);}, [&](){right->erase(itemss+median, nn-median);});
       }
       numItems = left->actualSize()+right->actualSize();
     }
@@ -477,9 +486,10 @@ class dynamicKdNode {
         right->insert(itemss+median, nn-median);
       } else {
         intT offset = left->size()+median;
-        cilk_spawn left->insert(itemss, median);
-        right->insert(itemss+median, nn-median);
-        cilk_sync;
+        /* cilk_spawn left->insert(itemss, median); */
+        /* right->insert(itemss+median, nn-median); */
+        /* cilk_sync; */
+	par_do([&](){left->insert(itemss, median);}, [&](){right->insert(itemss+median, nn-median);});
       }
     }
   }
@@ -548,7 +558,8 @@ class dynamicKdTree {
   }
   dynamicKdTree(objT* P, intT n) {
     objT** items = newA(objT*, n);
-    par_for(intT i=0; i<n; ++i) {items[i]=&P[i];}
+    parallel_for(0, n, [&](intT i){
+	items[i]=&P[i];});
     if (n>2000) {
       objT** scratch = newA(objT*, n);
       intT* flags = newA(intT, n);
@@ -574,7 +585,8 @@ class dynamicKdTree {
   void erase(objT* PP, intT nn, bool rebuild=false) {
     if(!root) return;
     objT** PPP = newA(objT*, nn);
-    par_for(intT i=0; i<nn; ++i) {PPP[i]=&PP[i];}
+    parallel_for(0, nn, [&](intT i){
+	PPP[i]=&PP[i];});
     root->erase(PPP, nn);
     free(PPP);
     if(rebuild) root->rebuildRecurse();
@@ -583,7 +595,8 @@ class dynamicKdTree {
   void insert(objT* PP, intT nn, bool rebuild=false) {
     if (!root) {
       objT** items = newA(objT*, nn);
-      par_for(intT i=0; i<nn; ++i) {items[i]=&PP[i];}
+      parallel_for(0, nn, [&](intT i) {
+	  items[i]=&PP[i];});
       if (nn>2000) {
         objT** scratch = newA(objT*, nn);
         intT* flags = newA(intT, nn);
@@ -595,7 +608,8 @@ class dynamicKdTree {
       free(items);
     } else {
       objT** PPP = newA(objT*, nn);
-      par_for(intT i=0; i<nn; ++i) {PPP[i]=&PP[i];}
+      parallel_for(0, nn, [&](intT i) {
+	  PPP[i]=&PP[i];});
       root->insert(PPP, nn);
       free(PPP);
       if(rebuild) root->rebuildRecurse();

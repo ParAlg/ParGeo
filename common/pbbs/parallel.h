@@ -135,11 +135,12 @@ using namespace parlay;
 #define par_for_1 for
 #define par_for_256 for
 
-static void printScheduler() {
-  cout << "scheduler = Parlay-HomeGrown (beta, runs serially on unsupported code)" << endl;}
 static int getWorkers() {return (int)num_workers();}
 static int getWorkerId() {return (int)worker_id();}
 static void setWorkers(int n) { }
+static void printScheduler() {
+  cout << "scheduler = Parlay-HomeGrown (beta, runs serially on unsupported code)" << endl;
+  cout << "num-threads = " << getWorkers() << endl;}
 
 #else
 
@@ -176,5 +177,31 @@ inline void par_do(Lf left, Rf right, bool conservative=false) {
 }
 
 #endif
+
+#define nblocks(_n,_bsize) (1 + ((_n)-1)/(_bsize))
+
+template <class F>
+inline void blocked_for(intT _s, intT _e, intT _bsize, F f) {
+  if (_e > _s) {
+    intT _ss = _s;
+    intT _ee = _e;
+    intT _n = _ee-_ss;
+    intT _l = nblocks(_n,_bsize);
+    auto body = [&](intT _i) {
+      intT _s = _ss + _i * (_bsize);
+      intT _e = min(_s + (_bsize), _ee);
+      f(_s, _e, _i);
+    };
+    parallel_for(0, _l, body);
+  }
+}
+
+template <class F>
+inline void granular_for(intT _s, intT _e, intT _thresh, F f, intT granularity=0) {
+  if (_e - _s > _thresh)
+    parallel_for(_s, _e, f, granularity);
+  else
+    for(intT i=_s; i<_e; ++i) f(i);
+}
 
 #endif

@@ -7,6 +7,8 @@
 #include "pbbs/utils.h"
 #include "pbbs/sequence.h"
 
+//todo cilk_spawn refactoring
+
 using namespace std;
 
 template<class T, class cmpT>
@@ -38,20 +40,19 @@ inline intT splitItem(T* A, intT n, cmpT leftSide, T* B, intT* flag) {
     return 1;
   }
   if (n < 2000) return splitItemSerial(A, n, leftSide);
-  par_for(intT i=0; i<n; ++i) {
-    if (leftSide(A[i])) flag[i]=1;
-    else flag[i] = 0;
-  }
+  parallel_for(0, n, [&](intT i) {
+      if (leftSide(A[i])) flag[i]=1;
+      else flag[i] = 0;
+    });
   intT leftSize = sequence::prefixSum(flag,0,n);
-  par_for(intT i=0; i<n-1; ++i) {
-    if (flag[i] != flag[i+1]) B[flag[i]] = A[i];
-    if (i-flag[i] != i+1-flag[i+1]) B[leftSize+i-flag[i]] = A[i];
-  }
+  parallel_for(0, n-1, [&](intT i) {
+      if (flag[i] != flag[i+1]) B[flag[i]] = A[i];
+      if (i-flag[i] != i+1-flag[i+1]) B[leftSize+i-flag[i]] = A[i];
+    });
   if (flag[n-1] != leftSize) B[flag[n-1]] = A[n-1];
   if (n-1-flag[n-1] != n-leftSize) B[leftSize+n-1-flag[n-1]] = A[n-1];
-  par_for(intT i=0; i<n; ++i) {
-    A[i] = B[i];
-  }
+  parallel_for(0, n, [&](intT i) {
+      A[i] = B[i];});
   return leftSize;
 }
 

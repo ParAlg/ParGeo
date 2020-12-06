@@ -82,59 +82,29 @@ namespace sequence {
     OT operator () (intT i) {return f(A[i]);}
   };
 
-#define nblocks(_n,_bsize) (1 + ((_n)-1)/(_bsize))
+/* #define granular_for(_i, _st, _ne, _thresh, _body) { \ */
+/*   if ((_ne - _st) > _thresh) { \ */
+/*     {par_for(intT _i=_st; _i < _ne; _i++) { \ */
+/*       _body \ */
+/*     }} \ */
+/*   } else { \ */
+/*     {for (intT _i=_st; _i < _ne; _i++) { \ */
+/*       _body \ */
+/*     }} \ */
+/*   } \ */
+/*   } */
 
-#define granular_for(_i, _st, _ne, _thresh, _body) { \
-  if ((_ne - _st) > _thresh) { \
-    {par_for(intT _i=_st; _i < _ne; _i++) { \
-      _body \
-    }} \
-  } else { \
-    {for (intT _i=_st; _i < _ne; _i++) { \
-      _body \
-    }} \
-  } \
-  }
-
-#define granular_for_1(_i, _st, _ne, _thresh, _body) { \
-  if ((_ne - _st) > _thresh) { \
-    {par_for_1(intT _i=_st; _i < _ne; _i++) { \
-      _body \
-    }} \
-  } else { \
-    {for (intT _i=_st; _i < _ne; _i++) { \
-      _body \
-    }} \
-  } \
-  }
-
-  template <class F>
-  inline void blocked_for(intT _s, intT _e, intT _bsize, F f) {
-    if (_e > _s) {
-      intT _ss = _s;
-      intT _ee = _e;
-      intT _n = _ee-_ss;
-      intT _l = nblocks(_n,_bsize);
-      auto body = [&](intT _i) {
-		    intT _s = _ss + _i * (_bsize);
-		    intT _e = min(_s + (_bsize), _ee);
-		    f(_s, _e, _i);
-		  };
-      parallel_for(0, _l, body);
-    }
-  }
-
-// #define blocked_for(_i, _s, _e, _bsize, _body)  { \
-//      intT _ss = _s;          \
-//      intT _ee = _e;          \
-//      intT _n = _ee-_ss;          \
-//      intT _l = nblocks(_n,_bsize);     \
-//      par_for (intT _i = 0; _i < _l; _i++) {   \
-//        intT _s = _ss + _i * (_bsize);      \
-//        intT _e = min(_s + (_bsize), _ee);      \
-//        _body           \
-//    }           \
-//    }
+/* #define granular_for_1(_i, _st, _ne, _thresh, _body) { \ */
+/*   if ((_ne - _st) > _thresh) { \ */
+/*     {par_for_1(intT _i=_st; _i < _ne; _i++) { \ */
+/*       _body \ */
+/*     }} \ */
+/*   } else { \ */
+/*     {for (intT _i=_st; _i < _ne; _i++) { \ */
+/*       _body \ */
+/*     }} \ */
+/*   } \ */
+/*   } */
 
   template <class OT, class intT, class F, class G>
   OT reduceSerial(intT s, intT e, F f, G g) {

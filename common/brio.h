@@ -40,9 +40,8 @@ void brioSort(T* A, intT n, intT prefix=1000) {
   if (n < prefix) return;
   if (n < 2000) return brioSortSerial<dim, T>(A, n, prefix);
   intT x = n/2;
-  cilk_spawn spatialSort<dim, T>(A+x, n-x);
-  brioSort<dim, T>(A, x, prefix);
-  cilk_sync;
+  par_do([&](){spatialSort<dim, T>(A+x, n-x);},
+	 [&](){brioSort<dim, T>(A, x, prefix);});
 }
 
 #endif

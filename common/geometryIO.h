@@ -153,10 +153,10 @@ namespace benchIO {
   void parsePoints(char** Str, pointT* P, intT n) {
     int d = pointT::dim;
     double* a = newA(double,n*d);
-    {par_for (long i=0; i<d*n; i++)
-	a[i] = atof(Str[i]);}
-    {par_for (long i=0; i<n; i++)
-	P[i] = pointT(a+(d*i));}
+    parallel_for (0, d*n, [&](intT i) {
+	a[i] = atof(Str[i]);});
+    parallel_for (0, n, [&](intT i) {
+	P[i] = pointT(a+(d*i));});
     free(a);
   }
 
@@ -164,14 +164,14 @@ namespace benchIO {
   void parseCsvPoints(char** Str, pointT* P, intT n, int col) {
     int d = pointT::dim;
     double* a = newA(double,n*d);
-    par_for (long i=0; i<n/col; i++) {
-      for (int j=0; j<col; j++) {
-        a[i*d+j] = atof(Str[i*col+j]);
-      }
-    }
-    par_for (long i=0; i<n/col; i++) {
-      P[i] = pointT(a+(d*i));
-    }
+    parallel_for (0, n/col, [&](intT i) {
+	for (int j=0; j<col; j++) {
+	  a[i*d+j] = atof(Str[i*col+j]);
+	}
+      });
+    parallel_for (0, n/col, [&](intT i) {
+	P[i] = pointT(a+(d*i));
+      });
     free(a);
   }
 
