@@ -81,10 +81,11 @@ void parallel_prefix(T* A, intT n, F& process, G& cleanUp, bool verbose=false, i
       parCount += 1;
       parSize += prefix - i;
 
-      par_for (intT j=i; j<prefix; ++j) {
-	if (process(A[j])) flag[j-i] = 1;//conflict
-	else flag[j-i] = 0;
-      }
+      auto body = [&](size_t j) {
+		    if (process(A[j])) flag[j-i] = 1;//conflict
+		    else flag[j-i] = 0;
+		  };
+      parallel_for(i, prefix, body);
       if(verbose) parTime += t0.next();
 
       intT numBad = sequence::prefixSum(flag, 0, prefix-i);
@@ -93,8 +94,10 @@ void parallel_prefix(T* A, intT n, F& process, G& cleanUp, bool verbose=false, i
 
       if (numBad > 0) {
 	if(verbose) t0.start();
-	par_for(intT j=0; j<prefix-i; ++j) {
-	  if (flag[j]==0 && flag[j]!=flag[j+1]) conflict = j;}
+	auto body = [&](size_t j) {
+		      if (flag[j]==0 && flag[j]!=flag[j+1]) conflict = j;
+		    };
+	parallel_for(0, prefix-i, body);
 	i += conflict;
 	if(verbose) parTime2 += t0.next();
 	//if (verbose) cout << "ci = " << i << endl;
