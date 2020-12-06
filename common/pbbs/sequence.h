@@ -108,17 +108,33 @@ namespace sequence {
   } \
   }
 
-#define blocked_for(_i, _s, _e, _bsize, _body)  { \
-    intT _ss = _s;          \
-    intT _ee = _e;          \
-    intT _n = _ee-_ss;          \
-    intT _l = nblocks(_n,_bsize);     \
-    par_for (intT _i = 0; _i < _l; _i++) {   \
-      intT _s = _ss + _i * (_bsize);      \
-      intT _e = min(_s + (_bsize), _ee);      \
-      _body           \
-  }           \
+  template <class F>
+  inline void blocked_for(intT _s, intT _e, intT _bsize, F f) {
+    if (_e > _s) {
+      intT _ss = _s;
+      intT _ee = _e;
+      intT _n = _ee-_ss;
+      intT _l = nblocks(_n,_bsize);
+      auto body = [&](intT _i) {
+		    intT _s = _ss + _i * (_bsize);
+		    intT _e = min(_s + (_bsize), _ee);
+		    f(_s, _e, _i);
+		  };
+      parallel_for(0, _l, body);
+    }
   }
+
+// #define blocked_for(_i, _s, _e, _bsize, _body)  { \
+//      intT _ss = _s;          \
+//      intT _ee = _e;          \
+//      intT _n = _ee-_ss;          \
+//      intT _l = nblocks(_n,_bsize);     \
+//      par_for (intT _i = 0; _i < _l; _i++) {   \
+//        intT _s = _ss + _i * (_bsize);      \
+//        intT _e = min(_s + (_bsize), _ee);      \
+//        _body           \
+//    }           \
+//    }
 
   template <class OT, class intT, class F, class G>
   OT reduceSerial(intT s, intT e, F f, G g) {
@@ -132,8 +148,11 @@ namespace sequence {
     intT l = nblocks(e-s, _SCAN_BSIZE);
     if (l <= 1) return reduceSerial<OT>(s, e, f , g);
     OT *Sums = newA(OT,l);
-    blocked_for (i, s, e, _SCAN_BSIZE,
-     Sums[i] = reduceSerial<OT>(s, e, f, g););
+    // blocked_for (i, s, e, _SCAN_BSIZE,
+    //  Sums[i] = reduceSerial<OT>(s, e, f, g););
+    auto body = [&](intT _s, intT _e, intT i) {
+		  Sums[i] = reduceSerial<OT>(_s, _e, f, g);};
+    blocked_for(s, e, _SCAN_BSIZE, body);
     OT r = reduce<OT>((intT) 0, l, f, getA<OT,intT>(Sums));
     free(Sums);
     return r;
@@ -184,8 +203,12 @@ namespace sequence {
     if (l <= 2) return maxIndexSerial<ET>(s, e, f , g);
     else {
       intT *Idx = newA(intT,l);
-      blocked_for (i, s, e, _SCAN_BSIZE,
-       Idx[i] = maxIndexSerial<ET>(s, e, f, g););
+      // blocked_for (i, s, e, _SCAN_BSIZE,
+      //  Idx[i] = maxIndexSerial<ET>(s, e, f, g););
+      auto body = [&](intT _s, intT _e, intT i) {
+		    Idx[i] = maxIndexSerial<ET>(_s, _e, f, g);
+		  };
+      blocked_for (s, e, _SCAN_BSIZE, body);
       intT k = Idx[0];
       for (intT j=1; j < l; j++)
   if (f(g(Idx[j]),g(k))) k = Idx[j];
@@ -216,8 +239,12 @@ namespace sequence {
     if (l <= 2) return maxIndexSerial<ET>(s, e, g);
     else {
       intT *Idx = newA(intT,l);
-      blocked_for (i, s, e, _SCAN_BSIZE,
-                   Idx[i] = maxIndexSerial<ET>(s, e, g););
+      // blocked_for (i, s, e, _SCAN_BSIZE,
+      //              Idx[i] = maxIndexSerial<ET>(s, e, g););
+      auto body = [&](intT _s, intT _e, intT i) {
+		    Idx[i] = maxIndexSerial<ET>(_s, _e, g);
+		  };
+      blocked_for(s, e, _SCAN_BSIZE, body);
       intT k = Idx[0];
       for (intT j=1; j < l; j++)
         if (g(Idx[j])>= g(k)) k = Idx[j];
@@ -243,8 +270,11 @@ namespace sequence {
     if (l <= 2) return minIndexSerial<ET>(s, e, g);
     else {
       intT *Idx = newA(intT,l);
-      blocked_for (i, s, e, _SCAN_BSIZE,
-       Idx[i] = minIndexSerial<ET>(s, e, g););
+      // blocked_for (i, s, e, _SCAN_BSIZE,
+      //  Idx[i] = minIndexSerial<ET>(s, e, g););
+      auto body = [&] (intT _s, intT _e, intT i) {
+		    Idx[i] = minIndexSerial<ET>(_s, _e, g);};
+      blocked_for(s, e, _SCAN_BSIZE, body);
       intT k = Idx[0];
       for (intT j=1; j < l; j++)
   if (g(Idx[j])< g(k)) k = Idx[j];
@@ -289,11 +319,17 @@ namespace sequence {
     intT l = nblocks(n,_SCAN_BSIZE);
     if (l <= 2) return scanSerial(Out, s, e, f, g, zero, inclusive, back);
     ET *Sums = newA(ET,nblocks(n,_SCAN_BSIZE));
-    blocked_for (i, s, e, _SCAN_BSIZE,
-     Sums[i] = reduceSerial<ET>(s, e, f, g););
+    auto body1 = [&](intT _s, intT _e, intT i) {
+		   Sums[i] = reduceSerial<ET>(_s, _e, f, g);};
+    blocked_for(s, e, _SCAN_BSIZE, body1);
+    // blocked_for (i, s, e, _SCAN_BSIZE,
+    //  Sums[i] = reduceSerial<ET>(s, e, f, g););
     ET total = scan(Sums, (intT) 0, l, f, getA<ET,intT>(Sums), zero, false, back);
-    blocked_for (i, s, e, _SCAN_BSIZE,
-     scanSerial(Out, s, e, f, g, Sums[i], inclusive, back););
+    auto body2 = [&](intT _s, intT _e, intT i) {
+		   scanSerial(Out, _s, _e, f, g, Sums[i], inclusive, back);};
+    blocked_for(s, e, _SCAN_BSIZE, body2);
+    // blocked_for (i, s, e, _SCAN_BSIZE,
+    //  scanSerial(Out, s, e, f, g, Sums[i], inclusive, back););
     free(Sums);
     return total;
   }
@@ -450,11 +486,17 @@ namespace sequence {
     intT l = nblocks(e-s, _SCAN_BSIZE);
     if (l <= 1) return prefixSumSerial(data, s, e);
     T* sums = newA(T, l);
-    blocked_for (i, s, e, _SCAN_BSIZE,
-        sums[i] = prefixSumSerial<T>(data, s, e););
+    auto body1 = [&](intT _s, intT _e, intT i) {
+		   sums[i] = prefixSumSerial<T>(data, _s, _e);};
+    blocked_for(s, e, _SCAN_BSIZE, body1);
+    // blocked_for (i, s, e, _SCAN_BSIZE,
+    //     sums[i] = prefixSumSerial<T>(data, s, e););
     T res = prefixSumSerial(sums, 0, l);
-    blocked_for (i, s, e, _SCAN_BSIZE,
-        addSerial(data, s, e, sums[i]););
+    auto body2 = [&](intT _s, intT _e, intT i) {
+		 addSerial(data, _s, _e, sums[i]);};
+    blocked_for(s, e, _SCAN_BSIZE, body2);
+    // blocked_for (i, s, e, _SCAN_BSIZE,
+    //     addSerial(data, s, e, sums[i]););
     free(sums);
     return res;
   }
@@ -464,10 +506,16 @@ namespace sequence {
     intT l = nblocks(e-s, _F_BSIZE);
     if (l <= 1) return packSerial(Out, Fl, s, e, f);
     intT *Sums = newA(intT,l);
-    blocked_for (i, s, e, _F_BSIZE, Sums[i] = sumFlagsSerial(Fl+s, e-s););
+    auto body1 = [&](intT _s, intT _e, intT i) {
+		   Sums[i] = sumFlagsSerial(Fl+_s, _e-_s);};
+    blocked_for(s, e, _F_BSIZE, body1);
+    //blocked_for (i, s, e, _F_BSIZE, Sums[i] = sumFlagsSerial(Fl+s, e-s););
     intT m = plusScan(Sums, Sums, l);
     if (Out == NULL) Out = newA(ET,m);
-    blocked_for (i, s, e, _F_BSIZE, packSerial(Out+Sums[i], Fl, s, e, f););
+    auto body2 = [&](intT _s, intT _e, intT i) {
+		   packSerial(Out+Sums[i], Fl, _s, _e, f);};
+    blocked_for(s, e, _F_BSIZE, body2);
+    //blocked_for (i, s, e, _F_BSIZE, packSerial(Out+Sums[i], Fl, s, e, f););
     free(Sums);
     return _seq<ET>(Out,m);
   }
@@ -489,14 +537,22 @@ namespace sequence {
     int split(ET* Out, bool*  Fl, intT s, intT e, F f) {
     intT l = nblocks(e-s, _F_BSIZE);
     intT *SumsTrue = newA(intT,l);
-    blocked_for (i, s, e, _F_BSIZE, SumsTrue[i] = sumFlagsSerial(Fl+s, e-s););
+    auto body1 = [&](intT _s, intT _e, intT i) {
+		   SumsTrue[i] = sumFlagsSerial(Fl+_s, _e-_s);};
+    blocked_for(s, e, _F_BSIZE, body1);
+    //blocked_for (i, s, e, _F_BSIZE, SumsTrue[i] = sumFlagsSerial(Fl+s, e-s););
     intT numTrue = plusScan(SumsTrue, SumsTrue, l);
     intT numFalse = (e - s) - numTrue;
     ET* OutTrue = Out + numFalse;
-    blocked_for(i, s, e, _F_BSIZE,
-    splitSerial(Out + _F_BSIZE*i - SumsTrue[i],
-          OutTrue + SumsTrue[i],
-          Fl, s, e, f););
+    auto body2 = [&](intT _s, intT _e, intT i) {
+		   splitSerial(Out + _F_BSIZE*i - SumsTrue[i],
+			       OutTrue + SumsTrue[i],
+			       Fl, _s, _e, f);};
+    blocked_for(s, e, _F_BSIZE, body2);
+    // blocked_for(i, s, e, _F_BSIZE,
+    // splitSerial(Out + _F_BSIZE*i - SumsTrue[i],
+    //       OutTrue + SumsTrue[i],
+    //       Fl, s, e, f););
     free(SumsTrue);
     return numFalse;
   }
@@ -507,9 +563,13 @@ namespace sequence {
     intT l = nblocks(e-s, _F_BSIZE);
     intT *Sums1 = newA(intT,l);
     intT *Sums2 = newA(intT,l);
-    blocked_for (i, s, e, _F_BSIZE,
-                 Sums1[i] = sumFlagsSerial(Fl1+s, e-s);
-                 Sums2[i] = sumFlagsSerial(Fl2+s, e-s););
+    auto body1 = [&](intT _s, intT _e, intT i) {
+		   Sums1[i] = sumFlagsSerial(Fl1+_s, _e-_s);
+		   Sums2[i] = sumFlagsSerial(Fl2+_s, _e-_s);};
+    blocked_for(s, e, _F_BSIZE, body1);
+    // blocked_for (i, s, e, _F_BSIZE,
+    //              Sums1[i] = sumFlagsSerial(Fl1+s, e-s);
+    //              Sums2[i] = sumFlagsSerial(Fl2+s, e-s););
     intT m1 = plusScan(Sums1, Sums1, l);
     intT m2 = plusScan(Sums2, Sums2, l);
     ET* Out1;
@@ -521,9 +581,13 @@ namespace sequence {
       Out1 = Out;
       Out2 = Out+m1;
     }
-    blocked_for(i, s, e, _F_BSIZE,
-    packSerial(Out1+Sums1[i], Fl1, s, e, f);
-    packSerial(Out2+Sums2[i], Fl2, s, e, f););
+    auto body2 = [&](intT _s, intT _e, intT i) {
+		   packSerial(Out1+Sums1[i], Fl1, _s, _e, f);
+		   packSerial(Out2+Sums2[i], Fl2, _s, _e, f);};
+    blocked_for(s, e, _F_BSIZE, body2);
+    // blocked_for(i, s, e, _F_BSIZE,
+    // packSerial(Out1+Sums1[i], Fl1, s, e, f);
+    // packSerial(Out2+Sums2[i], Fl2, s, e, f););
     free(Sums1); free(Sums2);
     return pair<_seq<ET>,_seq<ET> >(_seq<ET>(Out1,m1),_seq<ET>(Out2,m2));
   }
@@ -536,9 +600,13 @@ namespace sequence {
     intT l = nblocks(e-s, _F_BSIZE);
     intT *Sums1 = newA(intT,l);
     intT *Sums2 = newA(intT,l);
-    blocked_for (i, s, e, _F_BSIZE,
-                 Sums2[i] = sumBitFlagsSerial(Fl, s, e); // count ones
-                 Sums1[i] = (e-s-Sums2[i]);); // calculate zeros
+    auto body1 = [&](intT _s, intT _e, intT i) {
+		   Sums2[i] = sumBitFlagsSerial(Fl, _s, _e); // count ones
+		   Sums1[i] = (_e-_s-Sums2[i]);};
+    blocked_for(s, e, _F_BSIZE, body1);
+    // blocked_for (i, s, e, _F_BSIZE,
+    //              Sums2[i] = sumBitFlagsSerial(Fl, s, e); // count ones
+    //              Sums1[i] = (e-s-Sums2[i]);); // calculate zeros
     intT m1 = plusScan(Sums1, Sums1, l);
     intT m2 = plusScan(Sums2, Sums2, l);
     ET* Out1;
@@ -550,8 +618,11 @@ namespace sequence {
       Out1 = Out;
       Out2 = Out+m1;
     }
-    blocked_for(i, s, e, _F_BSIZE,
-    packSerial01(Out1+Sums1[i], Out2+Sums2[i], Fl, s, e, f););
+    auto body2 = [&](intT _s, intT _e, intT i) {
+		 packSerial01(Out1+Sums1[i], Out2+Sums2[i], Fl, _s, _e, f);};
+    blocked_for(s, e, _F_BSIZE, body2);
+    // blocked_for(i, s, e, _F_BSIZE,
+    // packSerial01(Out1+Sums1[i], Out2+Sums2[i], Fl, s, e, f););
     //packSerial0(Out1+Sums1[i], Fl, s, e, f);
     //packSerial1(Out2+Sums2[i], Fl, s, e, f););
     free(Sums1); free(Sums2);
