@@ -70,7 +70,7 @@ inline void parallel_for(size_t start, size_t end, F f,
       _Pragma("cilk_grainsize = 1") cilk_for(size_t i=start; i<end; ++i) f(i);
     } else if (granularity == 256) {
       _Pragma("cilk_grainsize = 256") cilk_for(size_t i=start; i<end; ++i) f(i);
-    } else if (granularity == 0) {
+    } else {
       cilk_for(size_t i=start; i<end; ++i) f(i);
     }
   }
