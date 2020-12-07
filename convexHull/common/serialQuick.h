@@ -23,7 +23,7 @@
 #ifndef SERIAL_QUICK_H
 #define SERIAL_QUICK_H
 
-static const floatT numericKnob = 1e-12;
+static const floatT numericKnob = 1e-9;
 
 template <class ET, class F>
 pair<intT,intT> split(ET* A, intT n, F lf, F rf) {

@@ -52,13 +52,12 @@ intT quickHull(intT* I, intT* Itmp, point2d* P, intT n, intT l, intT r, intT dep
     intT n2 = filter(I, Itmp+n1, n, aboveLine(P, maxP, r));
 
     intT m1, m2;
-    m1 = cilk_spawn quickHull(Itmp, I ,P, n1, l, maxP, depth-1);
-    m2 = quickHull(Itmp+n1, I+n1, P, n2, maxP, r, depth-1);
-    cilk_sync;
+    par_do([&](){m1 = quickHull(Itmp, I ,P, n1, l, maxP, depth-1);},
+	   [&](){m2 = quickHull(Itmp+n1, I+n1, P, n2, maxP, r, depth-1);});
 
-    par_for (intT i=0; i < m1; i++) I[i] = Itmp[i];
+    parallel_for (0, m1, [&](intT i) {I[i] = Itmp[i];});
     I[m1] = maxP;
-    par_for (intT i=0; i < m2; i++) I[i+m1+1] = Itmp[i+n1];
+    parallel_for (0, m2, [&](intT i) {I[i+m1+1] = Itmp[i+n1];});
     return m1+1+m2;
   }
 }
@@ -90,24 +89,23 @@ _seq<intT> hullInternal(point2d* P, intT n) {
   bool* fBot = newA(bool,n);
   intT* I = newA(intT, n);
   intT* Itmp = newA(intT, n);
-  par_for(intT i=0; i < n; i++) {
-    Itmp[i] = i;
-    double a = triArea(P[l],P[r],P[i]);
-    fTop[i] = a > 0;
-    fBot[i] = a < 0;
-  }
+  parallel_for(0, n, [&](intT i) {
+		       Itmp[i] = i;
+		       double a = triArea(P[l],P[r],P[i]);
+		       fTop[i] = a > 0;
+		       fBot[i] = a < 0;
+		     });
 
   intT n1 = pack(Itmp, I, fTop, n);
   intT n2 = pack(Itmp, I+n1, fBot, n);
   free(fTop); free(fBot);
 
   intT m1; intT m2;
-  m1 = cilk_spawn quickHull(I, Itmp, P, n1, l, r, DEPTH);
-  m2 = quickHull(I+n1, Itmp+n1, P, n2, r, l, DEPTH);
-  cilk_sync;
+  par_do([&](){m1 = quickHull(I, Itmp, P, n1, l, r, DEPTH);},
+	 [&](){m2 = quickHull(I+n1, Itmp+n1, P, n2, r, l, DEPTH);});
 
-  par_for (intT i=0; i < m1; i++) Itmp[i+1] = I[i];
-  par_for (intT i=0; i < m2; i++) Itmp[i+m1+2] = I[i+n1];
+  parallel_for (0, m1, [&](intT i) {Itmp[i+1] = I[i];});
+  parallel_for (0, m2, [&](intT i) { Itmp[i+m1+2] = I[i+n1];});
   free(I);
   Itmp[0] = l;
   Itmp[m1+1] = r;

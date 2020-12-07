@@ -133,7 +133,7 @@ _seq<intT> hull(point2d* P, intT n) {
   }
 
   pointNode* PN = newA(pointNode, n-3);
-  par_for(intT i=0; i<n-3; ++i) {
+  for(intT i=0; i<n-3; ++i) {
     PN[i] = pointNode(P[i+3]);
     auto ptr = H;
     do {
