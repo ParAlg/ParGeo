@@ -150,8 +150,9 @@ void ANN(vertexT** v, int n, int k) {
   vertexT** vr = T.vertices();
 
   // find nearest k neighbors for each point
-  par_for_1 (int i=0; i < n; i++) 
-    T.kNearest(vr[i], vr[i]->ngh, k);
+  parallel_for (0, n,
+		[&](intT i) {
+		  T.kNearest(vr[i], vr[i]->ngh, k);}, 1);
 
   free(vr);
   T.del();

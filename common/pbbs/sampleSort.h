@@ -81,26 +81,27 @@ void sampleSort (E* A, intT n, BinPred f) {
     E* sampleSet = newA(E,sampleSetSize);
 
     // generate "random" samples with oversampling
-    par_for(long j=0; j<sampleSetSize; ++j)
-      sampleSet[j] = A[hashVal(j)%n];
+    parallel_for(0, sampleSetSize,
+		 [&](intT j) {sampleSet[j] = A[hashVal(j)%n];});
 
     // sort the samples
     quickSort(sampleSet, sampleSetSize, f);
 
     // subselect samples at even stride
     E* pivots = newA(E,numBuckets-1);
-    par_for(long k=0; k<numBuckets-1; ++k)
-      pivots[k] = sampleSet[PBBS_OVER_SAMPLE*k];
+    parallel_for(0, numBuckets-1,
+		 [&](intT k){pivots[k] = sampleSet[PBBS_OVER_SAMPLE*k];});
     free(sampleSet);
 
     // sort each block and merge with samples to get counts for each bucket
     intT *counts = newA(intT, numBlocks*numBuckets);
-    par_for(long i=0; i<numBlocks; ++i) {
-      long offset = i * blockSize;
-      long size =  (i < numBlocks - 1) ? blockSize : n - offset;
-      quickSort(A+offset, size, f);
-      mergeSeq(A + offset, pivots, counts + i*numBuckets, size, numBuckets-1, f);
-    }
+    parallel_for(0, numBlocks,
+		 [&](intT i) {
+		   long offset = i * blockSize;
+		   long size =  (i < numBlocks - 1) ? blockSize : n - offset;
+		   quickSort(A+offset, size, f);
+		   mergeSeq(A + offset, pivots, counts + i*numBuckets, size, numBuckets-1, f);
+		 });
 
     E *B = newA(E, numBlocks*blockSize);
     intT *sourceOffsets = newA(intT, numBlocks*numBuckets);
@@ -117,18 +118,19 @@ void sampleSort (E* A, intT n, BinPred f) {
     free(counts);
 
     // sort within each bucket
-    par_for(long i=0; i<numBuckets; ++i) {
-      long start = destOffsets[i*numBlocks];
-      long end = (i < numBuckets -1) ? destOffsets[(i+1)*numBlocks] : n;
+    parallel_for(0, numBuckets,
+		 [&](intT i) {
+		   long start = destOffsets[i*numBlocks];
+		   long end = (i < numBuckets -1) ? destOffsets[(i+1)*numBlocks] : n;
 
-      // middle buckets need not be sorted if two consecutive pivots are equal
-      if (i == 0 || i == numBuckets - 1 || f(pivots[i-1],pivots[i]))
-	quickSort(B+start, end - start, f);
+		   // middle buckets need not be sorted if two consecutive pivots are equal
+		   if (i == 0 || i == numBuckets - 1 || f(pivots[i-1],pivots[i]))
+		     quickSort(B+start, end - start, f);
 
-      // copy back to A
-      for (long j = start; j < end; j++)
-	A[j] = B[j];
-    }
+		   // copy back to A
+		   for (long j = start; j < end; j++)
+		     A[j] = B[j];
+		 });
     free(pivots);
     free(destOffsets);
     free(B);

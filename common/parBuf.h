@@ -158,16 +158,17 @@ vector<T> *parBufCollect(parBuf<T> **t_threadVecs, int P) {
 
   T* all= (T*) malloc(sizeof(T) * total);
 
-  par_for_1(int p = 0; p < P; ++ p) {
-    auto buf = t_threadVecs[p];
-    intT threadTotal = sequence::prefixSum<intT>(buf->m_parentSizes, 0, buf->m_parentUsed);
-    buf->m_parentSizes[buf->m_parentUsed] = threadTotal; // there's 1 extra space at the end of array
+  parallel_for(0, P,
+	       [&](intT p) {
+		 auto buf = t_threadVecs[p];
+		 intT threadTotal = sequence::prefixSum<intT>(buf->m_parentSizes, 0, buf->m_parentUsed);
+		 buf->m_parentSizes[buf->m_parentUsed] = threadTotal; // there's 1 extra space at the end of array
 
-    par_for_1 (intT parent = 0; parent < buf->m_parentUsed; ++ parent) {
-      for (intT elem = 0; elem < buf->m_parentSizes[parent+1]-buf->m_parentSizes[parent]; ++ elem) {
-        all[vecSizes[p] + buf->m_parentSizes[parent] + elem] = buf->m_parent[parent][elem];
-      }}
-  }
+		 parallel_for (0, buf->m_parentUsed, [&](intT parent) {
+		     for (intT elem = 0; elem < buf->m_parentSizes[parent+1]-buf->m_parentSizes[parent]; ++ elem) {
+		       all[vecSizes[p] + buf->m_parentSizes[parent] + elem] = buf->m_parent[parent][elem];
+		     }}, 1);
+	       }, 1);
   free(vecSizes);
   return new vector<T>(all, all + total);
 }

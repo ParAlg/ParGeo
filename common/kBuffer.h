@@ -224,13 +224,13 @@ namespace KBuffer {
     auto kb = newA(bufT, n);
     //KElem<T> *kb_buffer = (KElem<T> *) malloc( sizeof(KElem<T>) * bufLen * n);
     auto kb_buffer = newA(elemT, bufLen*n);
-    par_for(intT i=0; i<n; ++i) {
-      kb[i].m_k = k;
-      kb[i].m_ptr = 0;
-      kb[i].m_used = 0;
-      kb[i].m_maxLen = bufLen;
-      kb[i].m_buf = kb_buffer + bufLen*i;
-    }
+    parallel_for(0, n, [&](intT i) {
+			 kb[i].m_k = k;
+			 kb[i].m_ptr = 0;
+			 kb[i].m_used = 0;
+			 kb[i].m_maxLen = bufLen;
+			 kb[i].m_buf = kb_buffer + bufLen*i;
+		       });
     return kb;
   }
 

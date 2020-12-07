@@ -72,8 +72,8 @@ namespace benchIO {
   struct toLong { long operator() (bool v) {return (long) v;} };
 
   words stringToWords(char *Str, long n) {
-    par_for(long i=0; i<n; i++)
-      if (isSpace(Str[i])) Str[i] = 0; 
+    parallel_for(0, n, [&](intT i) {
+			 if (isSpace(Str[i])) Str[i] = 0;});
 
     bool *FL = newA(bool,n);
     FL[0] = Str[0];

@@ -163,16 +163,16 @@ struct wspGetParallel {
     int P = getWorkers();
     out = newA(bufT*, P);
     intT n = tree->rootNode()->size();
-    par_for(int p=0; p<P; ++p) {
-      out[p] = new bufT(n/P);
-    }
+    parallel_for(0, P,
+		 [&](intT p) {
+		   out[p] = new bufT(n/P);});
   }
 
   vector<bcpT>* collect() {
     int P = getWorkers();
     auto tmp = parBufCollect<bcpT>(out, P);
 
-    par_for(int p=0; p<P; ++p) delete out[p];
+    parallel_for(0, P, [&](intT p) {delete out[p];});
     free(out);
     return tmp;
   }

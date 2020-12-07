@@ -45,12 +45,12 @@ class Table {
 
   // needs to be in separate routine due to Cilk bugs
   static void clearA(eType* A, intT n, eType v) {
-    par_for(intT i=0; i<n; i++) A[i] = v;
+    parallel_for(0, n, [&](intT i) {A[i] = v;});
   }
 
  // needs to be in separate routine due to Cilk bugs
   void clear() {
-    par_for(intT i=0; i<m; i++) TA[i] = empty;
+    parallel_for(0, m, [&](intT i) {TA[i] = empty;});
   }
 
   struct notEmptyF { 
@@ -277,8 +277,8 @@ class Table {
   // returns all the current entries compacted into a sequence
   _seq<eType> entries() {
     bool *FL = newA(bool,m);
-    par_for (intT i=0; i<m; i++)
-      FL[i] = (TA[i] != empty);
+    parallel_for (0, m, [&](intT i) {
+			  FL[i] = (TA[i] != empty);});
     _seq<eType> R = sequence::pack(TA,FL,m);
     free(FL);
     return R;
@@ -298,7 +298,7 @@ template <class HASH, class ET, class intT>
 _seq<ET> removeDuplicates(_seq<ET> S, intT m, HASH hashF) {
   Table<HASH,intT> T(m,hashF,1.0);
   ET* A = S.A;
-  {par_for(intT i=0; i<S.n; i++) { T.insert(A[i]);}}
+  parallel_for(0, S.n, [&](intT i) { T.insert(A[i]);});
   _seq<ET> R = T.entries();
   T.del(); 
   return R;

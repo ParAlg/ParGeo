@@ -59,13 +59,14 @@ class kdNode {
     for (intT i=0; i<P; ++i) {
       localMin[i] = pointT(items[0]->coordinate());
       localMax[i] = pointT(items[0]->coordinate());}
-    par_for(intT p=0; p<P; ++p) {
-      intT s = p*blockSize;
-      intT e = min((intT)(p+1)*blockSize,n);
-      for (intT j=s; j<e; ++j) {
-        localMin[p].minCoords(items[j]->coordinate());
-        localMax[p].maxCoords(items[j]->coordinate());}
-    }
+    parallel_for(0, P,
+		 [&](intT p) {
+		   intT s = p*blockSize;
+		   intT e = min((intT)(p+1)*blockSize,n);
+		   for (intT j=s; j<e; ++j) {
+		     localMin[p].minCoords(items[j]->coordinate());
+		     localMax[p].maxCoords(items[j]->coordinate());}
+		 });
     pMin = pointT(items[0]->coordinate());
     pMax = pointT(items[0]->coordinate());
     for(intT p=0; p<P; ++p) {
@@ -97,20 +98,23 @@ class kdNode {
   inline intT splitItemParallel(floatT xM, objT **scratch, intT* flags) {
     if (n < 2) {
       cout << "error, kdTree splitting singleton, abort" << endl;abort();}
-    par_for(intT i=0; i<n; ++i) {
-      if (items[i]->coordinate(k)<xM) flags[i]=1;
-      else flags[i] = 0;
-    }
+    parallel_for(0, n,
+		 [&](intT i) {
+		   if (items[i]->coordinate(k)<xM) flags[i]=1;
+		   else flags[i] = 0;
+		 });
     intT leftSize = sequence::prefixSum(flags,0,n);
-    par_for(intT i=0; i<n-1; ++i) {
-      if (flags[i] != flags[i+1]) scratch[flags[i]] = items[i];
-      if (i-flags[i] != i+1-flags[i+1]) scratch[leftSize+i-flags[i]] = items[i];
-    }
+    parallel_for(0, n-1,
+		 [&](intT i) {
+		   if (flags[i] != flags[i+1]) scratch[flags[i]] = items[i];
+		   if (i-flags[i]
+		       != i+1-flags[i+1]) scratch[leftSize+i-flags[i]] = items[i];
+		 });
     if (flags[n-1] != leftSize) scratch[flags[n-1]] = items[n-1];
     if (n-1-flags[n-1] != n-leftSize) scratch[leftSize+n-1-flags[n-1]] = items[n-1];
-    par_for(intT i=0; i<n; ++i) {
-      items[i] = scratch[i];
-    }
+    parallel_for(0, n,
+		 [&](intT i) {
+		   items[i] = scratch[i];});
     return leftSize;
   }
 
@@ -173,8 +177,8 @@ class kdNode {
   }
 
   //cilk_spawn requires function
-  void buildNode(nodeT *space, objT** itemss, intT nn, nodeT *spacee, objT** scratchh, intT* flagss, intT leafSize) {
-    space[0] = nodeT(itemss, nn, spacee, scratchh, flagss, leafSize);}
+  // void buildNode(nodeT *space, objT** itemss, intT nn, nodeT *spacee, objT** scratchh, intT* flagss, intT leafSize) {
+  //   space[0] = nodeT(itemss, nn, spacee, scratchh, flagss, leafSize);}
   void constructParallel(nodeT *space, objT** scratch, intT* flags, intT leafSize) {
     boundingBoxParallel();
     sib = NULL;
@@ -197,9 +201,11 @@ class kdNode {
       }
 
       if (median == 0 || median == n) {median = (n/2.0);}
-      cilk_spawn buildNode(&space[0], items, median, space+1, scratch, flags, leafSize);
-      buildNode(&space[2*median-1], items+median, n-median, space+2*median, scratch+median, flags+median, leafSize);
-      cilk_sync;
+      par_do([&](){space[0] = nodeT(items, median, space+1, scratch, flags, leafSize);},
+	     [&](){space[2*median-1] = nodeT(items+median, n-median, space+2*median, scratch+median, flags+median, leafSize);});
+      // cilk_spawn buildNode(&space[0], items, median, space+1, scratch, flags, leafSize);
+      // buildNode(&space[2*median-1], items+median, n-median, space+2*median, scratch+median, flags+median, leafSize);
+      // cilk_sync;
       left = space;
       right = space+2*median-1;
       left->sib = right;

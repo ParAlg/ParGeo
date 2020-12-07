@@ -258,34 +258,38 @@ void topologyFromTriangles(triangles<point2d> Tri, vertex** vr, tri** tr) {
 
   if (*vr == NULL) *vr = newA(vertex,n);
   vertex* v = *vr;
-  par_for (intT i=0; i < n; i++)
-    v[i] = vertex(P[i],i);
+  parallel_for (0, n,
+		[&](intT i) {
+		  v[i] = vertex(P[i],i);});
 
   if (*tr == NULL) *tr = newA(tri,m);
   tri* Triangs = *tr;
   edge* E = newA(edge, m*3);
   EdgeTable ET = makeEdgeTable(m*6);
-  par_for (intT i=0; i < m; i++)
-    for (int j=0; j<3; j++) {
-      E[i*3 + j] = edge(pairInt(T[i].C[j], T[i].C[(j+1)%3]), &Triangs[i]);
-      ET.insert(&E[i*3+j]);
-      Triangs[i].vtx[(j+2)%3] = &v[T[i].C[j]];
-    }
+  parallel_for (0, m,
+		[&](intT i) {
+		  for (int j=0; j<3; j++) {
+		    E[i*3 + j] = edge(pairInt(T[i].C[j], T[i].C[(j+1)%3]), &Triangs[i]);
+		    ET.insert(&E[i*3+j]);
+		    Triangs[i].vtx[(j+2)%3] = &v[T[i].C[j]];
+		  }
+		});
 
-  par_for (intT i=0; i < m; i++) {
-    Triangs[i].id = i;
-    Triangs[i].initialized = 1;
-    Triangs[i].bad = 0;
-    for (int j=0; j<3; j++) {
-      pairInt key = pairInt(T[i].C[(j+1)%3], T[i].C[j]);
-      edge *Ed = ET.find(key);
-      if (Ed != NULL) Triangs[i].ngh[j] = Ed->second;
-      else { Triangs[i].ngh[j] = NULL;
-	//Triangs[i].vtx[j]->boundary = 1;
-	//Triangs[i].vtx[(j+2)%3]->boundary = 1;
-      }
-    }
-  }
+  parallel_for (0, m,
+		[&](intT i) {
+		  Triangs[i].id = i;
+		  Triangs[i].initialized = 1;
+		  Triangs[i].bad = 0;
+		  for (int j=0; j<3; j++) {
+		    pairInt key = pairInt(T[i].C[(j+1)%3], T[i].C[j]);
+		    edge *Ed = ET.find(key);
+		    if (Ed != NULL) Triangs[i].ngh[j] = Ed->second;
+		    else { Triangs[i].ngh[j] = NULL;
+		      //Triangs[i].vtx[j]->boundary = 1;
+		      //Triangs[i].vtx[(j+2)%3]->boundary = 1;
+		    }
+		  }
+		});
   
   ET.del();
   free(E);
@@ -296,39 +300,40 @@ void topologyFromTriangles(triangles<point2d> Tri, vertex** vr, tri** tr) {
 // triangles
 bool checkDelaunay(tri *triangs, intT n, intT boundarySize) {
   intT *bcount = newA(intT,n);
-  par_for (intT j=0; j<n; j++) bcount[j] = 0;
+  parallel_for (0, n, [&](intT j) {bcount[j] = 0;});
   intT insideOutError = n;
   intT inCircleError = n;
-  par_for (intT i=0; i<n; i++) {
-    if (triangs[i].initialized) {
-      simplex t = simplex(&triangs[i],0);
-      for (int j=0; j < 3; j++) {
-	simplex a = t.across();
-	if (a.valid()) {
-	  vertex* v = a.rotClockwise().firstVertex();
+  parallel_for (0, n,
+		[&](intT i) {
+		  if (triangs[i].initialized) {
+		    simplex t = simplex(&triangs[i],0);
+		    for (int j=0; j < 3; j++) {
+		      simplex a = t.across();
+		      if (a.valid()) {
+			vertex* v = a.rotClockwise().firstVertex();
 
-          // Check that the neighbor is outside the triangle
-	  if (!t.outside(v)) {
-	    double vz = triAreaNormalized(t.t->vtx[(t.o+2)%3]->pt, 
-					  v->pt, t.t->vtx[t.o]->pt);
-	    //cout << "i=" << i << " vz=" << vz << endl;
-	    // allow for small error
-	    if (vz < -1e-10)  utils::writeMin(&insideOutError,i);
-	  }
+			// Check that the neighbor is outside the triangle
+			if (!t.outside(v)) {
+			  double vz = triAreaNormalized(t.t->vtx[(t.o+2)%3]->pt,
+							v->pt, t.t->vtx[t.o]->pt);
+			  //cout << "i=" << i << " vz=" << vz << endl;
+			  // allow for small error
+			  if (vz < -1e-10)  utils::writeMin(&insideOutError,i);
+			}
 
-          // Check that the neighbor is not in circumcircle of the triangle
-	  if (t.inCirc(v)) {
-	    double vz = inCircleNormalized(t.t->vtx[0]->pt, t.t->vtx[1]->pt, 
-					  t.t->vtx[2]->pt, v->pt);
-	    //cout << "i=" << i << " vz=" << vz << endl;
-	    // allow for small error
-	    if (vz > 1e-10) utils::writeMin(&inCircleError,i);
-	  }
-	} else bcount[i]++;
-	t = t.rotClockwise();
-      }
-    }
-  }
+			// Check that the neighbor is not in circumcircle of the triangle
+			if (t.inCirc(v)) {
+			  double vz = inCircleNormalized(t.t->vtx[0]->pt, t.t->vtx[1]->pt,
+							 t.t->vtx[2]->pt, v->pt);
+			  //cout << "i=" << i << " vz=" << vz << endl;
+			  // allow for small error
+			  if (vz > 1e-10) utils::writeMin(&inCircleError,i);
+			}
+		      } else bcount[i]++;
+		      t = t.rotClockwise();
+		    }
+		  }
+		});
   intT cnt = sequence::plusReduce(bcount,n);
   //if (boundarySize != cnt) {
   //cout << "delaunayCheck: wrong boundary size, should be " << boundarySize 

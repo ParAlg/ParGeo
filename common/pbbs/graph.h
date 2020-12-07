@@ -158,8 +158,8 @@ struct graphC {
   graphC copy() {
     intT* o = newA(intT,n+1);
     intE* e = newA(intE,m);
-    {par_for(long i=0;i<n+1;i++) o[i] = offsets[i];}
-    {par_for(long i=0;i<m;i++) e[i] = edges[i];}
+    parallel_for(0, n+1, [&](intT i) {o[i] = offsets[i];});
+    parallel_for(0, m, [&](intT i) {e[i] = edges[i];});
     return graphC(o,e,n,m);
   }
   size_t degree(size_t i) {

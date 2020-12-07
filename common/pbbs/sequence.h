@@ -48,7 +48,7 @@ struct _seq {
 
 template <class E>
 void brokenCompiler__(intT n, E* x, E v) {
-  par_for(intT i=0; i<n; i++) x[i] = v;
+  parallel_for(0, n, [&](intT i) {x[i] = v;});
 }
 
 template <class E>
@@ -81,30 +81,6 @@ namespace sequence {
     getAF(IT* AA, F ff) : A(AA), f(ff) {}
     OT operator () (intT i) {return f(A[i]);}
   };
-
-/* #define granular_for(_i, _st, _ne, _thresh, _body) { \ */
-/*   if ((_ne - _st) > _thresh) { \ */
-/*     {par_for(intT _i=_st; _i < _ne; _i++) { \ */
-/*       _body \ */
-/*     }} \ */
-/*   } else { \ */
-/*     {for (intT _i=_st; _i < _ne; _i++) { \ */
-/*       _body \ */
-/*     }} \ */
-/*   } \ */
-/*   } */
-
-/* #define granular_for_1(_i, _st, _ne, _thresh, _body) { \ */
-/*   if ((_ne - _st) > _thresh) { \ */
-/*     {par_for_1(intT _i=_st; _i < _ne; _i++) { \ */
-/*       _body \ */
-/*     }} \ */
-/*   } else { \ */
-/*     {for (intT _i=_st; _i < _ne; _i++) { \ */
-/*       _body \ */
-/*     }} \ */
-/*   } \ */
-/*   } */
 
   template <class OT, class intT, class F, class G>
   OT reduceSerial(intT s, intT e, F f, G g) {
@@ -657,7 +633,7 @@ namespace sequence {
     if (n < _F_BSIZE)
       return filterSerial(In, Out, n, p);
     bool *Fl = newA(bool,n);
-    par_for (intT i=0; i < n; i++) Fl[i] = (bool) p(In[i]);
+    parallel_for (0, n, [&](intT i) {Fl[i] = (bool) p(In[i]);});
     intT  m = pack(In, Out, Fl, n);
     free(Fl);
     return m;
@@ -668,7 +644,7 @@ namespace sequence {
   intT filter(ET* In, ET* Out, bool* Fl, intT n, PRED p) {
     if (n < _F_BSIZE)
       return filterSerial(In, Out, n, p);
-    par_for (intT i=0; i < n; i++) Fl[i] = (bool) p(In[i]);
+    parallel_for (0, n, [&](intT i) {Fl[i] = (bool) p(In[i]);});
     intT  m = pack(In, Out, Fl, n);
     return m;
   }
@@ -676,7 +652,7 @@ namespace sequence {
   template <class ET, class intT, class PRED>
   _seq<ET> filter(ET* In, intT n, PRED p) {
     bool *Fl = newA(bool,n);
-    par_for (intT i=0; i < n; i++) Fl[i] = (bool) p(In[i]);
+    parallel_for (0, n, [&](intT i) {Fl[i] = (bool) p(In[i]);});
     _seq<ET> R = pack(In, Fl, n);
     free(Fl);
     return R;
@@ -692,23 +668,24 @@ namespace sequence {
     intT l = nblocks(n, b);
     b = nblocks(n, l);
     intT *Sums = newA(intT,l + 1);
-    {par_for (intT i = 0; i < l; i++) {
-      intT s = i * b;
-      intT e = min(s + b, n);
-      intT k = s;
-      for (intT j = s; j < e; j++)
-  if (p(In[j])) In[k++] = In[j];
-      Sums[i] = k - s;
-    }}
+    parallel_for (0, l, [&](intT i) {
+			  intT s = i * b;
+			  intT e = min(s + b, n);
+			  intT k = s;
+			  for (intT j = s; j < e; j++)
+			    if (p(In[j])) In[k++] = In[j];
+			  Sums[i] = k - s;
+			});
     intT m = plusScan(Sums, Sums, l);
     Sums[l] = m;
-    {par_for (intT i = 0; i < l; i++) {
-      ET* I = In + i*b;
-      ET* O = Out + Sums[i];
-      for (intT j = 0; j < Sums[i+1]-Sums[i]; j++) {
-  O[j] = I[j];
-      }
-    }}
+    parallel_for (0, l,
+		  [&](intT i) {
+		    ET* I = In + i*b;
+		    ET* O = Out + Sums[i];
+		    for (intT j = 0; j < Sums[i+1]-Sums[i]; j++) {
+		      O[j] = I[j];
+		    }
+		  });
     free(Sums);
     return m;
   }

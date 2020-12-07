@@ -12,9 +12,9 @@ struct unionFind {
 
   unionFind(intT n) {
     parents = newA(intT, n);
-    par_for (intT i=0; i < n; i++) parents[i] = intMax();
+    parallel_for (0, n, [&](intT i) {parents[i] = intMax();});
     hooks = newA(intT, n);
-    par_for (intT i=0; i < n; i++) hooks[i] = intMax();
+    parallel_for (0, n, [&](intT i) {hooks[i] = intMax();});
   }
 
   void del() {free(parents);}
@@ -50,10 +50,10 @@ struct edgeUnionFind {
 
 edgeUnionFind(intT nn): n(nn) {
   parents = newA(intT, n);
-  par_for (intT i=0; i < n; i++) parents[i] = intMax();
+  parallel_for (0, n, [&](intT i) {parents[i] = intMax();});
   hooks = newA(edgeT, n);
-  par_for (intT i=0; i < n; i++) {
-    hooks[i] = make_pair(intMax(), intMax());}
+  parallel_for (0, n, [&](intT i) {
+      hooks[i] = make_pair(intMax(), intMax());});
 }
 
   void del() {free(parents);}

@@ -70,22 +70,18 @@ inline void findPairParallel(nodeT *u, nodeT *v, opT* f, floatT s) {
       cout << "error, leaves not well separated, abort" << endl;
       abort();
     } else if (u->isLeaf()) {
-      cilk_spawn findPairParallel(v->L(), u, f, s);
-      findPairParallel(v->R(), u, f, s);
-      cilk_sync;
+      par_do([&](){findPairParallel(v->L(), u, f, s);},
+	     [&](){findPairParallel(v->R(), u, f, s);});
     } else if (v->isLeaf()) {
-      cilk_spawn findPairParallel(u->L(), v, f, s);
-      findPairParallel(u->R(), v, f, s);
-      cilk_sync;
+      par_do([&](){findPairParallel(u->L(), v, f, s);},
+	     [&](){findPairParallel(u->R(), v, f, s);});
     } else {
       if (u->lMax() > v->lMax()) {
-        cilk_spawn findPairParallel(u->L(), v, f, s);
-        findPairParallel(u->R(), v, f, s);
-        cilk_sync;
+	par_do([&](){findPairParallel(u->L(), v, f, s);},
+	       [&](){findPairParallel(u->R(), v, f, s);});
       } else {
-        cilk_spawn findPairParallel(v->L(), u, f, s);
-        findPairParallel(v->R(), u, f, s);
-        cilk_sync;
+	par_do([&](){findPairParallel(v->L(), u, f, s);},
+	       [&](){findPairParallel(v->R(), u, f, s);});
       }
     }}
 }
@@ -103,9 +99,8 @@ inline void wspdParallel(nodeT *nd, opT *f, floatT s=2) {
   if (nd->size() < 2000) {
     wspdSerial(nd, f, s);
   } else if (!nd->isLeaf() && f->start(nd)) {
-    cilk_spawn wspdParallel(nd->L(), f, s);
-    wspdParallel(nd->R(), f, s);
-    cilk_sync;
+    par_do([&](){wspdParallel(nd->L(), f, s);},
+	   [&](){wspdParallel(nd->R(), f, s);});
     findPairParallel<nodeT, opT>(nd->L(), nd->R(), f, s);}
 }
 

@@ -77,9 +77,8 @@ void quickSort(E* A, intT n, BinPred f) {
   if (n < (1 << 8)) quickSortSerial(A, n, f);
   else {
     std::pair<E*,E*> X = split(A,n,f);
-    cilk_spawn quickSort(A, X.first - A, f);
-    quickSort(X.second, A+n-X.second, f);
-    cilk_sync;
+    par_do([&](){quickSort(A, X.first - A, f);},
+	   [&](){quickSort(X.second, A+n-X.second, f);});
   }
 }
 

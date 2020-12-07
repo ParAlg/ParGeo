@@ -26,9 +26,10 @@ point<dim>** knn(point<dim>* P, intT n, intT k=1) {
   cout << "build-tree-time = " << t0.next() << endl;
 
   pointT** A = newA(pointT*, k*n);
-  par_for (intT i=0; i<n; ++i) {
-    pointT** NN = tree->kNN(&P[i], k, A+i*k);//query call
-  }
+  parallel_for (0, n,
+		[&](intT i) {
+		  pointT** NN = tree->kNN(&P[i], k, A+i*k);});
+
   cout << "knn-time = " << t0.next() << endl;
   return A;
 }

@@ -97,11 +97,12 @@ namespace intSort {
     bint* oA = (bint*) (BK+blocks);
     bint* oB = (bint*) (BK+2*blocks);
 
-    par_for_1 (long i=0; i < blocks; i++) {
-      bint od = i*nn;
-      long nni = min(max<long>(n-od,0),nn);
-      radixBlock(A+od, B, Tmp+od, cnts + m*i, oB + m*i, od, nni, m, extract);
-    }
+    parallel_for(0, blocks,
+		 [&](intT i) {
+		   bint od = i*nn;
+		   long nni = min(max<long>(n-od,0),nn);
+		   radixBlock(A+od, B, Tmp+od, cnts + m*i, oB + m*i, od, nni, m, extract);
+		 }, 1);
 
     transpose<bint,bint>(cnts, oA).trans(blocks, m);
     
@@ -156,17 +157,18 @@ namespace intSort {
       bint* offsets = BK[0];
       long remain = numBK - BUCKETS - 1;
       float y = remain / (float) n;
-      par_for (int i = 0; i < BUCKETS; i++) {
-	long segOffset = offsets[i];
-	long segNextOffset = (i == BUCKETS-1) ? n : offsets[i+1];
-	long segLen = segNextOffset - segOffset;
-	long blocksOffset = ((long) floor(segOffset * y)) + i + 1;
-	long blocksNextOffset = ((long) floor(segNextOffset * y)) + i + 2;
-	long blockLen = blocksNextOffset - blocksOffset;
-	radixLoopTopDown(A + segOffset, B + segOffset, Tmp + segOffset, 
-			 BK + blocksOffset, blockLen, segLen,
-			 bits-MAX_RADIX, f);
-      }
+      parallel_for (0, BUCKETS,
+		    [&](intT i) {
+		      long segOffset = offsets[i];
+		      long segNextOffset = (i == BUCKETS-1) ? n : offsets[i+1];
+		      long segLen = segNextOffset - segOffset;
+		      long blocksOffset = ((long) floor(segOffset * y)) + i + 1;
+		      long blocksNextOffset = ((long) floor(segNextOffset * y)) + i + 2;
+		      long blockLen = blocksNextOffset - blocksOffset;
+		      radixLoopTopDown(A + segOffset, B + segOffset, Tmp + segOffset,
+				       BK + blocksOffset, blockLen, segLen,
+				       bits-MAX_RADIX, f);
+		    });
     } else {
       radixLoopBottomUp(A, B, Tmp, BK, numBK, n, bits, false, f);
     }
@@ -206,8 +208,9 @@ namespace intSort {
       radixStep(A, B, Tmp, BK, numBK, n, (long) 1 << bits, true, 
 		eBits<E,F>(bits,0,f));
       if (bucketOffsets != NULL) {
-	par_for (long i = 0; i < m; i++) 
-	  bucketOffsets[i] = BK[0][i];
+	parallel_for (0, m,
+		      [&](intT i) {
+			bucketOffsets[i] = BK[0][i];});
       }
       return;
     } else if (bottomUp)
@@ -215,12 +218,14 @@ namespace intSort {
     else
       radixLoopTopDown(A, B, Tmp, BK, numBK, n, bits, f);
     if (bucketOffsets != NULL) {
-      {par_for (long i=0; i < m; i++) bucketOffsets[i] = n;}
-      {par_for (long i=0; i < n-1; i++) {
-	  long v = f(A[i]);
-	  long vn = f(A[i+1]);
-	  if (v != vn) bucketOffsets[vn] = i+1;
-	}}
+      parallel_for (0, m, [&](intT i) {
+			    bucketOffsets[i] = n;});
+      parallel_for (0, n-1,
+		    [&](intT i) {
+		      long v = f(A[i]);
+		      long vn = f(A[i+1]);
+		      if (v != vn) bucketOffsets[vn] = i+1;
+		    });
       bucketOffsets[f(A[0])] = 0;
       sequence::scanIBack(bucketOffsets, bucketOffsets, m,
 			  utils::minF<oint>(), (oint) n);

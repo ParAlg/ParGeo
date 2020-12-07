@@ -169,8 +169,8 @@ public :
     point center = minPt+(box/2.0);
     // copy before calling recursive routine since recursive routine is destructive
     vertex** v = newA(vertex*,n);
-    {par_for(int i=0; i < n; i++) 
-	v[i] = vv[i];}
+    parallel_for(0, n, [&](intT i) {
+			 v[i] = vv[i];});
     gTreeNode* result = new gTreeNode(_seq<vertex*>(v,n),center,box.maxDim(),NULL,0);
     return result;
   }
@@ -227,6 +227,7 @@ public :
       for (int i=0; i < count; i++) f(vertices[i],s+i);
     else {
       int ss = s;
+      //todo spawn
       for (int i=0 ; i < (1 << center.dimension()); i++) {
 	cilk_spawn children[i]->applyIndex(ss,f);
 	ss += children[i]->count;
@@ -298,6 +299,7 @@ void buildRecursiveTree(_seq<vertex*> S, int* offsets, int quadrants, gTreeNode 
       int l = ((q==quadrants-1) ? S.n : offsets[q+1]) - offsets[q];
       _seq<vertex*> A = _seq<vertex*>(S.A + offsets[q],l);
       parent->children[i] = newNodes+q;
+      //todo spawn
       cilk_spawn newTree(A,newcenter,parent->size/2.0,newNodes+q,1);
     } 
   } else {
@@ -305,6 +307,7 @@ void buildRecursiveTree(_seq<vertex*> S, int* offsets, int quadrants, gTreeNode 
       point newcenter = (parent->center).offsetPoint(i, parent->size/4.0);
       parent->children[i] = new(newNodes + i + 
 				nodesToLeft*(1<<center.dimension())) gTreeNode(newcenter,parent->size/2.0);
+      //todo spawn
       cilk_spawn buildRecursiveTree(S, offsets, quadrants, newNodes + (1<<(depth*center.dimension())), parent->children[i], (nodesToLeft << center.dimension())+i, height-1,depth+1);
     }
   }
@@ -331,12 +334,18 @@ static void sortBlocksBig(vertex** S, int count, int quadrants,
   pintv* blk = newA(pintv,count);
   double blocksize = size/(double)(1 << logdivs);
   point minpt = center.offsetPoint(0,size/2);
-  {par_for (int i=0;i< count; i++) 
-      blk[i] = pintv(ptFindBlock(minpt,blocksize,logdivs,S[i]->pt),
-		    S[i]);}
+  // {par_for (int i=0;i< count; i++)
+  //     blk[i] = pintv(ptFindBlock(minpt,blocksize,logdivs,S[i]->pt),
+  // 		    S[i]);}
+  parallel_for (0, count,
+		[&](intT i) {
+		  blk[i] = pintv(ptFindBlock(minpt,blocksize,logdivs,S[i]->pt), S[i]);});
   intSort::iSort(blk,offsets,count,quadrants,utils::firstF<int,vertex*>());
-  {par_for (int i=0;i< count; i++) 
-      S[i] = blk[i].second;}
+  // {par_for (int i=0;i< count; i++)
+  //     S[i] = blk[i].second;}
+  parallel_for (0, count,
+		[&](intT i) {
+		  S[i] = blk[i].second;});
   free(blk);
 }
 

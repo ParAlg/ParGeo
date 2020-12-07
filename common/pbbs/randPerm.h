@@ -40,11 +40,11 @@ void randPerm(E *A, int n) {
     return;
   }
 
-  par_for (int i=0; i < n; i++) {
-    H[i] = utils::hash(i)%(i+1);
-    I[i] = i;
-    check[i] = i;
-  }
+  parallel_for (0, n, [&](intT i) {
+			H[i] = utils::hash(i)%(i+1);
+			I[i] = i;
+			check[i] = i;
+		      });
 
   int end = n;
   int ratio = 100;
@@ -61,25 +61,27 @@ void randPerm(E *A, int n) {
     int size = 1 + end/ratio;
     int start = end-size;
 
-    {par_for(int i = 0; i < size; i++) {
-      int idx = I[i+start];
-      int idy = H[idx];
-      utils::writeMax(&check[idy], idx);
-      }}
+    parallel_for(0, size,
+		 [&](intT i) {
+		   int idx = I[i+start];
+		   int idy = H[idx];
+		   utils::writeMax(&check[idy], idx);
+		 });
 
-    {par_for(int i = 0; i < size; i++) {
-      int idx = I[i+start];
-      int idy = H[idx];
-      flags[i] = 1;
-      hold[i] = idx;
-      if (check[idy] == idx ) {
-	if (check[idx] == idx) {
-	  swap(A[idx],A[idy]);
-	  flags[i] = 0;
-	}
-	check[idy] = idy;
-      }
-      }}
+    parallel_for(0, size,
+		 [&](intT i) {
+		   int idx = I[i+start];
+		   int idy = H[idx];
+		   flags[i] = 1;
+		   hold[i] = idx;
+		   if (check[idy] == idx ) {
+		     if (check[idx] == idx) {
+		       swap(A[idx],A[idy]);
+		       flags[i] = 0;
+		     }
+		     check[idy] = idy;
+		   }
+		 });
     int nn = sequence::pack(hold,I+start,flags,size);
     end = end - size + nn;
     wasted += nn;
