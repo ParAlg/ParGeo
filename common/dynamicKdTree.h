@@ -287,7 +287,7 @@ class dynamicKdNode {
 	else flags[i] = 0;
       });
     intT valid = sequence::prefixSum(flags,0,numItems);
-    parallel_for(0; numItems-1, [&](intT i){
+    parallel_for(0, numItems-1, [&](intT i){
 	if (flags[i]!=flags[i+1]) {
 	  items[flags[i]] = scratch[i];}
       });

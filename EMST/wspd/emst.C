@@ -75,10 +75,10 @@ wEdge<point<dim>>* emst(point<dim>* P, intT n) {
 
   auto bcps = newA(indexBcp, out->size());
 
-  par_for (intT i=0; i<out->size(); ++i) {
-    bcpT bcp = out->at(i).u->compBcp(out->at(i).v);
-    bcps[i] = indexBcp(bcp.u-P, bcp.v-P, bcp.dist);
-  }
+  parallel_for (0, out->size(), [&](intT i) {
+      bcpT bcp = out->at(i).u->compBcp(out->at(i).v);
+      bcps[i] = indexBcp(bcp.u-P, bcp.v-P, bcp.dist);
+    });
   cout << "bcp-time = " << t0.next() << endl;
 
   edgeUnionFind *uf = new edgeUnionFind(n);
@@ -87,10 +87,10 @@ wEdge<point<dim>>* emst(point<dim>* P, intT n) {
 
   typedef wEdge<point<dim>> outT;
   auto R = newA(outT, n-1);
-  par_for(intT i=0; i<n-1; ++i) {
-    auto e = uf->getEdge(i);
-    R[i] = outT(P[e.first], P[e.second], P[e.first].dist(P[e.second]));
-  }
+  parallel_for(0, n-1, [&](intT i) {
+      auto e = uf->getEdge(i);
+      R[i] = outT(P[e.first], P[e.second], P[e.first].dist(P[e.second]));
+    });
   cout << "copy-time = " << t0.stop() << endl;
 
   delete uf;

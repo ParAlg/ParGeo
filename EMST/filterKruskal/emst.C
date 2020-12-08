@@ -125,10 +125,10 @@ wEdge<point<dim>>* emst(point<dim>* P, intT n) {
 
   typedef wEdge<point<dim>> outT;
   auto R = newA(outT, n-1);
-  par_for(intT i=0; i<n-1; ++i) {
-    auto e = uf->getEdge(i);
-    R[i] = outT(P[e.first], P[e.second], P[e.first].dist(P[e.second]));
-  }
+  parallel_for(0, n-1, [&](intT i) {
+      auto e = uf->getEdge(i);
+      R[i] = outT(P[e.first], P[e.second], P[e.first].dist(P[e.second]));
+    });
   cout << "copy-time = " << t0.stop() << endl;
 
   delete uf;

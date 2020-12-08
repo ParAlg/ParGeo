@@ -8,9 +8,8 @@ template<class nodeT>
 void markAll(nodeT *nd, intT id){
   if(!nd->isLeaf() && nd->getId() != id){
     if (nd->size() > 2000) {
-      cilk_spawn markAll(nd->L(), id);
-      markAll(nd->R(), id);
-      cilk_sync;
+      par_do([&](){markAll(nd->L(), id);},
+	     [&](){markAll(nd->R(), id);});
     } else {
       markAll(nd->L(), id);
       markAll(nd->R(), id);}
@@ -34,9 +33,8 @@ void mark(nodeT *nd, edgeUnionFind *uf, pointT* s){//todo look for that optimiza
     }
   } else {
     if (nd->size() > 2000) {
-      cilk_spawn mark(nd->L(), uf, s);
-      mark(nd->R(), uf, s);
-      cilk_sync;
+      par_do([&](){mark(nd->L(), uf, s);},
+	     [&](){mark(nd->R(), uf, s);});
     } else {
       mark(nd->L(), uf, s);
       mark(nd->R(), uf, s);

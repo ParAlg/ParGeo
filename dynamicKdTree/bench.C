@@ -118,9 +118,9 @@ void bench(point<dim>* P, intT n) {
     inserted += batchSize;
     cout << ">>>>> range query " << tree2->rangeNeighbor(&P[q], range)->size() << endl;
     t1.start();
-    par_for(intT i=0; i<inserted/10; ++i) {
-      tree2->rangeNeighbor(&P[rand()%inserted], range);
-    }
+    parallel_for(0, inserted/10, [&](intT i) {
+	tree2->rangeNeighbor(&P[rand()%inserted], range);
+      });
     queryTime += t1.stop();
   }
   cout << "dynamic insert = " << t0.stop() << endl;
@@ -133,9 +133,9 @@ void bench(point<dim>* P, intT n) {
     inserted -= batchSize;
     cout << ">>>>> range query " << tree2->rangeNeighbor(&P[q], range)->size() << endl;
     t1.start();
-    par_for(intT i=0; i<inserted/10; ++i) {
-      tree2->rangeNeighbor(&P[rand()%inserted], range);
-    }
+    parallel_for(0, inserted/10, [&](intT i) {
+	tree2->rangeNeighbor(&P[rand()%inserted], range);
+      });
     queryTime += t1.stop();
   }
   cout << "dynamic erase = " << t0.stop() << endl;
