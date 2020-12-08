@@ -226,15 +226,15 @@ intT addRefiningVertices(vertex** v, intT n, TriangleTable TT,
     intT cnt = min<intT>(size,top);
     vertex** vv = v+top-cnt;
 
-    par_for (intT j = 0; j < cnt; j++)
-      flags[j] = findAndReserveCavity(vv[j],t[j],VQ.qs[j]);
+    parallel_for (0, cnt, [&](intT j) {
+	flags[j] = findAndReserveCavity(vv[j],t[j],VQ.qs[j]);});
 
-    par_for (intT j = 0; j < cnt; j++)
-      flags[j] = flags[j] && !addCavity(vv[j], t[j], VQ.qs[j], TT);
+    parallel_for (0, cnt, [&](intT j) {
+	flags[j] = flags[j] && !addCavity(vv[j], t[j], VQ.qs[j], TT);});
 
     // Pack the failed vertices back onto Q
     intT k = sequence::pack(vv,h,flags,cnt);
-    par_for (intT j = 0; j < k; j++) vv[j] = h[j];
+    parallel_for (0, k, [&](intT j) {vv[j] = h[j];});
     failed += k;
     top = top-cnt+k; // adjust top, accounting for failed vertices
   }
@@ -268,17 +268,17 @@ triangles<point2d> refineInternal(triangles<point2d> Tri) {
 
 
   //  set up extra triangles
-  par_for (intT i=m; i < totalTriangles; i++) {
-    Triangs[i].id = i;
-    Triangs[i].initialized = 0;
-  }
+  parallel_for (m, totalTriangles, [&](intT i) {
+      Triangs[i].id = i;
+      Triangs[i].initialized = 0;
+    });
 
   //  set up extra vertices
-  par_for (intT i=0; i < totalVertices-n; i++) {
-    v[i] = new (&vv[i+n]) vertex(point2d(0,0), i+n);
-    // give each one a pointer to two triangles to use
-    v[i]->t = Triangs + m + 2*i;
-  }
+  parallel_for (0, totalVertices-n, [&](intT i) {
+      v[i] = new (&vv[i+n]) vertex(point2d(0,0), i+n);
+      // give each one a pointer to two triangles to use
+      v[i]->t = Triangs + m + 2*i;
+    });
   cout << "initializing-time = " << t0.next() << endl;
 
   // these will increase as more are added
@@ -286,12 +286,12 @@ triangles<point2d> refineInternal(triangles<point2d> Tri) {
   intT numPoints = n;
 
   TriangleTable workQ = makeTriangleTable(numTriangs);
-  par_for(intT i=0; i < numTriangs; i++) {
-    if (skinnyTriangle(&Triangs[i])) {
-      workQ.insert(&Triangs[i]);
-      Triangs[i].bad = 1;
-    }
-  }
+  parallel_for(0, numTriangs, [&](intT i) {
+      if (skinnyTriangle(&Triangs[i])) {
+	workQ.insert(&Triangs[i]);
+	Triangs[i].bad = 1;
+      }
+    });
 
   vertexQs VQ(QSIZE);
   cout << "start-time = " << t0.next() << endl;
@@ -304,8 +304,8 @@ triangles<point2d> refineInternal(triangles<point2d> Tri) {
 
     // packs out triangles that are no longer bad
     bool* flags = newA(bool, badTT.n);
-    par_for (intT i=0; i < badTT.n; i++)
-      flags[i] = badTT.A[i]->bad;
+    parallel_for (0, badTT.n, [&](intT i) {
+	flags[i] = badTT.A[i]->bad;});
     _seq<tri*> badT = sequence::pack(badTT.A, flags, badTT.n);
     free(flags);
     badTT.del();
@@ -319,10 +319,10 @@ triangles<point2d> refineInternal(triangles<point2d> Tri) {
     }
 
     // allocate 1 vertex per bad triangle and assign triangle to it
-    par_for (intT i=0; i < numBad; i++) {
-      badT.A[i]->bad = 2; // used to detect whether touched
-      v[i + numPoints - n]->badT = badT.A[i];
-    }
+    parallel_for (0, numBad, [&](intT i) {
+	badT.A[i]->bad = 2; // used to detect whether touched
+	v[i + numPoints - n]->badT = badT.A[i];
+      });
 
     // the new empty work queue
     workQ = makeTriangleTable(numBad);
@@ -332,8 +332,8 @@ triangles<point2d> refineInternal(triangles<point2d> Tri) {
     addRefiningVertices(v + numPoints - n, numBad, workQ, VQ);
 
     // push any bad triangles that were left untouched onto the Q
-    par_for (intT i=0; i < numBad; i++)
-      if (badT.A[i]->bad==2) workQ.insert(badT.A[i]);
+    parallel_for (0, numBad, [&](intT i) {
+	if (badT.A[i]->bad==2) workQ.insert(badT.A[i]);});
     badT.del();
 
     numPoints += numBad;
@@ -344,32 +344,32 @@ triangles<point2d> refineInternal(triangles<point2d> Tri) {
 
   // Extract Vertices for result
   bool* flag = newA(bool, numTriangs);
-  par_for (intT i=0; i < numPoints; i++) {
-    flag[i] = (vv[i].badT == NULL);
-  }
+  parallel_for (0, numPoints, [&](intT i) {
+      flag[i] = (vv[i].badT == NULL);
+    });
   _seq<intT> I = sequence::packIndex(flag, numPoints);
   intT nO = I.n;
   intT* II = I.A;
   point2d* rp = newA(point2d, nO);
-  par_for (intT i=0; i < nO; i++) {
-    vv[II[i]].id = i;
-    rp[i] = vv[II[i]].pt;
-  }
+  parallel_for (0, nO, [&](intT i) {
+      vv[II[i]].id = i;
+      rp[i] = vv[II[i]].pt;
+    });
   cout << "total points = " << nO << endl;
   I.del();
 
   // Extract Triangles for result
-  par_for (intT i=0; i < numTriangs; i++)
-    flag[i] = Triangs[i].initialized;
+  parallel_for (0, numTriangs, [&](intT i) {
+      flag[i] = Triangs[i].initialized;});
   I = sequence::packIndex(flag, numTriangs);
   triangle* rt = newA(triangle, I.n);
 
   // split into two loops to deal with compiler bug
   tri* x = newA(tri,I.n);
-  par_for (intT i=0; i < I.n; i++)
-    x[i] = Triangs[I.A[i]];
-  par_for (intT i=0; i < I.n; i++)
-    rt[i] = triangle(x[i].vtx[0]->id, x[i].vtx[1]->id, x[i].vtx[2]->id);
+  parallel_for (0, I.n, [&](intT i) {
+      x[i] = Triangs[I.A[i]];});
+  parallel_for (0, I.n, [&](intT i) {
+      rt[i] = triangle(x[i].vtx[0]->id, x[i].vtx[1]->id, x[i].vtx[2]->id);});
   free(x);
   cout << "total triangles = " << I.n << endl;
 

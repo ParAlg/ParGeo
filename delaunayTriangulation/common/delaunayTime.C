@@ -52,12 +52,12 @@ template<int dim>
 void timeDelaunay(point2d* pts, intT n, int rounds, char* outFile, int perturb) {
   cout << "nmax = " << n << endl;
   if (perturb) {
-    par_for(intT i=0; i<n; ++i) {
-      double myRand = pts[i][0] / 10000;
-      pts[i].p.x[0] += -myRand + 2*myRand*hash64(i)/numeric_limits<unsigned long>::max();
-      myRand = pts[i][1] / 10000;
-      pts[i].p.x[1] += -myRand + 2*myRand*hash64(i)/numeric_limits<unsigned long>::max();
-    }
+    parallel_for(0, n, [&](intT i) {
+	double myRand = pts[i][0] / 10000;
+	pts[i].p.x[0] += -myRand + 2*myRand*hash64(i)/numeric_limits<unsigned long>::max();
+	myRand = pts[i][1] / 10000;
+	pts[i].p.x[1] += -myRand + 2*myRand*hash64(i)/numeric_limits<unsigned long>::max();
+      });
   }
 
   triangles<point2d> R;
@@ -97,7 +97,7 @@ int main(int argc, char* argv[]) {
     if(!readCsv) PIn = readPointsFromFile<point<2>>(iFile);
     else PIn = readPointsFromFileCSV<point<2>>(iFile, csvCol);
     point2d* PP = newA(point2d, PIn.n);
-    par_for(intT i=0; i<PIn.n; ++i) PP[i] = point2d(PIn.A[i]);//convert to 2d points
+    parallel_for(0, PIn.n, [&](intT i) {PP[i] = point2d(PIn.A[i]);});//convert to 2d points
     timeDelaunay<2>(PP, nMax>0? nMax : PIn.n, rounds, oFile, perturb);
     free(PP);
   }

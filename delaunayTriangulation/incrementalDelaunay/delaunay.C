@@ -228,24 +228,24 @@ void incrementallyAddPoints(vertex** v, intT n, vertex* start) {
 
     // for trial vertices find containing triangle, determine cavity 
     // and reserve vertices on boundary of cavity
-    par_for (intT j = 0; j < cnt; j++) {
-      vertex *u = knn.nearest(vv[j]);
-      t[j] = find(vv[j],simplex(u->t,0));
-      reserveForInsert(vv[j],t[j],VQ[j]);
-    }
+    parallel_for (0, cnt, [&](intT j) {
+	vertex *u = knn.nearest(vv[j]);
+	t[j] = find(vv[j],simplex(u->t,0));
+	reserveForInsert(vv[j],t[j],VQ[j]);
+      });
 
     // For trial vertices check if they own their boundary and
     // update mesh if so.  flags[i] is 1 if failed (need to retry)
-    par_for (intT j = 0; j < cnt; j++) {
-      flags[j] = insert(vv[j],t[j],VQ[j]);
-    }
+    parallel_for (0, cnt, [&](intT j) {
+	flags[j] = insert(vv[j],t[j],VQ[j]);
+      });
 
     // Pack failed vertices back onto Q and successful
     // ones up above (needed for point location structure)
     intT k = sequence::pack(vv,h,flags,cnt);
-    par_for (intT j = 0; j < cnt; j++) flags[j] = !flags[j];
+    parallel_for (0, cnt, [&](intT j) {flags[j] = !flags[j];});
     sequence::pack(vv,h+k,flags,cnt);
-    par_for (intT j = 0; j < cnt; j++) vv[j] = h[j];
+    parallel_for (0, cnt, [&](intT j) {vv[j] = h[j];});
 
     failed += k;
     top = top-cnt+k; // adjust top, accounting for failed vertices
@@ -300,16 +300,16 @@ triangles<point2d> delaunay(point2d* P, intT n) {
 
   // The points are psuedorandomly permuted 
   hashID hash(n);
-  par_for (intT i=0; i < n; i++) 
-    v[i] = new (&vv[i]) vertex(P[hash.get(i)], i);
+  parallel_for (0, n, [&](intT i) {
+      v[i] = new (&vv[i]) vertex(P[hash.get(i)], i);});
 
   // allocate all the triangles needed
   intT numTriangles = 2 * n + (boundarySize - 2);
   tri* Triangs = newA(tri, numTriangles); 
 
   // give two triangles to each vertex
-  par_for (intT i=0; i < n; i++)
-      v[i]->t = Triangs + 2*i; 
+  parallel_for (0, n, [&](intT i) {
+      v[i]->t = Triangs + 2*i; });
 
   // generate boundary points and fill with simplices
   // The boundary points and simplices go at the end
@@ -329,20 +329,20 @@ triangles<point2d> delaunay(point2d* P, intT n) {
   // Since points were permuted need to translate back to
   // original coordinates
   intT *M = newA(intT, numVertices);
-  par_for (intT i=0; i < n; i++) M[i] = hash.get(i);
-  par_for (intT i=n; i < numVertices; i++) M[i] = i;
+  parallel_for (0, n, [&](intT i) {M[i] = hash.get(i);});
+  parallel_for (n, numVertices, [&](intT i) {M[i] = i;});
 
-  par_for (intT i=0; i < numTriangles; i++) {
-    vertex** vtx = Triangs[i].vtx;
-    rt[i] = triangle(M[vtx[0]->id], M[vtx[1]->id], M[vtx[2]->id]);
-  }
+  parallel_for (0, numTriangles, [&](intT i) {
+      vertex** vtx = Triangs[i].vtx;
+      rt[i] = triangle(M[vtx[0]->id], M[vtx[1]->id], M[vtx[2]->id]);
+    });
   free(M);
 
   point2d* rp = newA(point2d, numVertices);
-  par_for (intT i=0; i < n; i++) 
-    rp[i] = P[i];
-  par_for (intT i=n; i < numVertices; i++) 
-    rp[i] = vv[i].pt;
+  parallel_for (0, n, [&](intT i) {
+      rp[i] = P[i];});
+  parallel_for (n, numVertices, [&](intT i) {
+      rp[i] = vv[i].pt;});
   free(Triangs);
   free(vv);
   cout << "gen-output-time = " << t0.next() << endl;
