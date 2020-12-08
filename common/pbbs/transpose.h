@@ -48,7 +48,7 @@ struct transpose {
       intT l1 = rCount/2;
       intT l2 = rCount - rCount/2;
       par_do([&](){this->transR(rStart,l1,rLength,cStart,cCount,cLength);},
-	     [&](){transR(rStart + l1,l2,rLength,cStart,cCount,cLength);})
+	     [&](){transR(rStart + l1,l2,rLength,cStart,cCount,cLength);});
     }	
   }
 
