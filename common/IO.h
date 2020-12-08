@@ -77,14 +77,14 @@ namespace benchIO {
 
     bool *FL = newA(bool,n);
     FL[0] = Str[0];
-    par_for(long i=1; i<n; i++) FL[i] = Str[i] && !Str[i-1];
+    parallel_for(1, n, [&](intT i) {FL[i] = Str[i] && !Str[i-1];});
 
     _seq<long> Off = sequence::packIndex<long>(FL, n);
     long m = Off.n;
     long *offsets = Off.A;
 
     char **SA = newA(char*, m);
-    par_for(long j=0; j<m; j++) SA[j] = Str+offsets[j];
+    parallel_for(0, m, [&](intT j) {SA[j] = Str+offsets[j];});
 
     free(offsets); free(FL);
     return words(Str,n,SA,m);
@@ -102,26 +102,26 @@ namespace benchIO {
   }
 
   words stringToWordsCSV(char *Str, long n) {
-    par_for(long i=0; i<n; i++) {
-      if (isCommaCSV(Str[i])) {
-        Str[i] = 0; 
-      }
-    }
+    parallel_for(0, n, [&](intT i) {
+	if (isCommaCSV(Str[i])) {
+	  Str[i] = 0;
+	}
+      });
 
     bool *FL = newA(bool,n);
     FL[0] = Str[0];
-    par_for(long i=1; i<n; i++) {
-      FL[i] = Str[i] && !Str[i-1];
-    }
+    parallel_for(1, n, [&](intT i) {
+	FL[i] = Str[i] && !Str[i-1];
+      });
 
     _seq<long> Off = sequence::packIndex<long>(FL, n);
     long m = Off.n;
     long *offsets = Off.A;
 
     char **SA = newA(char*, m);
-    par_for(long j=0; j<m; j++) {
-      SA[j] = Str+offsets[j];
-    }
+    parallel_for(0, m, [&](intT j) {
+	SA[j] = Str+offsets[j];
+      });
 
     free(offsets); free(FL);
     return words(Str,n,SA,m);
@@ -174,15 +174,15 @@ namespace benchIO {
   template <class T>
   _seq<char> arrayToString(T* A, long n, bool comma=false) {
     long* L = newA(long,n);
-    {par_for(long i=0; i<n; i++) L[i] = xToStringLen(A[i])+1;}
+    parallel_for(0, n, [&](intT i) {L[i] = xToStringLen(A[i])+1;})
     long m = sequence::scan(L,L,n,utils::addF<long>(),(long) 0);
     char* B = newA(char,m);
-    par_for(long j=0; j<m; j++)
-      B[j] = 0;
-    par_for(long i=0; i<n-1; i++) {
-      xToString(B + L[i],A[i],comma);
-      B[L[i+1] - 1] = '\n';
-    }
+    parallel_for(0, m, [&](intT j) {
+	B[j] = 0;});
+    parallel_for(0, n-1, [&](intT i) {
+	xToString(B + L[i],A[i],comma);
+	B[L[i+1] - 1] = '\n';
+      });
     xToString(B + L[n-1],A[n-1],comma);
     B[m-1] = '\n';
     free(L);
@@ -244,7 +244,7 @@ namespace benchIO {
     file.seekg (0, ios::beg);
     long n = end - file.tellg();
     char* bytes = newA(char, n+1);
-    par_for(long i=0; i < n+1; i++) bytes[i] = 0;
+    parallel_for(0, n+1, [&](intT i) {bytes[i] = 0;});
     file.read (bytes,n);
     file.close();
     return _seq<char>(bytes,n);
@@ -273,8 +273,8 @@ namespace benchIO {
     }
     long n = W.m-1;
     intT* A = new intT[n];
-    par_for(long i=0; i<n; i++)
-      A[i] = atol(W.Strings[i+1]);
+    parallel_for(0, n, [&](intT i) {
+	A[i] = atol(W.Strings[i+1]);});
     W.del();
     return _seq<intT>(A,n);
   }

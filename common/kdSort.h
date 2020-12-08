@@ -57,20 +57,20 @@ template<int dim, class T>
 inline intT splitItemParallel(T* A, intT n, floatT xM, intT k, T* B, intT* flag) {
   if (n < 2) {
     cout << "error, spatial sort splitting singleton, abort" << endl;abort();}
-  par_for(intT i=0; i<n; ++i) {
-    if (A[i].coordinate(k)<xM) flag[i]=1;
-    else flag[i] = 0;
-  }
+  parallel_for(0, n, [&](intT i) {
+      if (A[i].coordinate(k)<xM) flag[i]=1;
+      else flag[i] = 0;
+    });
   intT leftSize = sequence::prefixSum(flag,0,n);
-  par_for(intT i=0; i<n-1; ++i) {
-    if (flag[i] != flag[i+1]) B[flag[i]] = A[i];
-    if (i-flag[i] != i+1-flag[i+1]) B[leftSize+i-flag[i]] = A[i];
-  }
+  parallel_for(0, n-1, [&](intT i) {
+      if (flag[i] != flag[i+1]) B[flag[i]] = A[i];
+      if (i-flag[i] != i+1-flag[i+1]) B[leftSize+i-flag[i]] = A[i];
+    });
   if (flag[n-1] != leftSize) B[flag[n-1]] = A[n-1];
   if (n-1-flag[n-1] != n-leftSize) B[leftSize+n-1-flag[n-1]] = A[n-1];
-  par_for(intT i=0; i<n; ++i) {
-    A[i] = B[i];
-  }
+  parallel_for(0, n, [&](intT i) {
+      A[i] = B[i];
+    });
   return leftSize;
 }
 
@@ -137,9 +137,8 @@ void kdSortMiddle(T* A, intT n, intT thresh=16, T* B=NULL, intT* flag=NULL) {
   intT median = findMiddleParallel(A, n, pMin, pMax, B, flag);
   if (median == 0 || median == n) {median = ceil(n/2.0);}
 
-  cilk_spawn kdSortMiddle<dim, T>(A, median, thresh, B, flag);
-  kdSortMiddle<dim, T>(A+median, n-median, thresh, B+median, flag+median);
-  cilk_sync;
+  par_do([&](){kdSortMiddle<dim, T>(A, median, thresh, B, flag);},
+	 [&](){kdSortMiddle<dim, T>(A+median, n-median, thresh, B+median, flag+median);});
 
   if(freeB) free(B);
   if(freeFlag) free(flag);
@@ -180,9 +179,8 @@ void kdSortMedian(T* A, intT n, intT thresh=16) {
   std::nth_element(A, A+median, A+n, splitK);//todo parallel?
   //sampleSort(A, n, splitK);
 
-  cilk_spawn kdSortMedian<dim, T>(A, median, thresh);
-  kdSortMedian<dim, T>(A+median, n-median, thresh);
-  cilk_sync;
+  par_do([&](){kdSortMedian<dim, T>(A, median, thresh);},
+	 [&](){kdSortMedian<dim, T>(A+median, n-median, thresh);});
 }
 
 template<class T>
@@ -276,9 +274,8 @@ void kdSortBFSHelperParallel(T* A, intT n, bfsNode<T>* space, bfsNode<T>* start,
   space->left = space+1;
   space->right = space+median;
 
-  cilk_spawn kdSortBFSHelperParallel<dim, T>(A, median-1, space->left, start, thresh);
-  kdSortBFSHelperParallel<dim, T>(A+median, n-median, space->right, start, thresh);
-  cilk_sync;
+  par_do([&](){kdSortBFSHelperParallel<dim, T>(A, median-1, space->left, start, thresh);},
+	 [&](){kdSortBFSHelperParallel<dim, T>(A+median, n-median, space->right, start, thresh);});
 }
 
 template<class T>

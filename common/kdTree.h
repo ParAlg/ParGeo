@@ -55,13 +55,13 @@ class kdTree {
 
   kdTree(objT* P, intT nn, bool parallel=true, bool noCoarsen=false): n(nn) {
     items = newA(objT*, n);
-    par_for(intT i=0; i<n; ++i) {
-      items[i]=&P[i];
-    }
+    parallel_for(0, n, [&](intT i) {
+	items[i]=&P[i];
+      });
     root = newA(nodeT, 2*n-1);
-    par_for(intT i=0; i<2*n-1; ++i) {
-      root[i].setEmpty();
-    }
+    parallel_for(0, 2*n-1, [&](intT i) {
+	root[i].setEmpty();
+      });
     if (parallel) {
       objT** scratch = newA(objT*, n);
       intT* flags = newA(intT, n);
