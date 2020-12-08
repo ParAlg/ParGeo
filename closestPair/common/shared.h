@@ -204,15 +204,15 @@ template<int dim>
 pointPair<dim> bruteForceParallel(point<dim>* P, intT n) {
   static const intT intMax = numeric_limits<intT>::max();
   pointPair<dim>* A = newA(pointPair<dim>, n*n);
-  par_for(intT i = 0; i < n; ++ i) {
-    for(intT j = 0; j < n; ++ j) {
-      if (i == j) {
-        A[i+j*n] = pointPair<dim>(P[i], P[j], intMax);
-      } else {
-        A[i+j*n] = pointPair<dim>(P[i], P[j]);
+  parallel_for(0, n, [&](intT i) {
+      for(intT j = 0; j < n; ++ j) {
+	if (i == j) {
+	  A[i+j*n] = pointPair<dim>(P[i], P[j], intMax);
+	} else {
+	  A[i+j*n] = pointPair<dim>(P[i], P[j]);
+	}
       }
-    }
-  }
+    });
   intT I = sequence::minIndex<double, intT, getDist<dim>>(0, n*n, getDist<dim>(A));
   auto R = A[I];
   free(A);
@@ -223,11 +223,11 @@ template<int dim>
 pointPair<dim> bruteForceSerial(point<dim>* P, intT n) {
   static const intT intMax = numeric_limits<intT>::max();
   pointPair<dim> A = pointPair<dim>(P[0], P[1], intMax);
-  par_for(intT i = 0; i < n; ++ i) {
-    for(intT j = i+1; j < n; ++ j) {
-      A.closer(P[i], P[j]);
-    }
-  }
+  parallel_for(0, n, [&](intT i) {
+      for(intT j = i+1; j < n; ++ j) {
+	A.closer(P[i], P[j]);
+      }
+    });
   return A;
 }
 
@@ -250,12 +250,12 @@ point<dim> pMinParallel(point<dim>* items, intT n) {
   point<dim> localMin[P];
   for (intT i=0; i<P; ++i) {
     localMin[i] = point<dim>(items[0].x);}
-  par_for(intT p=0; p<P; p++) {
-    intT s = p*blockSize;
-    intT e = min((p+1)*blockSize,n);
-    for (intT j=s; j<e; ++j) {
-      localMin[p].minCoords(items[j].x);}
-  }
+  parallel_for(0, P, [&](intT p) {
+      intT s = p*blockSize;
+      intT e = min((p+1)*blockSize,n);
+      for (intT j=s; j<e; ++j) {
+	localMin[p].minCoords(items[j].x);}
+    });
   pMin = point<dim>(items[0].x);
   for(intT p=0; p<P; ++p) {
     pMin.minCoords(localMin[p].x);}

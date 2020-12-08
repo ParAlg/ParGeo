@@ -6,7 +6,7 @@ JEMALLOC = -DUSEJEMALLOC -L$(JEMALLOCLD) -ljemalloc
 endif
 
 #CFLAGS = -mcx16 -O3 -std=c++14 -march=native -Wall -Wextra
-CFLAGS = -mcx16 -O3 -std=c++14 -march=native
+CFLAGS = -mcx16 -O3 -std=c++17 -march=native
 
 OMPFLAGS = -DOPENMP -fopenmp
 CILKFLAGS = -DCILK -fcilkplus

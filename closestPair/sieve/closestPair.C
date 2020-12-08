@@ -51,9 +51,9 @@ floatT getDiParallel(point<dim>* P, intT nn, floatT* xDists) {
   intT xi;
   if(noRandom) xi = rands[2]%nn;
   else xi = rand()%nn;
-  par_for(intT i=0; i<nn; ++i) {
-    xDists[i] = P[i].pointDist(P[xi]);
-  }
+  parallel_for(0, nn, [&](intT i) {
+      xDists[i] = P[i].pointDist(P[xi]);
+    });
   xDists[xi] = xDists[0]>xDists[1] ? xDists[0] : xDists[1];//make sure xi's dist to self (zero) isn't counted
   auto getItem = [&](intT i) {return xDists[i];};
   intT iMin = sequence::minIndex<floatT,intT>(0, nn, getItem);
@@ -78,9 +78,9 @@ pointPair<dim> sieve(point<dim>* PIn, intT n, bool serial=false) {
 
   //make a copy of PIn in P, where P will be modified
   pointT* P = newA(pointT, n);
-  par_for(intT i=0; i<n; ++i) {
-    P[i] = PIn[i];
-  }
+  parallel_for(0, n, [&](intT i) {
+      P[i] = PIn[i];
+    });
 
   timing t0; t0.start();
   double tGetMin = 0;

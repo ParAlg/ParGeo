@@ -169,9 +169,9 @@ struct grid {
   }
 
   inline void resetCells() {
-    par_for(intT i=0; i<n; ++i) {
-      cells[i].init();
-    }
+    parallel_for(0, n, [&](intT i) {
+	cells[i].init();
+      });
     numCells = 0;
   }
 
@@ -280,32 +280,32 @@ struct grid {
                    return pointGridCmp<dim, pointT>(a, b, pMin, r);};
     sampleSort(P, nn, pLess);
     flag[0] = 1;
-    par_for(intT i=1; i<nn; ++i) {
-      if (compareCoordinate(P[i].x, P[i-1].x)) flag[i] = 1;
-      else flag[i] = 0;
-    }
+    parallel_for(1, nn, [&](intT i) {
+	if (compareCoordinate(P[i].x, P[i-1].x)) flag[i] = 1;
+	else flag[i] = 0;
+      });
     numCells = sequence::prefixSum(flag, 0, nn);
 
     flag[nn] = numCells;
     cells[0].P = P;
-    par_for(intT i=1; i<nn; ++i) {
-      intT ii = i+1;
-      if (flag[ii] != flag[ii-1]) {
-        cells[flag[ii]-1].P = &P[ii-1];}
-    }
-    par_for(intT i=0; i<numCells-1; ++i) {
-      cells[i].numPoints = cells[i+1].P - cells[i].P;
-      cells[i].computeCoord(pMin, r);
-    }
+    parallel_for(1, nn, [&](intT i) {
+	intT ii = i+1;
+	if (flag[ii] != flag[ii-1]) {
+	  cells[flag[ii]-1].P = &P[ii-1];}
+      });
+    parallel_for(0, numCells-1, [&](intT i) {
+	cells[i].numPoints = cells[i+1].P - cells[i].P;
+	cells[i].computeCoord(pMin, r);
+      });
     cells[numCells-1].numPoints = &P[nn] - cells[numCells-1].P;
     cells[numCells-1].computeCoord(pMin, r);
 
     if (!useTree) {
       table->setActive(min(n,numCells*3));
       table->clear();
-      par_for(intT i=0; i<numCells; ++i) {
-        table->insert(&cells[i]);
-      }
+      parallel_for(0, numCells, [&](intT i) {
+	  table->insert(&cells[i]);
+	});
     }
     tree = NULL;
     if(freeFlag) free(flag);
@@ -374,14 +374,14 @@ struct grid {
    */
   _seq<pointT> checkInsertParallel(pointT* P, pointT* PP, intT nn, bool* flag, bool useTree=false) {
     if (useTree) tree = new kdTree<dim, cellT>(cells, numCells, true);
-    par_for(intT i=0; i<nn; ++i) {
-      if (useTree) {
-        if (isSparseKdTree(P[i])) flag[i] = false;
-        else flag[i] = true;
-      } else {
-        if (isSparse(P[i])) flag[i] = false;
-        else flag[i] = true;}
-    }
+    parallel_for(0, nn, [&](intT i) {
+	if (useTree) {
+	  if (isSparseKdTree(P[i])) flag[i] = false;
+	  else flag[i] = true;
+	} else {
+	  if (isSparse(P[i])) flag[i] = false;
+	  else flag[i] = true;}
+      });
     auto pCreate = [&](intT i) {return pointT(P[i].x);};
     auto seqPP = sequence::pack(PP, flag, (intT)0, nn, pCreate);
     return seqPP;
@@ -424,24 +424,24 @@ struct grid {
   pointPairT closestPairParallel(bool useTree=false) {
     if (useTree && tree == NULL) tree = new kdTree<dim, cellT>(cells, numCells, true);
     auto Rs = newA(pointPairT, numCells);
-    par_for(intT i=0; i<numCells; ++i) {
-      auto c = &cells[i];
-      vector<pointT> P;
-      auto gather = [&](cellT *c) {
-                      for (intT i=0; i<c->size(); ++i) {
-                        P.push_back(c->P[i]);}
-                      return false;};
-      if (useTree) {
-        auto notComplete = [&]() {return false;};
-        tree->rangeNeighbor(c, r*sqrt(2), [&](){return false;}, gather);
-      } else {
-        cellNeighborhood(c, gather);}
-      auto myCp = pointPairT();
-      for (intT i=0; i<P.size(); ++i) {
-        for (intT j=i+1; j<P.size(); ++j) myCp.closer(P[i],P[j]);
-      }
-      Rs[i] = myCp;
-    }
+    parallel_for(0, numCells, [&](intT i) {
+	auto c = &cells[i];
+	vector<pointT> P;
+	auto gather = [&](cellT *c) {
+	  for (intT i=0; i<c->size(); ++i) {
+	    P.push_back(c->P[i]);}
+	  return false;};
+	if (useTree) {
+	  auto notComplete = [&]() {return false;};
+	  tree->rangeNeighbor(c, r*sqrt(2), [&](){return false;}, gather);
+	} else {
+	  cellNeighborhood(c, gather);}
+	auto myCp = pointPairT();
+	for (intT i=0; i<P.size(); ++i) {
+	  for (intT j=i+1; j<P.size(); ++j) myCp.closer(P[i],P[j]);
+	}
+	Rs[i] = myCp;
+      });
     auto getDist = [&](intT i){return Rs[i].dist;};
     intT iMin = sequence::minIndex<floatT,intT>(0, numCells, getDist);
     auto R = Rs[iMin]; free(Rs);

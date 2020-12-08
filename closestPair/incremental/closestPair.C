@@ -227,9 +227,9 @@ struct grid {
     return modprime(xx, dim);}
 
   inline void resetCells() {
-    par_for(intT i=0; i<n; ++i) {
-      cells[i].init();
-    }
+    parallel_for(0, n, [&](intT i) {
+	cells[i].init();
+      });
     numCells = 0;}
 
   inline void initRand() {
@@ -318,32 +318,32 @@ struct grid {
 
     int* flag = newA(int, nn+1);
     flag[0] = 1;
-    par_for(intT i=1; i<nn; ++i) {
-      if (compareCoordinate(P[i].x(), P[i-1].x())) flag[i] = 1;
-      else flag[i] = 0;
-    }
+    parallel_for(1, nn, [&](intT i) {
+	if (compareCoordinate(P[i].x(), P[i-1].x())) flag[i] = 1;
+	else flag[i] = 0;
+      });
     numCells = sequence::prefixSum(flag, 0, nn);
     flag[nn] = numCells;
 
     cells[0].P = P;
-    par_for(intT i=1; i<nn; ++i) {
-      intT ii = i+1;
-      if (flag[ii] != flag[ii-1]) {
-        cells[flag[ii]-1].P = &P[ii-1];}
-    }
-    par_for(intT i=0; i<numCells-1; ++i) {
-      cells[i].numPoints = cells[i+1].P - cells[i].P;
-      cells[i].computeCoord(pMin, r());
-    }
+    parallel_for(1, nn, [&](intT i) {
+	intT ii = i+1;
+	if (flag[ii] != flag[ii-1]) {
+	  cells[flag[ii]-1].P = &P[ii-1];}
+      });
+    parallel_for(0, numCells-1, [&](intT i) {
+	cells[i].numPoints = cells[i+1].P - cells[i].P;
+	cells[i].computeCoord(pMin, r());
+      });
     cells[numCells-1].numPoints = &P[nn] - cells[numCells-1].P;
     cells[numCells-1].computeCoord(pMin, r());
 
     if (!useTree) {
       table->setActive(min(n,numCells*3));
       table->clear();
-      par_for(intT i=0; i<numCells; ++i) {
-        table->insert(&cells[i]);
-      }
+      parallel_for(0, numCells, [&](intT i) {
+	  table->insert(&cells[i]);
+	});
     }
     free(flag);
     return numCells;
@@ -414,21 +414,21 @@ struct grid {
     for (intT b=0; b<numBuckets; ++b) {
       intT ss = s+b*bucketSize;
       intT ee = ss+min(bucketSize, e-ss);
-      par_for(intT i=ss; i<ee; ++i) {
-        bool hasConflict;
-        if (useTree) hasConflict = findConflictKdTree(P[i], tree);
-        else hasConflict = findConflict(P[i]);
-        if (hasConflict) bucket[i-ss] = 1;
-        else bucket[i-ss] = 0;
-      }
+      parallel_for(ss, ee, [&](intT i) {
+	  bool hasConflict;
+	  if (useTree) hasConflict = findConflictKdTree(P[i], tree);
+	  else hasConflict = findConflict(P[i]);
+	  if (hasConflict) bucket[i-ss] = 1;
+	  else bucket[i-ss] = 0;
+	});
       intT numBad = sequence::prefixSum(bucket,0,ee-ss);
       bucket[ee-ss] = numBad;
 
       if (numBad > 0) {
         intT ii = -1;
-        par_for(intT i=0; i<ee-ss; ++i) {
-          if (bucket[i]==0 && bucket[i]!=bucket[i+1]) ii = i;
-        }
+        parallel_for(0, ee-ss, [&](intT i) {
+	    if (bucket[i]==0 && bucket[i]!=bucket[i+1]) ii = i;
+	  });
         free(bucket);
         if (useTree) {
           auto RR = make_pair(ss+ii, findClosestKdTree(P[ss+ii], tree));
@@ -511,9 +511,9 @@ pointPair<dim> incremental(point<dim>* P, intT n, bool serial=false) {
   grids.addTable(table);
 
   iPointT *PP = newA(iPointT, n);
-  par_for(intT i=0; i<n; ++i) {
-    PP[i]=iPointT(P[i], i);
-  }
+  parallel_for(0, n, [&](intT i) {
+      PP[i]=iPointT(P[i], i);
+    });
 
   grids.updateR(R);
   intT nn = 0;

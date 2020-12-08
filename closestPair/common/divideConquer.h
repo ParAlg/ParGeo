@@ -152,9 +152,11 @@ pointPair<dim> divideConquerParallel(point<dim>* P, intT n, point<dim>* Pp, int 
   point<dim> *R = P+xm;
   point<dim> *Lp = Pp;
   point<dim> *Rp = Pp+xm;
-  pointPair<dim> Lr = cilk_spawn divideConquerParallel<dim>(L, xm, Lp, k);
-  pointPair<dim> Rr = divideConquerParallel<dim>(R, n-xm, Rp, k);
-  cilk_sync;
+  par_do([&](){pointPair<dim> Lr = divideConquerParallel<dim>(L, xm, Lp, k);},
+	 [&](){pointPair<dim> Rr = divideConquerParallel<dim>(R, n-xm, Rp, k);});
+  /* pointPair<dim> Lr = cilk_spawn divideConquerParallel<dim>(L, xm, Lp, k); */
+  /* pointPair<dim> Rr = divideConquerParallel<dim>(R, n-xm, Rp, k); */
+  /* cilk_sync; */
 
   pointPair<dim> better = Lr.dist < Rr.dist ? Lr : Rr;
   if (better.dist == 0) return better;
@@ -182,15 +184,15 @@ pointPair<dim> divideConquerParallel(point<dim>* P, intT n, point<dim>* Pp, int 
       //go parallel
       sampleSort(Pp, np, pLess);
       pointPair<dim>* A = newA(pointPair<dim>, np*check);
-      par_for(intT i=0; i<np; ++i) { //for each point in the slab in parallel
-        for (intT j = 0; j < check; ++ j) { //check constant number of points after
-          if (i+j+1<np) {
-            A[i*check+j] = pointPair<dim>(Pp[i], Pp[i+j+1]);
-          } else {
-            A[i*check+j] = pointPair<dim>(Pp[i], Pp[i+j+1], intMax());
-          }
-        }
-      }
+      parallel_for(0, np, [&](intT i) { //for each point in the slab in parallel
+	  for (intT j = 0; j < check; ++ j) { //check constant number of points after
+	    if (i+j+1<np) {
+	      A[i*check+j] = pointPair<dim>(Pp[i], Pp[i+j+1]);
+	    } else {
+	      A[i*check+j] = pointPair<dim>(Pp[i], Pp[i+j+1], intMax());
+	    }
+	  }
+	});
       auto getDist = [&](intT i) {return A[i].dist;};
       intT I = sequence::minIndex<double, intT>(0, np*check, getDist);
       slabR = A[I];
@@ -220,7 +222,7 @@ pointPair<dim> divideConquerParallel(point<dim>* P, intT n, point<dim>* Pp, int 
 template<int dim>
 pointPair<dim> divideConquer(point<dim>* P, intT n, bool serial = false) {
   point<dim>* Pp = newA(point<dim>, n*2);
-  par_for(intT i=0; i<n; ++i) {Pp[i]=P[i];}
+  parallel_for(0, n, [&](intT i) {Pp[i]=P[i];});
   pointPair<dim> r;
   if (serial) r = divideConquerSerial<dim>(Pp, n, Pp+n, dim-1);
   else r = divideConquerParallel<dim>(Pp, n, Pp+n, dim-1);
