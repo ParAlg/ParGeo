@@ -174,7 +174,7 @@ namespace benchIO {
   template <class T>
   _seq<char> arrayToString(T* A, long n, bool comma=false) {
     long* L = newA(long,n);
-    parallel_for(0, n, [&](intT i) {L[i] = xToStringLen(A[i])+1;})
+    parallel_for(0, n, [&](intT i) {L[i] = xToStringLen(A[i])+1;});
     long m = sequence::scan(L,L,n,utils::addF<long>(),(long) 0);
     char* B = newA(char,m);
     parallel_for(0, m, [&](intT j) {
