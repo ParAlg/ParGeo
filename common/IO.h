@@ -72,19 +72,19 @@ namespace benchIO {
   struct toLong { long operator() (bool v) {return (long) v;} };
 
   words stringToWords(char *Str, long n) {
-    parallel_for(0, n, [&](intT i) {
+    parallel_for(0, n, [&](size_t i) {
 			 if (isSpace(Str[i])) Str[i] = 0;});
 
     bool *FL = newA(bool,n);
     FL[0] = Str[0];
-    parallel_for(1, n, [&](intT i) {FL[i] = Str[i] && !Str[i-1];});
+    parallel_for(1, n, [&](size_t i) {FL[i] = Str[i] && !Str[i-1];});
 
     _seq<long> Off = sequence::packIndex<long>(FL, n);
     long m = Off.n;
     long *offsets = Off.A;
 
     char **SA = newA(char*, m);
-    parallel_for(0, m, [&](intT j) {SA[j] = Str+offsets[j];});
+    parallel_for(0, m, [&](size_t j) {SA[j] = Str+offsets[j];});
 
     free(offsets); free(FL);
     return words(Str,n,SA,m);
@@ -102,7 +102,7 @@ namespace benchIO {
   }
 
   words stringToWordsCSV(char *Str, long n) {
-    parallel_for(0, n, [&](intT i) {
+    parallel_for(0, n, [&](size_t i) {
 	if (isCommaCSV(Str[i])) {
 	  Str[i] = 0;
 	}
@@ -110,7 +110,7 @@ namespace benchIO {
 
     bool *FL = newA(bool,n);
     FL[0] = Str[0];
-    parallel_for(1, n, [&](intT i) {
+    parallel_for(1, n, [&](size_t i) {
 	FL[i] = Str[i] && !Str[i-1];
       });
 
@@ -119,7 +119,7 @@ namespace benchIO {
     long *offsets = Off.A;
 
     char **SA = newA(char*, m);
-    parallel_for(0, m, [&](intT j) {
+    parallel_for(0, m, [&](size_t j) {
 	SA[j] = Str+offsets[j];
       });
 
@@ -174,12 +174,12 @@ namespace benchIO {
   template <class T>
   _seq<char> arrayToString(T* A, long n, bool comma=false) {
     long* L = newA(long,n);
-    parallel_for(0, n, [&](intT i) {L[i] = xToStringLen(A[i])+1;});
+    parallel_for(0, n, [&](size_t i) {L[i] = xToStringLen(A[i])+1;});
     long m = sequence::scan(L,L,n,utils::addF<long>(),(long) 0);
     char* B = newA(char,m);
-    parallel_for(0, m, [&](intT j) {
+    parallel_for(0, m, [&](size_t j) {
 	B[j] = 0;});
-    parallel_for(0, n-1, [&](intT i) {
+    parallel_for(0, n-1, [&](size_t i) {
 	xToString(B + L[i],A[i],comma);
 	B[L[i+1] - 1] = '\n';
       });
@@ -244,7 +244,7 @@ namespace benchIO {
     file.seekg (0, ios::beg);
     long n = end - file.tellg();
     char* bytes = newA(char, n+1);
-    parallel_for(0, n+1, [&](intT i) {bytes[i] = 0;});
+    parallel_for(0, n+1, [&](size_t i) {bytes[i] = 0;});
     file.read (bytes,n);
     file.close();
     return _seq<char>(bytes,n);
@@ -273,7 +273,7 @@ namespace benchIO {
     }
     long n = W.m-1;
     intT* A = new intT[n];
-    parallel_for(0, n, [&](intT i) {
+    parallel_for(0, n, [&](size_t i) {
 	A[i] = atol(W.Strings[i+1]);});
     W.del();
     return _seq<intT>(A,n);

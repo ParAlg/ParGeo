@@ -15,8 +15,6 @@ static floatT floatMin() {return numeric_limits<floatT>::lowest();}
 
 #if defined(OPENCILK)
 
-#error "OpenCilk support is under maintenance, use CILK instead."
-
 #include <cilk/cilk.h>
 #include <cilk/cilk_api.h>
 #define parallel_main main
@@ -33,6 +31,36 @@ static void setWorkers(int n) { }
 static void printScheduler() {
   cout << "scheduler = OpenCilk" << endl;
   cout << "num-threads = " << getWorkers() << endl;
+}
+
+//new syntax:
+
+inline size_t num_workers() {
+  return __cilkrts_get_nworkers();}
+
+inline size_t worker_id() {
+  return __cilkrts_internal_worker_id();}
+
+template <class F>
+inline void parallel_for(size_t start, size_t end, F f,
+			 size_t granularity=0,
+			 bool conservative=false) {
+  if (end > start) {
+    if (granularity == 1) {
+      _Pragma("cilk_grainsize = 1") cilk_for(size_t i=start; i<end; ++i) f(i);
+    } else if (granularity == 256) {
+      _Pragma("cilk_grainsize = 256") cilk_for(size_t i=start; i<end; ++i) f(i);
+    } else {
+      cilk_for(size_t i=start; i<end; ++i) f(i);
+    }
+  }
+}
+
+template <typename Lf, typename Rf>
+inline void par_do(Lf left, Rf right, bool conservative=false) {
+  cilk_spawn left();
+  right();
+  cilk_sync;
 }
 
 #elif defined(CILK)
