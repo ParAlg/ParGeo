@@ -52,10 +52,10 @@ void bench(point<dim>* P, intT n) {
 
   cout << endl << "computes bccp for all pairs" << endl;
   auto bcps = newA(bcpT, out.size());
-  par_for (intT i=0; i<out.size(); ++i) {
-    auto bcp = out[i].u->compBcp(out[i].v);
-    bcps[i] = bcp;
-  }
+  parallel_for (0, out.size(), [&](intT i) {
+      auto bcp = out[i].u->compBcp(out[i].v);
+      bcps[i] = bcp;
+    });
   cout << "bcp-time = " << t0.stop() << endl;
 
   free(bcps);

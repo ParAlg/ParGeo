@@ -35,13 +35,13 @@ intT* coreSNG_BF(pointT* P, intT n, floatT epsilon, intT minPts, floatT s) {
   intT* coreFlag = newA(intT, n);
   intT ns = ceil(n*s);
 
-  par_for (intT i=0; i<n; ++i) {
-    coreFlag[i] = 0;
-    for (intT j=0; j<ns; ++j) {
-      if (P[i].dist(P[utils::hash(i*n+j)%ns]) <= epsilon) {
-        coreFlag[i] ++;
-      }}
-  }
+  parallel_for (0, n, [&](intT i) {
+      coreFlag[i] = 0;
+      for (intT j=0; j<ns; ++j) {
+	if (P[i].dist(P[utils::hash(i*n+j)%ns]) <= epsilon) {
+	  coreFlag[i] ++;
+	}}
+    });
 
   intT numCore = 0;
   for (intT i=0; i<n; ++i) {
@@ -61,19 +61,19 @@ template<int dim, class pointT>
 intT* clusterCoreSNG_BF(pointT* P, intT n, floatT epsilon, intT minPts, floatT s, intT* coreFlag) {
   intT ns = ceil(n*s);
   auto uf = unionFind(n);
-  par_for (intT i=0; i<n; ++i) {
-    for (intT j=0; j<ns; ++j) {
-      intT jj = utils::hash(i*n+j)%ns;
-      if (coreFlag[i] && coreFlag[jj] && P[i].dist(P[jj]) <= epsilon) {
-        uf.link(i,jj);
-      }}
-  }
+  parallel_for (0, n, [&](intT i) {
+      for (intT j=0; j<ns; ++j) {
+	intT jj = utils::hash(i*n+j)%ns;
+	if (coreFlag[i] && coreFlag[jj] && P[i].dist(P[jj]) <= epsilon) {
+	  uf.link(i,jj);
+	}}
+    });
   intT* cluster = newA(intT, n);
-  par_for (intT i=0; i<n; ++i) {
-    auto pi = P[i];
-    cluster[i] = -1;
-    if(coreFlag[i]) cluster[i] = uf.find(i);
-  }
+  parallel_for (0, n, [&](intT i) {
+      auto pi = P[i];
+      cluster[i] = -1;
+      if(coreFlag[i]) cluster[i] = uf.find(i);
+    });
   // for (intT i=0; i<n; ++i) cout << cluster[i] << " ";
   // cout << endl;
   return cluster;
@@ -83,23 +83,23 @@ template<int dim, class pointT>
 void clusterBorderSNG_BF(pointT* P, intT n, floatT epsilon, intT minPts, floatT s, intT* coreFlag, intT* clusterb) {
   intT ns = ceil(n*s);
   floatT thresh = epsilon*epsilon;
-  par_for(intT i=0; i<n; ++i) {
-    if (!coreFlag[i]) {
-      intT cid = -1;
-      floatT cDistSqr = floatMax();
-      for(intT j=0; j<ns; ++j) {
-        intT jj = utils::hash(i*n+j)%ns;
-        if (coreFlag[jj]) {
-          auto dist = P[i].distSqr(P[jj]);
-          if (dist <= thresh && dist < cDistSqr) {
-            cid = clusterb[jj];
-            cDistSqr = dist;
-          }
-        }
+  parallel_for(0, n, [&](intT i) {
+      if (!coreFlag[i]) {
+	intT cid = -1;
+	floatT cDistSqr = floatMax();
+	for(intT j=0; j<ns; ++j) {
+	  intT jj = utils::hash(i*n+j)%ns;
+	  if (coreFlag[jj]) {
+	    auto dist = P[i].distSqr(P[jj]);
+	    if (dist <= thresh && dist < cDistSqr) {
+	      cid = clusterb[jj];
+	      cDistSqr = dist;
+	    }
+	  }
+	}
+	clusterb[i] = cid;
       }
-      clusterb[i] = cid;
-    }
-  }
+    });
 }
 
 using namespace std;

@@ -92,10 +92,10 @@ struct grid {
     cells = newA(cellT, cellCapacity);
     nbrCache = newA(cellBuf*, cellCapacity);
     intT initSize = dim*dim;
-    par_for(intT i=0; i<cellCapacity; ++i) {
-      nbrCache[i] = NULL;
-      cells[i].init();
-    }
+    parallel_for(0, cellCapacity, [&](intT i) {
+	nbrCache[i] = NULL;
+	cells[i].init();
+      });
     numCells = 0;
 
     myHash = new cellHashT(pMinn, r);
@@ -104,9 +104,9 @@ struct grid {
 
   ~grid() {
     free(cells);
-    par_for(intT i=0; i<numCells; ++i) {
-      if(nbrCache[i]) delete nbrCache[i];
-    }
+    parallel_for(0, numCells, [&](intT i) {
+	if(nbrCache[i]) delete nbrCache[i];
+      });
     if(myHash) delete myHash;
     if(table) {
       table->del();
@@ -184,12 +184,12 @@ struct grid {
     sampleSort(PP, nn, pLess);
 
     flag[0] = 1;
-    par_for(intT i=1; i<nn; ++i) {
-      if (table->hashStruct.diffCell(PP[i].coordinate(), PP[i-1].coordinate())) {
-        flag[i] = 1;
-      } else {
-        flag[i] = 0;}
-    }
+    parallel_for(1, nn, [&](intT i) {
+	if (table->hashStruct.diffCell(PP[i].coordinate(), PP[i-1].coordinate())) {
+	  flag[i] = 1;
+	} else {
+	  flag[i] = 0;}
+      });
 
     numCells = sequence::prefixSum(flag, 0, nn);
     flag[nn] = numCells;
@@ -197,17 +197,17 @@ struct grid {
     if (numCells > cellCapacity) {
       cout << "error, grid insert exceeded cell capacity, abort()" << endl;abort();}
 
-    par_for(intT i=0; i<nn; ++i) {
-      if (flag[i] != flag[i+1]) {
-        auto c = &cells[flag[i]];
-        c->P = &PP[i];
-        c->computeCoord(pMin, r);
-        table->insert(c);
-      }
-    }
-    par_for(intT i=0; i<numCells-1; ++i) {
-      cells[i].numPoints = cells[i+1].P - cells[i].P;
-    }
+    parallel_for(0, nn, [&](intT i) {
+	if (flag[i] != flag[i+1]) {
+	  auto c = &cells[flag[i]];
+	  c->P = &PP[i];
+	  c->computeCoord(pMin, r);
+	  table->insert(c);
+	}
+      });
+    parallel_for(0, numCells-1, [&](intT i) {
+	cells[i].numPoints = cells[i+1].P - cells[i].P;
+      });
     cells[numCells-1].numPoints = &PP[nn] - cells[numCells-1].P;
 
     tree = new treeT(&cells[0], numCells, true);

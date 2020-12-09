@@ -132,21 +132,20 @@ inline void compBcpCoreH(nodeT* n1, nodeT* n2, floatT* r, intT* coreFlag, objT* 
   } else {//recursive, todo consider call order, might help
     if (n1->isLeaf()) {
       if (n1->nodeDistance(n2->L()) < n1->nodeDistance(n2->R())) {
-        cilk_spawn compBcpCoreH(n1, n2->L(), r, coreFlag, P);
-        cilk_spawn compBcpCoreH(n1, n2->R(), r, coreFlag, P);
+	par_do([&](){compBcpCoreH(n1, n2->L(), r, coreFlag, P);},
+	       [&](){compBcpCoreH(n1, n2->R(), r, coreFlag, P);});
       } else {
-        cilk_spawn compBcpCoreH(n1, n2->R(), r, coreFlag, P);
-        cilk_spawn compBcpCoreH(n1, n2->L(), r, coreFlag, P);
+	par_do([&](){compBcpCoreH(n1, n2->R(), r, coreFlag, P);},
+	       [&](){compBcpCoreH(n1, n2->L(), r, coreFlag, P);});
       }
     } else if (n2->isLeaf()) {
       if (n2->nodeDistance(n1->L()) < n2->nodeDistance(n1->R())) {
-        cilk_spawn compBcpCoreH(n2, n1->L(), r, coreFlag, P);
-        cilk_spawn compBcpCoreH(n2, n1->R(), r, coreFlag, P);
+	par_do([&](){compBcpCoreH(n2, n1->L(), r, coreFlag, P);},
+	       [&](){compBcpCoreH(n2, n1->R(), r, coreFlag, P);});
       } else {
-        cilk_spawn compBcpCoreH(n2, n1->R(), r, coreFlag, P);
-        cilk_spawn compBcpCoreH(n2, n1->L(), r, coreFlag, P);
+	par_do([&](){compBcpCoreH(n2, n1->R(), r, coreFlag, P);},
+	       [&](){compBcpCoreH(n2, n1->L(), r, coreFlag, P);});
       }
-      cilk_sync;
     } else {
       pair<nodeT*, nodeT*> ordering[4];
       ordering[0] = make_pair(n2->L(), n1->L());
@@ -156,9 +155,8 @@ inline void compBcpCoreH(nodeT* n1, nodeT* n2, floatT* r, intT* coreFlag, objT* 
       auto bbd = [&](pair<nodeT*,nodeT*> p1, pair<nodeT*,nodeT*> p2) {
                    return p1.first->nodeDistance(p1.second) < p2.first->nodeDistance(p2.second);};
       quickSortSerial(ordering, 4, bbd);
-      for (intT o=0; o<4; ++o) {
-        cilk_spawn compBcpCoreH(ordering[o].first, ordering[o].second, r, coreFlag, P);}
-      cilk_sync;
+      parallel_for (0, 4, [&](intT o) {
+	  compBcpCoreH(ordering[o].first, ordering[o].second, r, coreFlag, P);}, 1);
     }
   }
 }

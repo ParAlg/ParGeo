@@ -38,7 +38,7 @@ void bench(point<dim>* P, intT n) {
   if (n < 2) abort();
 
   pointT* Q = newA(pointT, n);
-  par_for (int i=0; i<n; ++i) Q[i] = P[i];
+  parallel_for (0, n, [&](intT i) {Q[i] = P[i];});
 
   timing t0;
   t0.start();

@@ -78,31 +78,31 @@ intT* DBSCAN(point<dim>* P, intT n, floatT epsilon, intT minPts) {
 
   //mark core
   intT* coreFlag = newA(intT, n);
-  par_for(intT i=0; i<n; ++i) coreFlag[i] = -1;
+  parallel_for(0, n, [&](intT i) {coreFlag[i] = -1;});
 
   auto isCore = [&](pointT *p) {
                   coreFlag[p-P] = 1;
                   return false;
                 };
 
-  par_for(intT i=0; i<G->numCell(); ++i) {
-    cellT* c = G->getCell(i);
-    if (c->size() >= minPts) c->pointMap(isCore);
-  }
+  parallel_for(0, G->numCell(), [&](intT i) {
+      cellT* c = G->getCell(i);
+      if (c->size() >= minPts) c->pointMap(isCore);
+    });
 
-  par_for(intT i=0; i<n; ++i) {
-    if (coreFlag[i] < 0) {
-      intT count = 0;
-      auto isCore = [&] (pointT *p) {
-                      if(count >= minPts) return true;
-                      if(p->distSqr(P[i]) <= epsSqr) {//todo sqrt opt
-                        count ++;}
-                      return false;};
-      G->nghPointMap(P[i].coordinate(), isCore);
-      if (count >= minPts) coreFlag[i] = 1;
-      else coreFlag[i] = 0;
-    }
-  }
+  parallel_for(0, n, [&](intT i) {
+      if (coreFlag[i] < 0) {
+	intT count = 0;
+	auto isCore = [&] (pointT *p) {
+	  if(count >= minPts) return true;
+	  if(p->distSqr(P[i]) <= epsSqr) {//todo sqrt opt
+	    count ++;}
+	  return false;};
+	G->nghPointMap(P[i].coordinate(), isCore);
+	if (count >= minPts) coreFlag[i] = 1;
+	else coreFlag[i] = 0;
+      }
+    });
 
   cout << "mark-core-time = " << t0.next() << endl;
 
@@ -123,24 +123,24 @@ intT* DBSCAN(point<dim>* P, intT n, floatT epsilon, intT minPts) {
 
   //cluster core
   auto ccFlag = newA(intT, G->numCell());
-  par_for(intT i=0; i<G->numCell(); ++i) {
-    auto ci = G->getCell(i);
-    ccFlag[i] = 0;
-    auto hasCore = [&](pointT *p) {
-                     if (coreFlag[p-P]) {
-                       ccFlag[i] = 1;
-                       return true;
-                     }
-                     return false;
-                   };
-    ci->pointMap(hasCore);
-  }
+  parallel_for(0, G->numCell(), [&](intT i) {
+      auto ci = G->getCell(i);
+      ccFlag[i] = 0;
+      auto hasCore = [&](pointT *p) {
+	if (coreFlag[p-P]) {
+	  ccFlag[i] = 1;
+	  return true;
+	}
+	return false;
+      };
+      ci->pointMap(hasCore);
+    });
 
   typedef kdTree<dim, pointT> treeT;
   typedef kdNode<dim, pointT> nodeT;
   typedef typename nodeT::bcp bcpT;
   auto trees = newA(treeT*, G->numCell());
-  par_for(intT i=0; i<G->numCell(); ++i) trees[i] = NULL;
+  parallel_for(0, G->numCell(), [&](intT i) {trees[i] = NULL;});
 
   // auto degCmp = [&](intT i, intT j) {
   //                 return G->getCell(i)->size() < G->getCell(j)->size();
@@ -152,41 +152,41 @@ intT* DBSCAN(point<dim>* P, intT n, floatT epsilon, intT minPts) {
   auto uf = unionFind(G->numCell());
 
   floatT bcpTotalTime = 0; timing t1;
-  par_for(intT i=0; i<G->numCell(); ++i) {
-    if (ccFlag[i]) {
-      auto ti = trees[i];
-      auto procTj = [&](cellT* cj) {
-                      intT j = cj - G->getCell(0);
-                      auto tj = trees[j];
-                      if (j < i && ccFlag[j] &&
-                          uf.find(i) != uf.find(j)) {
-                        if(hasEdge<cellT, treeT, pointT>(i, j, coreFlag, P, epsilon, G->getCell(0), trees)) {
-                          uf.link(i, j);
-                        }
-                      }
-                      return false;
-                    };
-      //G->nghCellMap(G->getCell(ordering[i]), procTj);
-      G->nghCellMap(G->getCell(i), procTj);
-    }
-  }
+  parallel_for(0, G->numCell(), [&](intT i) {
+      if (ccFlag[i]) {
+	auto ti = trees[i];
+	auto procTj = [&](cellT* cj) {
+	  intT j = cj - G->getCell(0);
+	  auto tj = trees[j];
+	  if (j < i && ccFlag[j] &&
+	      uf.find(i) != uf.find(j)) {
+	    if(hasEdge<cellT, treeT, pointT>(i, j, coreFlag, P, epsilon, G->getCell(0), trees)) {
+	      uf.link(i, j);
+	    }
+	  }
+	  return false;
+	};
+	//G->nghCellMap(G->getCell(ordering[i]), procTj);
+	G->nghCellMap(G->getCell(i), procTj);
+      }
+    });
 
-  par_for(intT i=0; i<G->numCell(); ++i) {
-    if (trees[i]) delete trees[i];
-  }
+  parallel_for(0, G->numCell(), [&](intT i) {
+      if (trees[i]) delete trees[i];
+    });
 
   intT* cluster = newA(intT, n);
-  par_for(intT i=0; i<n; ++i) cluster[i] = -1;
+  parallel_for(0, n, [&](intT i) {cluster[i] = -1;});
 
-  par_for(intT i=0; i<G->numCell(); ++i) {
-    auto cid = G->getCell(uf.find(i))->getItem() - P;//id of first point
-    auto clusterCore = [&](pointT* p){
-                         if (coreFlag[p - P])
-                           cluster[p - P] = cid;
-                         return false;
-                       };
-    G->getCell(i)->pointMap(clusterCore);
-  }
+  parallel_for(0, G->numCell(), [&](intT i) {
+      auto cid = G->getCell(uf.find(i))->getItem() - P;//id of first point
+      auto clusterCore = [&](pointT* p){
+	if (coreFlag[p - P])
+	  cluster[p - P] = cid;
+	return false;
+      };
+      G->getCell(i)->pointMap(clusterCore);
+    });
   cout << "cluster-core-time = " << t0.next() << endl;
 
   if (checker) {
@@ -207,26 +207,26 @@ intT* DBSCAN(point<dim>* P, intT n, floatT epsilon, intT minPts) {
 
   intT* cbCheck; if (checker) {
     cbCheck = newA(intT, n);
-    par_for(intT i=0; i<n; ++i) cbCheck[i] = cluster[i];
+    parallel_for(0, n, [&](intT i) {cbCheck[i] = cluster[i];});
   }
 
   //cluster border to closest core point
-  par_for(intT i=0; i<n; ++i) {
-    if (!coreFlag[i]) {
-      intT cid = -1;
-      floatT cDistSqr = floatMax();
-      auto closestCore = [&] (pointT* p) {
-                           if (coreFlag[p-P]) {
-                             auto dist = p->distSqr(P[i]);
-                             if (dist <= epsSqr && dist < cDistSqr) {
-                               cDistSqr = dist;
-                               cid = cluster[p-P];}
-                           }
-                           return false;};
-      G->nghPointMap(P[i].coordinate(), closestCore);
-      cluster[i] = cid;
-    }
-  }
+  parallel_for(0, n, [&](intT i) {
+      if (!coreFlag[i]) {
+	intT cid = -1;
+	floatT cDistSqr = floatMax();
+	auto closestCore = [&] (pointT* p) {
+	  if (coreFlag[p-P]) {
+	    auto dist = p->distSqr(P[i]);
+	    if (dist <= epsSqr && dist < cDistSqr) {
+	      cDistSqr = dist;
+	      cid = cluster[p-P];}
+	  }
+	  return false;};
+	G->nghPointMap(P[i].coordinate(), closestCore);
+	cluster[i] = cid;
+      }
+    });
   //for (intT i=0; i<n; ++i) cout << cluster[i] << " ";cout << endl << endl;
   cout << "cluster-border-time = " << t0.next() << endl;
 

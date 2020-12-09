@@ -75,11 +75,11 @@ wEdge<point<dim>>* spanner(point<dim>* P, intT n, intT t) {
 
   typedef wEdge<point<dim>> outT;
   auto R = newA(outT, wspd->size());
-  par_for(intT i=0; i<wspd->size(); ++i) {
-    auto pt1 = wspd->at(i).u->getItem(0);
-    auto pt2 = wspd->at(i).v->getItem(0);
-    R[i] = outT(*pt1, *pt2, pt1->dist(*pt2));
-  }
+  parallel_for(0, wspd->size(), [&](intT i) {
+      auto pt1 = wspd->at(i).u->getItem(0);
+      auto pt2 = wspd->at(i).v->getItem(0);
+      R[i] = outT(*pt1, *pt2, pt1->dist(*pt2));
+    });
   cout << "copy-time = " << t0.stop() << endl;
   cout << "edge-count = " << wspd->size() << endl;
 

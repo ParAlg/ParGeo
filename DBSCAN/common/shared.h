@@ -132,12 +132,12 @@ point<dim> pMinParallel(point<dim>* items, intT n) {
   point<dim> localMin[P];
   for (intT i=0; i<P; ++i) {
     localMin[i] = point<dim>(items[0].x);}
-  par_for(intT p=0; p<P; p++) {
-    intT s = p*blockSize;
-    intT e = min((p+1)*blockSize,n);
-    for (intT j=s; j<e; ++j) {
-      localMin[p].minCoords(items[j].x);}
-  }
+  parallel_for(0, P, [&](intT p) {
+      intT s = p*blockSize;
+      intT e = min((p+1)*blockSize,n);
+      for (intT j=s; j<e; ++j) {
+	localMin[p].minCoords(items[j].x);}
+    });
   pMin = point<dim>(items[0].x);
   for(intT p=0; p<P; ++p) {
     pMin.minCoords(localMin[p].x);}
