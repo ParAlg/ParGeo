@@ -102,7 +102,7 @@ ball<dim> miniDiscPlain(point<dim>* P, intT n, vector<point<dim>>& support, ball
                    B = miniDiscPlain(A, i, support, B, flag);
                    support.pop_back();
                  };
-  parallel_prefix(P, n, process, cleanUp, freeFlag, flag);
+  parallel_prefix(P, n, process, cleanUp, freeFlag, flag, 200000, 500000);
 
   if(freeFlag) free(flag);
   return B;

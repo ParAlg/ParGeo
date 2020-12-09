@@ -192,18 +192,24 @@ void miniDisc(point<dim>* P, intT n) {
    */
   static const int method = 2;
 
+#ifndef SILENT
   cout << "smallest enclosing disc, " << n << ", dim " << dim << " points" << endl;
+#endif
 
   timing t0;t0.start();
   if(preprocess) {
     randPerm(P, n);
+#ifndef SILENT
     cout << "preprocess-time = " << t0.next() << endl;
+#endif
   }
 
   ballT D;
   switch (method) {
   case 0: {
+#ifndef SILENT
     cout << "method = plain" << endl;
+#endif
     auto support = vector<pointT>();
     if (serial)
       D = miniDiscPlainSerial(P, n, support, ballT());
@@ -212,7 +218,9 @@ void miniDisc(point<dim>* P, intT n) {
     break;
   }
   case 1: {
+#ifndef SILENT
     cout << "method = mtf" << endl;
+#endif
     auto support = vector<pointT>();
     if (serial)
       D = miniDiscMtfSerial(P, n, support, ballT());
@@ -221,7 +229,9 @@ void miniDisc(point<dim>* P, intT n) {
     break;
   }
   case 2: {
+#ifndef SILENT
     cout << "method = mtf+pivot" << endl;
+#endif
     auto support = vector<pointT>();
     if (serial)
       D = miniDiscPivotSerial(P, n, support, ballT());
@@ -233,13 +243,14 @@ void miniDisc(point<dim>* P, intT n) {
     cout << "invalid method, abort" << endl; abort();
   }
 
+#ifndef SILENT
   cout << "seb-time = " << t0.stop() << endl;
-
   cout << D.radius() << ", center = " << D.center() << endl;
-
   cout << endl;
-
   check<dim,ballT>(&D, P, n);
+#else
+  cout << t0.stop() << endl;
+#endif
 }
 
 template void miniDisc<2>(point<2>*, intT);

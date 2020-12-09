@@ -52,9 +52,10 @@ intT ortScanSerial(point<dim> c, floatT rSqr, point<dim>* P, intT n, vector<poin
         idx[o] = i;}
     }
   }
+#ifndef SILENT
   if (confCount > 0)
     cout << "conflicts = " << confCount << "/" << n << " (" << 100*floatT(confCount)/n << " %)" << endl;
-
+#endif
   for(intT i=0; i<dd; ++i) {
     if (idx[i] != -1) {
       support.push_back(P[idx[i]]);
@@ -116,10 +117,10 @@ intT ortScan(point<dim> c, floatT rSqr, point<dim>* A, intT n, vector<point<dim>
       }
     }
   }
-
+#ifndef SILENT
   if (totalConfs > 0)
     cout << "conflicts = " << totalConfs << "/" << n << " (" << 100*floatT(totalConfs)/n << " %)" << endl;
-
+#endif
   for(intT o=0; o<dd; ++o) {
     if (idxGlobal[o] != -1) {
       support.push_back(A[idxGlobal[o]]);}
@@ -169,9 +170,9 @@ ball<dim> miniDiscSamplingOrtSerial(point<dim>* P, intT n) {
     }
   }
   sampleTime = t.next();
-
+#ifndef SILENT
   cout << "---" << endl;
-
+#endif
   while (1) {
     vector<pointT> support;
     for(intT i=0; i<B.size(); ++i) {
@@ -181,9 +182,10 @@ ball<dim> miniDiscSamplingOrtSerial(point<dim>* P, intT n) {
 
     if (!found) {
       remainTime = t.stop();
+#ifndef SILENT
       cout << "sample-time = " << 100*sampleTime/(sampleTime+remainTime) << " %" << endl;
       cout << "remain-time = " << 100*remainTime/(sampleTime+remainTime) << " %" << endl;
-
+#endif
       return B;
     } else {
       auto supportNew = vector<pointT>();
@@ -192,9 +194,10 @@ ball<dim> miniDiscSamplingOrtSerial(point<dim>* P, intT n) {
     }
   }
   remainTime = t.stop();
+#ifndef SILENT
   cout << "sample-time = " << 100*sampleTime/(sampleTime+remainTime) << " %" << endl;
   cout << "remain-time = " << 100*remainTime/(sampleTime+remainTime) << " %" << endl;
-
+#endif
   return B;
 }
 
@@ -241,9 +244,9 @@ ball<dim> miniDiscSamplingOrt(point<dim>* P, intT n) {
     }
   }
   sampleTime = t.next();
-
+#ifndef SILENT
   cout << "---" << endl;
-
+#endif
   while (1) {
     vector<pointT> support;
     for(intT i=0; i<B.size(); ++i) {
@@ -253,9 +256,10 @@ ball<dim> miniDiscSamplingOrt(point<dim>* P, intT n) {
 
     if (!found) {
       remainTime = t.stop();
+#ifndef SILENT
       cout << "sample-time = " << 100*sampleTime/(sampleTime+remainTime) << " %" << endl;
       cout << "remain-time = " << 100*remainTime/(sampleTime+remainTime) << " %" << endl;
-
+#endif
       return B;
     } else {
       auto supportNew = vector<pointT>();
@@ -264,9 +268,10 @@ ball<dim> miniDiscSamplingOrt(point<dim>* P, intT n) {
     }
   }
   remainTime = t.stop();
+#ifndef SILENT
   cout << "sample-time = " << 100*sampleTime/(sampleTime+remainTime) << " %" << endl;
   cout << "remain-time = " << 100*remainTime/(sampleTime+remainTime) << " %" << endl;
-
+#endif
   return B;
 }
 
@@ -309,8 +314,9 @@ ball<dim> miniDiscSamplingOrt2(point<dim>* P, intT n) {
       scanned += scanStep;
       scanStep *= 2;
     }
+#ifndef SILENT
     cout << "found = " << found << "/" << scanned << endl;
-
+#endif
     if (found == 0 || scanned >= n) {
       break;
     } else {
@@ -320,9 +326,9 @@ ball<dim> miniDiscSamplingOrt2(point<dim>* P, intT n) {
     }
   }
   sampleTime = t.next();
-
+#ifndef SILENT
   cout << "---" << endl;
-
+#endif
   while (1) {
     vector<pointT> support;
     for(intT i=0; i<B.size(); ++i) {
@@ -332,9 +338,10 @@ ball<dim> miniDiscSamplingOrt2(point<dim>* P, intT n) {
 
     if (!found) {
       remainTime = t.stop();
+#ifndef SILENT
       cout << "sample-time = " << 100*sampleTime/(sampleTime+remainTime) << " %" << endl;
       cout << "remain-time = " << 100*remainTime/(sampleTime+remainTime) << " %" << endl;
-
+#endif
       return B;
     } else {
       auto supportNew = vector<pointT>();
@@ -343,9 +350,10 @@ ball<dim> miniDiscSamplingOrt2(point<dim>* P, intT n) {
     }
   }
   remainTime = t.stop();
+#ifndef SILENT
   cout << "sample-time = " << 100*sampleTime/(sampleTime+remainTime) << " %" << endl;
   cout << "remain-time = " << 100*remainTime/(sampleTime+remainTime) << " %" << endl;
-
+#endif
   return B;
 }
 
@@ -396,31 +404,35 @@ void miniDisc(point<dim>* P, intT n) {
 
   static const bool preprocess = false;
   static const bool serial = false;
-
+#ifndef SILENT
   cout << "smallest enclosing disc, " << n << ", dim " << dim << " points" << endl;
-
+#endif
   timing t0;t0.start();
   if(preprocess) {
     randPerm(P, n);
+#ifndef SILENT
     cout << "preprocess-time = " << t0.next() << endl;
+#endif
   }
 
   ballT D;
+#ifndef SILENT
   cout << "method = orthant-scan-sampling" << endl;
+#endif
   if (serial) {
     D = miniDiscSamplingOrtSerial(P, n);
   } else {
     D = miniDiscSamplingOrt(P, n);
     //D = miniDiscSamplingOrt2(P, n);
   }
-
+#ifndef SILENT
   cout << "seb-time = " << t0.stop() << endl;
-
   cout << D.radius() << ", center = " << D.center() << endl;
-
   cout << endl;
-
   check<dim,ballT>(&D, P, n);
+#else
+  cout << t0.stop() << endl;
+#endif
 }
 
 template void miniDisc<2>(point<2>*, intT);

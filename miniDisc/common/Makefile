@@ -6,11 +6,17 @@ JEMALLOC = -DUSEJEMALLOC -L$(JEMALLOCLD) -ljemalloc
 endif
 
 #CFLAGS = -mcx16 -O3 -std=c++14 -march=native -Wall -Wextra
-CFLAGS = -mcx16 -O3 -march=native
+CFLAGS = -mcx16 -O3 -std=c++17 -march=native
 
 OMPFLAGS = -DOPENMP -fopenmp
 CILKFLAGS = -DCILK -fcilkplus
 HGFLAGS = -DHOMEGROWN -pthread
+
+ifdef SILENT
+OTHERFLAGS = -DSILENT
+else
+OTHERFLAGS =
+endif
 
 # ifdef CLANG
 # CC = clang++-5.0
@@ -18,23 +24,23 @@ HGFLAGS = -DHOMEGROWN -pthread
 # else
 ifdef OPENCILK
 CC = ~/clang
-PFLAGS = -std=c++14 -DUSEMALLOC -DOPENCILK -fopencilk -lstdc++ -lm
+PFLAGS = -DUSEMALLOC -DOPENCILK -fopencilk -lstdc++ -lm  $(OTHERFLAGS)
 #PFLAGS = -DOPENCILK -fopencilk -lstdc++ -lm
 else ifdef CILK
 CC = g++
-PFLAGS = -std=c++14 $(CILKFLAGS)
+PFLAGS = $(CILKFLAGS) $(OTHERFLAGS)
 # else ifdef OPENMP
 # CC = g++
-# PFLAGS = $(OMPFLAGS)
+# PFLAGS = $(OMPFLAGS) $(OTHERFLAGS)
 else ifdef HOMEGROWN
 CC = g++
-PFLAGS = -std=c++17 $(HGFLAGS)
+PFLAGS = $(HGFLAGS)  $(OTHERFLAGS)
 # else ifdef SERIAL
 # CC = g++
-# PFLAGS = -std=c++14
+# PFLAGS = $(OTHERFLAGS)
 else # default is sequential
 CC = g++
-PFLAGS = -std=c++14
+PFLAGS = $(OTHERFLAGS)
 endif
 
 #########

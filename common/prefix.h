@@ -36,9 +36,7 @@ void serial_prefix(T* A, intT n, F& process, G& cleanUp) {
 }
 
 template<class T, class F, class G>
-void parallel_prefix(T* A, intT n, F& process, G& cleanUp, bool verbose=false, intT* flag=NULL) {
-  static const intT PREFIX = 200000;
-  static const intT THRESH = 500000;
+void parallel_prefix(T* A, intT n, F& process, G& cleanUp, bool verbose=false, intT* flag=NULL, intT PREFIX=2000, intT THRESH=5000) {
   if (n < THRESH) return serial_prefix(A, n, process, cleanUp);
 
   intT prefix;
@@ -110,6 +108,7 @@ void parallel_prefix(T* A, intT n, F& process, G& cleanUp, bool verbose=false, i
     }
   }
 
+#ifndef SILENT
   if(verbose) {
     cout << "serial prefix stats" << endl;
     cout << " count = " << serCount << endl;
@@ -123,6 +122,7 @@ void parallel_prefix(T* A, intT n, F& process, G& cleanUp, bool verbose=false, i
     cout << " total time 3 = " << parTime2 << endl;
     cout << " total time 4 = " << parTime3 << endl;
   }
+#endif
 
   if(freeFlag) free(flag);
 }

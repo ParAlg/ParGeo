@@ -50,7 +50,9 @@ uint64_t hash64(uint64_t u)
 
 template<int dim>
 void timeBench(point<dim>* pts, intT n, int rounds, char* outFile, int perturb) {
+#ifndef SILENT
   cout << "nmax = " << n << endl;
+#endif
   if (perturb) {
     parallel_for(0, n,
 		 [&](intT i) {
@@ -65,8 +67,13 @@ void timeBench(point<dim>* pts, intT n, int rounds, char* outFile, int perturb) 
   for (int i=0; i < rounds; i++) {
     timing t0; t0.start();
     miniDisc<dim>(pts, n);
-    cout << "timing = " << t0.stop() << endl;}
+#ifndef SILENT
+    cout << "timing = " << t0.stop() << endl;
+#endif
+  }
+#ifndef SILENT
   cout << endl;
+#endif
 }
 
 int main(int argc, char* argv[]) {
@@ -83,8 +90,10 @@ int main(int argc, char* argv[]) {
   if(!readCsv) dim = readPointsDimensionFromFile(iFile);
   else dim = csvCol;
 
+#ifndef SILENT
   printScheduler();
   cout << "perturb points = " << perturb << endl;
+#endif
 
   if (dim == 1) {
     cout << "dimension 1 not supported, abort" << endl; abort();

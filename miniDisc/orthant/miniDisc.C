@@ -204,29 +204,35 @@ void miniDisc(point<dim>* P, intT n) {
   static const bool preprocess = false;
   static const bool serial = false;
 
+#ifndef SILENT
   cout << "smallest enclosing disc, " << n << ", dim " << dim << " points" << endl;
-
+#endif
   timing t0;t0.start();
   if(preprocess) {
     randPerm(P, n);
+#ifndef SILENT
     cout << "preprocess-time = " << t0.next() << endl;
+#endif
   }
 
   ballT D;
+#ifndef SILENT
   cout << "method = orthant-scan" << endl;
+#endif
   if (serial) {
     D = miniDiscOrtSerial(P, n);
   } else {
     D = miniDiscOrt(P, n);
   }
-
+#ifndef SILENT
   cout << "seb-time = " << t0.stop() << endl;
-
   cout << D.radius() << ", center = " << D.center() << endl;
-
   cout << endl;
-
   check<dim,ballT>(&D, P, n);
+#else
+  cout << t0.stop() << endl;
+#endif
+
 }
 
 template void miniDisc<2>(point<2>*, intT);
