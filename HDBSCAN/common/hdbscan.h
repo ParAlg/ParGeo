@@ -25,13 +25,11 @@
 #include "geometry.h"
 #include "pbbs/parallel.h"
 
-template<class pointT>
-struct wEdge {
-  pointT u;
-  pointT v;
+struct dEdge {
+  intT u,v;
   floatT weight;
-  wEdge(pointT uu, pointT vv, floatT weightt): u(uu), v(vv), weight(weightt) {};
+  dEdge(intT uu, intT vv, floatT weightt): u(uu), v(vv), weight(weightt) {};
 };
 
 template<int dim>
-wEdge<point<dim>>* hdbscan(point<dim>*, intT, floatT, intT);
+dEdge* hdbscan(point<dim>*, intT, floatT, intT);

@@ -29,6 +29,7 @@
 #include "kNearestNeighbors.h"
 #include "kBuffer.h"
 #include "bccpStar.h"
+#include "dendrogram.h"
 #include "pbbs/gettime.h"
 
 using namespace std;
@@ -44,7 +45,7 @@ using namespace std;
  * @return a weighted edge array of size n-1
  */
 template<int dim>
-wEdge<point<dim>>* hdbscan(point<dim>* P, intT n, floatT eps, intT minPts) {
+dEdge* hdbscan(point<dim>* P, intT n, floatT eps, intT minPts) {
   typedef point<dim> pointT;
   typedef kdTree<dim, pointT> treeT;
   typedef kdNode<dim, pointT> nodeT;
@@ -116,15 +117,17 @@ wEdge<point<dim>>* hdbscan(point<dim>* P, intT n, floatT eps, intT minPts) {
   parKruskal::mst(parKruskal::bcpWrap<indexBcp>(bcps), n, out->size(), uf);
   cout << "kruskal-time = " << t0.next() << endl;
 
-  typedef wEdge<point<dim>> outT;
-  auto R = newA(outT, n-1);
+  auto R = newA(dEdge, n-1);
   par_for(intT i=0; i<n-1; ++i) {
     auto e = uf->getEdge(i);
     auto w = max(P[e.first].dist(P[e.second]), coreDist[e.first]);
     w = max(w, coreDist[e.second]);
-    R[i] = outT(P[e.first], P[e.second], w);
+    R[i] = dEdge(e.first, e.second, w);
   }
   cout << "copy-time = " << t0.stop() << endl;
+
+  auto myDendro = dendrogram::directedDendro<dEdge>(R, n);
+  cout << "dendrogram-time = " << t0.stop() << endl;
 
   delete uf;
   free(bcps);
@@ -135,11 +138,11 @@ wEdge<point<dim>>* hdbscan(point<dim>* P, intT n, floatT eps, intT minPts) {
   return R;
 }
 
-template wEdge<point<2>>* hdbscan(point<2>*, intT, floatT, intT);
-template wEdge<point<3>>* hdbscan(point<3>*, intT, floatT, intT);
-template wEdge<point<4>>* hdbscan(point<4>*, intT, floatT, intT);
-template wEdge<point<5>>* hdbscan(point<5>*, intT, floatT, intT);
-template wEdge<point<6>>* hdbscan(point<6>*, intT, floatT, intT);
-template wEdge<point<7>>* hdbscan(point<7>*, intT, floatT, intT);
-template wEdge<point<8>>* hdbscan(point<8>*, intT, floatT, intT);
-template wEdge<point<9>>* hdbscan(point<9>*, intT, floatT, intT);
+template dEdge* hdbscan(point<2>*, intT, floatT, intT);
+template dEdge* hdbscan(point<3>*, intT, floatT, intT);
+template dEdge* hdbscan(point<4>*, intT, floatT, intT);
+template dEdge* hdbscan(point<5>*, intT, floatT, intT);
+template dEdge* hdbscan(point<6>*, intT, floatT, intT);
+template dEdge* hdbscan(point<7>*, intT, floatT, intT);
+template dEdge* hdbscan(point<8>*, intT, floatT, intT);
+template dEdge* hdbscan(point<9>*, intT, floatT, intT);
