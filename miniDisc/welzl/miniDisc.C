@@ -180,7 +180,6 @@ ball<dim> miniDiscPivot(point<dim>* P, intT n, vector<point<dim>>& support, ball
 template<int dim>
 void miniDisc(point<dim>* P, intT n) {
   typedef point<dim> pointT;
-  typedef circle discT;
   typedef ball<dim> ballT;
 
   static const bool preprocess = false;

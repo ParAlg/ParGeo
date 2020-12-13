@@ -569,132 +569,6 @@ bool intersect2d(point2d a, point2d b, point2d c, point2d d) {
   return isIn(a,b) && isIn(c,d);
 }
 
-// A class for sphere
-class sphere {
-public:
-  typedef double floatT;
-  typedef point<3> pointT;
-  pointT ct;
-  floatT rad;
-
-  inline floatT radius() {return rad;}
-  inline pointT center() {return ct;}
-  floatT& operator[] (int i) {return ct[i];}
-
-  sphere(pointT a, pointT b, pointT c, pointT d) {
-    //reference: http://www.ambrsoft.com/TrigoCalc/Sphere/Spher3D_.htm
-    auto x1 = a[0]; auto y1 = a[1]; auto z1 = a[2];
-    auto x2 = b[0]; auto y2 = b[1]; auto z2 = b[2];
-    auto x3 = c[0]; auto y3 = c[1]; auto z3 = c[2];
-    auto x4 = d[0]; auto y4 = d[1]; auto z4 = d[2];
-    floatT t1 = -(x1*x1+y1*y1+z1*z1);
-    floatT t2 = -(x2*x2+y2*y2+z2*z2);
-    floatT t3 = -(x3*x3+y3*y3+z3*z3);
-    floatT t4 = -(x4*x4+y4*y4+z4*z4);
-    floatT M1[16] = {x1,y1,z1,1,x2,y2,z2,1,x3,y3,z3,1,x4,y4,z4,1};
-    floatT T = determinant4by4(M1);
-    floatT M2[16] = {t1,y1,z1,1,t2,y2,z2,1,t3,y3,z3,1,t4,y4,z4,1};
-    floatT D = determinant4by4(M2)/T;
-    floatT M3[16] = {x1,t1,z1,1,x2,t2,z2,1,x3,t3,z3,1,x4,t4,z4,1};
-    floatT E = determinant4by4(M3)/T;
-    floatT M4[16] = {x1,y1,t1,1,x2,y2,t2,1,x3,y3,t3,1,x4,y4,t4,1};
-    floatT F = determinant4by4(M4)/T;
-    floatT M5[16] = {x1,y1,z1,t1,x2,y2,z2,t2,x3,y3,z3,t3,x4,y4,z4,t4};
-    floatT G = determinant4by4(M5)/T;
-    ct.x[0] = -D/2;
-    ct.x[1] = -E/2;
-    ct.x[2] = -F/2;
-    rad = 0.5*sqrt(D*D+E*E+F*F-4*G);
-  }
-
-  sphere(pointT a, pointT b, pointT c) {
-    //change basis
-    auto v1 = (b-a).normalize();
-    auto v3 = crossProduct<pointT>(c-a,b-a).normalize();
-    auto v2 = crossProduct<pointT>(v1,v3);
-    floatT T[9];
-    T[0] = v1[0]; T[1] = v2[0]; T[2] = v3[0];
-    T[3] = v1[1]; T[4] = v2[1]; T[5] = v3[1];
-    T[6] = v1[2]; T[7] = v2[2]; T[8] = v3[2];
-    floatT Ti[9]; for (int i=0; i<9; ++i) Ti[i] = T[i];
-    inverse3by3(Ti);
-    auto aa = dot3<pointT>(Ti, a);
-    auto bb = dot3<pointT>(Ti, b);
-    auto cc = dot3<pointT>(Ti, c);
-    //2d circle
-    auto x1 = aa[0]; auto y1 = aa[1];
-    auto x2 = bb[0]; auto y2 = bb[1];
-    auto x3 = cc[0]; auto y3 = cc[1];
-    floatT A = x1*(y2-y3) - y1*(x2-x3) + x2*y3 - x3*y2;
-    floatT B = (x1*x1+y1*y1)*(y3-y2) + (x2*x2+y2*y2)*(y1-y3) + (x3*x3+y3*y3)*(y2-y1);
-    floatT C = (x1*x1+y1*y1)*(x2-x3) + (x2*x2+y2*y2)*(x3-x1) + (x3*x3+y3*y3)*(x1-x2);
-    floatT D = (x1*x1+y1*y1)*(x3*y2-x2*y3) + (x2*x2+y2*y2)*(x1*y3-x3*y1) + (x3*x3+y3*y3)*(x2*y1-x1*y2);
-    ct.x[0] = -B/(2*A);
-    ct.x[1] = -C/(2*A);
-    rad = sqrt((B*B+C*C-4*A*D)/(4*A*A));
-    //change back
-    ct.x[2] = aa[2];
-    ct = dot3<pointT>(T, ct);
-  }
-
-  sphere(pointT a, pointT b) {
-    ct = a.average(b);
-    rad = a.pointDist(b)/2;
-  }
-
-  sphere(pointT centerr, floatT radd): ct(centerr), rad(radd) {}
-
-  //empty constructor
-  sphere(): ct(pointT()), rad(-1) {}
-
-  bool isEmpty() {return rad < 0;}
-
-  inline bool contain(pointT p) {
-    return p.pointDist(ct) <= rad*1.000001;}//todo, sqrt optimize
-};
-
-// A class for circle
-class circle {
-public:
-  typedef double floatT;
-  typedef point<2> pointT;
-  pointT ct;
-  floatT rad;
-
-  inline floatT radius() {return rad;}
-  inline pointT center() {return ct;}
-  floatT& operator[] (int i) {return ct[i];}
-
-  circle(pointT a, pointT b, pointT c) {
-    //reference: http://www.ambrsoft.com/trigocalc/circle3d.htm
-    auto x1 = a[0]; auto y1 = a[1];
-    auto x2 = b[0]; auto y2 = b[1];
-    auto x3 = c[0]; auto y3 = c[1];
-    floatT A = x1*(y2-y3) - y1*(x2-x3) + x2*y3 - x3*y2;
-    floatT B = (x1*x1+y1*y1)*(y3-y2) + (x2*x2+y2*y2)*(y1-y3) + (x3*x3+y3*y3)*(y2-y1);
-    floatT C = (x1*x1+y1*y1)*(x2-x3) + (x2*x2+y2*y2)*(x3-x1) + (x3*x3+y3*y3)*(x1-x2);
-    floatT D = (x1*x1+y1*y1)*(x3*y2-x2*y3) + (x2*x2+y2*y2)*(x1*y3-x3*y1) + (x3*x3+y3*y3)*(x2*y1-x1*y2);
-    ct.x[0] = -B/(2*A);
-    ct.x[1] = -C/(2*A);
-    rad = sqrt((B*B+C*C-4*A*D)/(4*A*A));
-  }
-
-  circle(pointT a, pointT b) {
-    ct = a.average(b);
-    rad = a.pointDist(b)/2;
-  }
-
-  circle(pointT centerr, floatT radd): ct(centerr), rad(radd) {}
-
-  //empty constructor
-  circle(): ct(pointT()), rad(-1) {}
-
-  bool isEmpty() {return rad < 0;}
-
-  inline bool contain(pointT p) {
-    return p.pointDist(ct) <= rad*1.000001;}//todo, sqrt optimize
-};
-
 template <int dim>
 class ball {
   typedef point<dim> pointT;
@@ -704,7 +578,6 @@ class ball {
   pointT P[dim+1];
   floatT Q[dim];
   floatT La[dim];
-  pointT offset;
 
   pointT c;
   floatT r;
@@ -717,16 +590,6 @@ class ball {
     r = sqrt(c.dot(c));
     c = c+P[0];
   }
-
-public:
-  inline pointT center() {return c+offset;}
-  inline pointT* support() {return P;}
-  inline floatT radius() {return r;}
-  inline intT size() {return d;}
-  inline bool contain(pointT p) {
-    auto pp = p-offset;
-    return pp.distSqr(c) <= radius()*radius();}
-  inline bool isEmpty() {return size() <= 0;}
 
   void twoPointConstruct() {
     c = P[0].average(P[1]);
@@ -756,15 +619,18 @@ public:
     recompute();
   }
 
+public:
+  inline pointT center() {return c;}
+  inline pointT* support() {return P;}
+  inline floatT radius() {return r;}
+  inline intT size() {return d;}
+  inline bool isEmpty() {return size() <= 0;}
+  inline bool contain(pointT p, floatT eps=1e-9) {
+    return p.dist(c) <= radius()+eps;}
+
   ball(): d(0) {}
   ball(pointT* PP, intT dd): d(dd) {
-    for(int i=0; i<dim; ++i) offset[i] = 0;
-    for(int i=0; i<d; ++i) {
-      P[i] = PP[i];
-      offset = offset + PP[i];
-    }
-    offset = offset/d;
-    for(int i=0; i<d; ++i) P[i] = P[i]-offset;//offset supports to a safer zone
+    for(int i=0; i<d; ++i) P[i] = PP[i];
 
     if (d <= 1) {
       cout << "error, cannot construct ball on <=1 point, abort" << endl;abort();
@@ -777,8 +643,6 @@ public:
     } else {
       cout << "error, ball wrong dimension, abort" << endl;abort();
     }
-
-    for(int i=0; i<d; ++i) P[i] = P[i]+offset;//restore supports
   }
 
   void grow(pointT q) {
@@ -835,7 +699,6 @@ public:
     }
     recompute();
   }
-
 };
 
 inline vect3d onParabola(vect2d v) {

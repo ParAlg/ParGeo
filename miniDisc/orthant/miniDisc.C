@@ -43,9 +43,9 @@ bool ortScanSerial(point<dim> c, floatT rSqr, point<dim>* P, intT n, vector<poin
 
   for (intT i=0; i<n; ++i) {
     floatT dSqr = P[i].distSqr(c);
-    if (dSqr > rSqr*(1+numericKnob)) {
+    if (dSqr > rSqr+numericKnob) {
       intT o = c.quadrant(P[i]);
-      if (dSqr > dist[o]*(1+numericKnob)) {
+      if (dSqr > dist[o]+numericKnob) {
         dist[o] = dSqr;
         idx[o] = i;}
     }
@@ -86,9 +86,9 @@ bool ortScan(point<dim> c, floatT rSqr, point<dim>* A, intT n, vector<point<dim>
 		 floatT* locDist = dist + p*dd;
 		 for (intT i=s; i<e; ++i) {
 		   floatT dSqr = A[i].distSqr(c);
-		   if (dSqr > rSqr*(1+numericKnob)) {
+		   if (dSqr > rSqr+numericKnob) {
 		     intT o = c.quadrant(A[i]);
-		     if (dSqr > locDist[o]*(1+numericKnob)) {
+		     if (dSqr > locDist[o]+numericKnob) {
 		       locDist[o] = dSqr;
 		       locIdx[o] = i;}
 		   }
@@ -198,7 +198,6 @@ ball<dim> miniDiscOrt(point<dim>* P, intT n) {
 template<int dim>
 void miniDisc(point<dim>* P, intT n) {
   typedef point<dim> pointT;
-  typedef circle discT;
   typedef ball<dim> ballT;
 
   static const bool preprocess = false;
