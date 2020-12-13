@@ -704,6 +704,7 @@ class ball {
   pointT P[dim+1];
   floatT Q[dim];
   floatT La[dim];
+  pointT offset;
 
   pointT c;
   floatT r;
@@ -718,12 +719,13 @@ class ball {
   }
 
 public:
-  inline pointT center() {return c;}
+  inline pointT center() {return c+offset;}
   inline pointT* support() {return P;}
   inline floatT radius() {return r;}
   inline intT size() {return d;}
   inline bool contain(pointT p) {
-    return p.pointDist(center()) <= radius()*1.000001;}//todo, sqrt optimize
+    auto pp = p-offset;
+    return pp.distSqr(c) <= radius()*radius();}
   inline bool isEmpty() {return size() <= 0;}
 
   void twoPointConstruct() {
@@ -756,7 +758,14 @@ public:
 
   ball(): d(0) {}
   ball(pointT* PP, intT dd): d(dd) {
-    for(int i=0; i<d; ++i) P[i] = PP[i];
+    for(int i=0; i<dim; ++i) offset[i] = 0;
+    for(int i=0; i<d; ++i) {
+      P[i] = PP[i];
+      offset = offset + PP[i];
+    }
+    offset = offset/d;
+    for(int i=0; i<d; ++i) P[i] = P[i]-offset;//offset supports to a safer zone
+
     if (d <= 1) {
       cout << "error, cannot construct ball on <=1 point, abort" << endl;abort();
     } else if (d == 2) twoPointConstruct();
@@ -764,10 +773,12 @@ public:
     else if (d > 3) {
       d = 3;
       threePointConstruct();
-      for (intT i=3; i<dd; ++i) grow(PP[i]);
+      for (intT i=3; i<dd; ++i) grow(P[i]);
     } else {
       cout << "error, ball wrong dimension, abort" << endl;abort();
     }
+
+    for(int i=0; i<d; ++i) P[i] = P[i]+offset;//restore supports
   }
 
   void grow(pointT q) {
