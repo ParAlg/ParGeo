@@ -569,6 +569,8 @@ bool intersect2d(point2d a, point2d b, point2d c, point2d d) {
   return isIn(a,b) && isIn(c,d);
 }
 
+#define ROBUST_BALL
+
 template <int dim>
 class ball {
   typedef point<dim> pointT;
@@ -578,6 +580,9 @@ class ball {
   pointT P[dim+1];
   floatT Q[dim];
   floatT La[dim];
+#ifdef ROBUST_BALL
+  pointT offset;
+#endif
 
   pointT c;
   floatT r;
@@ -620,18 +625,34 @@ class ball {
   }
 
 public:
+#ifdef ROBUST_BALL
+  inline pointT center() {return c+offset;}
+  inline bool contain(pointT p) {
+    auto pp = p-offset;
+    return pp.dist(c) <= radius()+1e-9;}
+#else
   inline pointT center() {return c;}
+  inline bool contain(pointT p) {
+    return p.dist(c) <= radius()+1e-9;}
+#endif
   inline pointT* support() {return P;}
   inline floatT radius() {return r;}
   inline intT size() {return d;}
   inline bool isEmpty() {return size() <= 0;}
-  inline bool contain(pointT p, floatT eps=1e-9) {
-    return p.dist(c) <= radius()+eps;}
 
   ball(): d(0) {}
   ball(pointT* PP, intT dd): d(dd) {
+#ifdef ROBUST_BALL
+    for(int i=0; i<dim; ++i) offset[i] = 0;
+    for(int i=0; i<d; ++i) {
+      P[i] = PP[i];
+      offset = offset + PP[i];
+    }
+    offset = offset/d;
+    for(int i=0; i<d; ++i) P[i] = P[i]-offset;//offset supports to a safer zone
+#else
     for(int i=0; i<d; ++i) P[i] = PP[i];
-
+#endif
     if (d <= 1) {
       cout << "error, cannot construct ball on <=1 point, abort" << endl;abort();
     } else if (d == 2) twoPointConstruct();
@@ -643,6 +664,9 @@ public:
     } else {
       cout << "error, ball wrong dimension, abort" << endl;abort();
     }
+#ifdef ROBUST_BALL
+    for(int i=0; i<d; ++i) P[i] = P[i]+offset;//restore supports
+#endif
   }
 
   void grow(pointT q) {
@@ -699,6 +723,7 @@ public:
     }
     recompute();
   }
+
 };
 
 inline vect3d onParabola(vect2d v) {

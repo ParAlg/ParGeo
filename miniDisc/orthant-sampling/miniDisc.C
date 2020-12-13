@@ -31,7 +31,7 @@
 
 using namespace std;
 
-static const floatT numericKnob = 1e-9;
+static const floatT numericKnob = 1e-6;
 
 template<int dim>
 intT ortScanSerial(point<dim> c, floatT rSqr, point<dim>* P, intT n, vector<point<dim>>& support, floatT* dist) {
