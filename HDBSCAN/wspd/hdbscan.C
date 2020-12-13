@@ -64,19 +64,19 @@ dEdge* hdbscan(point<dim>* P, intT n, floatT eps, intT minPts) {
 
   floatT* coreDist = newA(floatT, n);
   auto buffer = KBuffer::allocKBuffer<pointT*>(minPts, n);
-  par_for (intT i=0; i<n; ++i) {
-    auto buf = buffer + i;
-    tree->rootNode()->kNN(&P[i], minPts, buf);
-    coreDist[i] = buf->get(minPts-1)->dist(P[i]);
-  }
+  parallel_for (0, n, [&](intT i) {
+			auto buf = buffer + i;
+			tree->rootNode()->kNN(&P[i], minPts, buf);
+			coreDist[i] = buf->get(minPts-1)->dist(P[i]);
+		      });
   cout << "knn-time = " << t0.next() << endl;
 
   floatT* cdMin = newA(floatT, tree->size()*2);
   floatT* cdMax = newA(floatT, tree->size()*2);
-  par_for(intT i=0; i<tree->size()*2; ++i) {
-    cdMin[i] = floatMax();
-    cdMax[i] = floatMin();
-  }
+  parallel_for(0, tree->size()*2, [&](intT i) {
+      cdMin[i] = floatMax();
+      cdMax[i] = floatMin();
+    });
   nodeCD(tree->rootNode(), coreDist, cdMin, cdMax, tree->rootNode(), P);
 
   auto wgpar = unreachableNormalParallel<dim, nodeT>(tree->rootNode(), cdMin, cdMax);
@@ -97,10 +97,10 @@ dEdge* hdbscan(point<dim>* P, intT n, floatT eps, intT minPts) {
 
   auto bcps = newA(indexBcp, out->size());
 
-  par_for (intT i=0; i<out->size(); ++i) {
-    bcpT bcp = compBcpStar<nodeT, bcpT>(out->at(i).u, out->at(i).v, coreDist, P);
-    bcps[i] = indexBcp(bcp.u-P, bcp.v-P, bcp.dist);
-  }
+  parallel_for (0, out->size(), [&](intT i) {
+      bcpT bcp = compBcpStar<nodeT, bcpT>(out->at(i).u, out->at(i).v, coreDist, P);
+      bcps[i] = indexBcp(bcp.u-P, bcp.v-P, bcp.dist);
+    });
   cout << "bcp-time = " << t0.next() << endl;
 
   edgeUnionFind *uf = new edgeUnionFind(n);
@@ -118,12 +118,12 @@ dEdge* hdbscan(point<dim>* P, intT n, floatT eps, intT minPts) {
   cout << "kruskal-time = " << t0.next() << endl;
 
   auto R = newA(dEdge, n-1);
-  par_for(intT i=0; i<n-1; ++i) {
-    auto e = uf->getEdge(i);
-    auto w = max(P[e.first].dist(P[e.second]), coreDist[e.first]);
-    w = max(w, coreDist[e.second]);
-    R[i] = dEdge(e.first, e.second, w);
-  }
+  parallel_for(0, n-1, [&](intT i) {
+			 auto e = uf->getEdge(i);
+			 auto w = max(P[e.first].dist(P[e.second]), coreDist[e.first]);
+			 w = max(w, coreDist[e.second]);
+			 R[i] = dEdge(e.first, e.second, w);
+		       });
   cout << "copy-time = " << t0.stop() << endl;
 
   auto myDendro = dendrogram::directedDendro<dEdge>(R, n);

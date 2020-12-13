@@ -111,9 +111,9 @@ namespace parKruskal {
   template <class EdgeWrapper, class F>
   inline intT almostKth(EdgeWrapper *A, pair<double, intT>* B, intT k, intT n, F f) {
     if (n == k) {
-      par_for (intT i=0; i < n; i++) {
-	B[i] = pair<double, intT>(A->GetWeight(i),i);
-      }
+      parallel_for (0, n, [&](intT i) {
+			    B[i] = pair<double, intT>(A->GetWeight(i),i);
+			  });
       return n;
     }
 
@@ -128,9 +128,9 @@ namespace parKruskal {
     pair<double, intT> p = T[km];
     free(T);
     bool *flags = newA(bool,n);
-    par_for (intT i=0; i < n; i++) {
-      flags[i] = !f(pair<double, intT>(A->GetWeight(i),i),p);
-    }
+    parallel_for (0, n, [&](intT i) {
+			  flags[i] = !f(pair<double, intT>(A->GetWeight(i),i),p);
+			});
     intT l = sequence::split(B,flags,0,n,myGet<EdgeWrapper>(A));
     free(flags);
     return l;
@@ -150,31 +150,31 @@ namespace parKruskal {
 
     // initialize size n reservation stations
     reservation *R = newA(reservation,n);
-    par_for (size_t i = 0; i < n; i++) {
-      new ((void*) (R+i)) reservation;}
+    parallel_for (0, n, [&](intT i) {
+			  new ((void*) (R+i)) reservation;});
 
     //assign each edge an index
     indexedEdge* z = newA(indexedEdge,m);
-    par_for (intT i=0; i < l; i++) {
-      intT j = y[i].second;
-      z[i] = indexedEdge(E.GetU(j),E.GetV(j),j);
-    }
+    parallel_for (0, l, [&](intT i) {
+			  intT j = y[i].second;
+			  z[i] = indexedEdge(E.GetU(j),E.GetV(j),j);
+			});
     //nextTime("copy to edges");
 
     bool *mstFlags = newA(bool, m);
-    par_for (intT i=0; i < m; i++) mstFlags[i] = 0;
+    parallel_for (0, m, [&](intT i) {mstFlags[i] = 0;});
     UnionFindStep<UFType> UFStep(z, UF, R, mstFlags);
     speculative_for(UFStep, 0, l, 8);
     free(z);
 
     bool *flags = newA(bool,m-l);
-    par_for (intT i = 0; i < m-l; i++) {
-      intT j = y[i+l].second;
-      intT u = UF->find(E.GetU(j));
-      intT v = UF->find(E.GetV(j));
-      if (u != v) flags[i] = 1;
-      else flags[i] = 0;
-    }
+    parallel_for (0, m-l, [&](intT i) {
+		       intT j = y[i+l].second;
+		       intT u = UF->find(E.GetU(j));
+		       intT v = UF->find(E.GetV(j));
+		       if (u != v) flags[i] = 1;
+		       else flags[i] = 0;
+		     });
     auto x = (pair<double, intT>*) malloc(sizeof(pair<double, intT>) * (m-l));
     // input the edges after the l_th, put into x
     intT k = sequence::pack(y+l, x, flags, m-l);
@@ -184,10 +184,11 @@ namespace parKruskal {
     sampleSort(x, k, edgeLess());
 
     z = newA(indexedEdge, k);
-    par_for (intT i=0; i < k; i++) {
-      intT j = x[i].second;
-      z[i] = indexedEdge(E.GetU(j),E.GetV(j),j);
-    }
+    parallel_for (0, k,
+		  [&](intT i) {
+		    intT j = x[i].second;
+		    z[i] = indexedEdge(E.GetU(j),E.GetV(j),j);
+		  });
     free(x);
 
     UFStep = UnionFindStep<UFType>(z, UF, R, mstFlags);

@@ -30,12 +30,13 @@ template<int dim>
 void timeHdbscan(point<dim>* pts, intT n, floatT epsilon, intT minPts, int rounds, char* outFile, int perturb) {
   cout << "nmax = " << n << endl;
   if (perturb) {
-    par_for(intT i=0; i<n; ++i) {
-      for (int j = 0; j < dim; ++ j) {
-        double myRand = pts[i][j] / 10000;
-        pts[i].x[j] += -myRand + 2*myRand*hash64(i)/numeric_limits<unsigned long>::max();
-      }
-    }
+    parallel_for(0, n,
+		 [&](intT i) {
+		   for (int j = 0; j < dim; ++ j) {
+		     double myRand = pts[i][j] / 10000;
+		     pts[i].x[j] += -myRand + 2*myRand*hash64(i)/numeric_limits<unsigned long>::max();
+		   }
+		 });
   }
 
   for (int i=0; i < rounds; i++) {

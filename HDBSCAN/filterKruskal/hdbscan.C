@@ -63,19 +63,20 @@ dEdge* hdbscan(point<dim>* P, intT n, floatT eps, intT minPts) {
 
   floatT* coreDist = newA(floatT, n);
   auto buffer = KBuffer::allocKBuffer<pointT*>(minPts, n);
-  par_for (intT i=0; i<n; ++i) {
-    auto buf = buffer + i;
-    tree->rootNode()->kNN(&P[i], minPts, buf);
-    coreDist[i] = buf->get(minPts-1)->dist(P[i]);
-  }
+  parallel_for (0, n, [&](intT i) {
+			auto buf = buffer + i;
+			tree->rootNode()->kNN(&P[i], minPts, buf);
+			coreDist[i] = buf->get(minPts-1)->dist(P[i]);
+		      });
   cout << "knn-time = " << t0.next() << endl;
 
   floatT* cdMin = newA(floatT, tree->size()*2);
   floatT* cdMax = newA(floatT, tree->size()*2);
-  par_for(intT i=0; i<tree->size()*2; ++i) {
-    cdMin[i] = floatMax();
-    cdMax[i] = floatMin();
-  }
+  parallel_for(0, tree->size()*2,
+	       [&](intT i) {
+		 cdMin[i] = floatMax();
+		 cdMax[i] = floatMin();
+	       });
   nodeCD(tree->rootNode(), coreDist, cdMin, cdMax, tree->rootNode(), P);
 
   floatT rhoLo = -0.1;
@@ -129,12 +130,13 @@ dEdge* hdbscan(point<dim>* P, intT n, floatT eps, intT minPts) {
 
   typedef dEdge outT;
   auto R = newA(outT, n-1);
-  par_for(intT i=0; i<n-1; ++i) {
-    auto e = uf->getEdge(i);
-    auto w = max(P[e.first].dist(P[e.second]), coreDist[e.first]);
-    w = max(w, coreDist[e.second]);
-    R[i] = outT(e.first, e.second, w);
-  }
+  parallel_for(0, n-1,
+	       [&](intT i) {
+		 auto e = uf->getEdge(i);
+		 auto w = max(P[e.first].dist(P[e.second]), coreDist[e.first]);
+		 w = max(w, coreDist[e.second]);
+		 R[i] = outT(e.first, e.second, w);
+	       });
   cout << "copy-time = " << t0.stop() << endl;
 
   auto myDendro = dendrogram::directedDendro<dEdge>(R, n);

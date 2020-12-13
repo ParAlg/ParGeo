@@ -45,9 +45,8 @@ inline void nodeCD(nodeT *nd, floatT *coreDist, floatT *cdMin, floatT *cdMax, no
     }
   } else {
     if (nd->size() > 2000) {
-      cilk_spawn nodeCD(nd->L(), coreDist, cdMin, cdMax, root, P);
-      nodeCD(nd->R(), coreDist, cdMin, cdMax, root, P);
-      cilk_sync;
+      par_do([&](){nodeCD(nd->L(), coreDist, cdMin, cdMax, root, P);},
+	     [&](){nodeCD(nd->R(), coreDist, cdMin, cdMax, root, P);});
     } else {
       nodeCD(nd->L(), coreDist, cdMin, cdMax, root, P);
       nodeCD(nd->R(), coreDist, cdMin, cdMax, root, P);
@@ -119,16 +118,16 @@ struct unreachableNormalParallel {
   unreachableNormalParallel(nodeT* roott, floatT* cdMinn, floatT* cdMaxx) : root(roott), cdMin(cdMinn), cdMax(cdMaxx) {
     int P = getWorkers();
     out = newA(bufT*, P);
-    par_for(int p=0; p<P; ++p) {
-      out[p] = new bufT(root->size()/P);
-    }
+    parallel_for(0, P, [&](intT p) {
+			 out[p] = new bufT(root->size()/P);
+		       });
   }
 
   vector<pType>* collect() {
     int P = getWorkers();
     auto tmp = parBufCollect<pType>(out, P);
 
-    par_for(int p=0; p<P; ++p) delete out[p];
+    parallel_for(0, P, [&](intT p) {delete out[p];});
     free(out);
     return tmp;
   }
@@ -309,16 +308,16 @@ struct unreachGetParallel {
     int P = getWorkers();
     out = newA(bufT*, P);
     intT n = tree->rootNode()->size();
-    par_for(int p=0; p<P; ++p) {
-      out[p] = new bufT(n/P);
-    }
+    parallel_for(0, P, [&](intT p) {
+			 out[p] = new bufT(n/P);
+		       });
   }
 
   vector<bcpT>* collect() {
     int P = getWorkers();
     auto tmp = parBufCollect<bcpT>(out, P);
 
-    par_for(int p=0; p<P; ++p) delete out[p];
+    parallel_for(0, P, [&](intT p) {delete out[p];});
     free(out);
     return tmp;
   }
