@@ -8,6 +8,7 @@
 #include "pbbs/utils.h"
 #include "pbbs/sequence.h"
 #include "pbbs/sampleSort.h"
+#include "pbbs/randPerm.h"
 
 template <int dim>
 void perfTest(point<dim>* P, intT n) {
@@ -16,44 +17,72 @@ void perfTest(point<dim>* P, intT n) {
 
   timing t0;
 
+  intT test = 0;
+  intT* I = newA(intT, n);
   intT* A = newA(intT, n);
   intT* B = newA(intT, n);
-  double x1, x2, x3, x4, x5;
+  double times[20];
 
   t0.start();
-  parallel_for(0, n, [&](intT i) {
-      A[i] = utils::hash(i);
-      B[i] = utils::hash(i)%2;
-    });
-  x1 = t0.next();
-  cout << ">>> Test 1 - par-for IO: " << x1 << " sec" << endl;
 
+  parallel_for(0, n, [&](intT i) {I[i] = i;});
+  randPerm(I, n);
+  times[test] = t0.next();
+  cout << ">>> Test " << test << " - rand-perm: " << times[test++] << " sec" << endl;
+
+  parallel_for(0, n, [&](intT i) {
+		       A[I[i]] = i;
+		     });
+  times[test] = t0.next();
+  cout << ">>> Test " << test << " - random-write: " << times[test++] << " sec" << endl;
+
+  parallel_for(0, n, [&](intT i) {
+		       A[i] = i;
+		     });
+  times[test] = t0.next();
+  cout << ">>> Test " << test << " - seq-write: " << times[test++] << " sec" << endl;
+
+  parallel_for(0, n, [&](intT i) {
+		       auto tmp = A[I[i]];
+		     });
+  times[test] = t0.next();
+  cout << ">>> Test " << test << " - random-read: " << times[test++] << " sec" << endl;
+
+  parallel_for(0, n, [&](intT i) {
+		       auto tmp = A[i];
+		     });
+  times[test] = t0.next();
+
+  cout << ">>> Test " << test << " - seq-read: " << times[test++] << " sec" << endl;
+
+  parallel_for(0, n, [&](intT i) {
+		       B[i] = utils::hash(i)%2;
+		     });
+  t0.next();
   intT tmp = sequence::prefixSum(B, 0, n);
-  x2 = t0.next();
-  cout << ">>> Test 2 - prefixSum: " << x2 << " sec" << endl;
+  times[test] = t0.next();
+  cout << ">>> Test " << test << " - prefix-sum: " << times[test++] << " sec" << endl;
 
   sampleSort(A, n, std::less<intT>());
-  x3 = t0.next();
-  cout << ">>> Test 3 - sampleSort: " << x3 << endl;
+  times[test] = t0.next();
+  cout << ">>> Test " << test << " - sample-sort: " << times[test++] << endl;
 
   treeT* tree = new treeT(P, n, true, 1);
-  x4 = t0.next();
-  cout << ">>> Test 4 - kdTree construction: " << x4 << " sec" << endl;
+  times[test] = t0.next();
+  cout << ">>> Test " << test << " - kdtree-construction: " << times[test++] << " sec" << endl;
 
   intT k = 2;
   pointT** AA = newA(pointT*, k*n);
-  t0.next();
+  times[test] = t0.next();
   parallel_for (0, n,[&](intT i) {
 		       pointT** NN = tree->kNN(&P[i], k, AA+i*k);});
-  x5 = t0.next();
-  cout << ">>> Test 5 - data parallel knn: " << x5 << " sec" << endl;
+  times[test] = t0.next();
+  cout << ">>> Test " << test << " - knn: " << times[test++] << " sec" << endl;
 
   cout << ">>>>>>>>" << endl;
-  cout << x1 << endl;
-  cout << x2 << endl;
-  cout << x3 << endl;
-  cout << x4 << endl;
-  cout << x5 << endl;
+  for (intT i=0; i<test; ++i) cout << times[i] << endl;
+
+  free(I); free(A); free(B);
 }
 
 #endif
