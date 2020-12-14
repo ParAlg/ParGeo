@@ -71,7 +71,7 @@ intT ortScan(point<dim> c, floatT rSqr, point<dim>* A, intT n, vector<point<dim>
   if (n<2000) return ortScanSerial(c, rSqr, A, n, support, distGlobal);
 
   intT dd = intT(pow(2.0, dim));
-  intT P = getWorkers()*8;//todo tune
+  intT P = max(96, getWorkers());
   intT blockSize = (n+P-1)/P;
   intT idx[dd*P];
   floatT dist[dd*P];
@@ -421,8 +421,8 @@ void miniDisc(point<dim>* P, intT n) {
   if (serial) {
     D = miniDiscSamplingOrtSerial(P, n);
   } else {
-    D = miniDiscSamplingOrt(P, n);
-    //D = miniDiscSamplingOrt2(P, n);
+    //D = miniDiscSamplingOrt(P, n);
+    D = miniDiscSamplingOrt2(P, n);
   }
 #ifndef SILENT
   cout << "seb-time = " << t0.stop() << endl;
