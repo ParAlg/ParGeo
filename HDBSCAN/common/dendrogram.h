@@ -268,9 +268,12 @@ namespace dendrogram {
     vector<intT> vtxDis;//stores distance to source mst vertex
     vector<eulerNode> eulerTour;
     vector<dendroNode> ddg;//output
+    floatT lightFraction, baseThreshold;
 
     //constructor and main function
-    directedDendro(edgeT *edgesIn, intT nn): n(nn) {
+    directedDendro(edgeT *edgesIn, intT nn, floatT heavyFrac=0.1, floatT bt=0.5): n(nn) {
+      baseThreshold = bt;
+      lightFraction = 1-heavyFrac;
       //printMstCsv(edges, n-1);
       //init
       edgePointers.resize(2*n-2);
@@ -538,7 +541,7 @@ namespace dendrogram {
       if (m%2>0) {
 	cout << "error, odd length tour = "<< m<<", abort" << endl;abort();}
 
-      if (m<=(n*0.5)) {
+      if (m<=(n*baseThreshold)) {
 	constructDDGSerial(tour, m, uf, dendro, dendroAbs);
 	return;
       }
@@ -550,7 +553,7 @@ namespace dendrogram {
 			   weights[i] = tour[i].weight;});
 
       sampleSort(weights, m, less<double>());
-      intT numLight = 0.9*m;
+      intT numLight = lightFraction*m;
       while (numLight && weights[numLight-1]==weights[numLight]) numLight++;
       if (numLight%2>0) numLight++;
 

@@ -139,13 +139,14 @@ _seq<intT> hull(point2d* P, intT n) {
     do {
       if (ptr->visibleFrom(P[i+3])) {
         PN[i].seeFacet = ptr;
-        ptr->seeList.push_back(&PN[i]);
-        break;
+        ptr->seeList.push_back(&PN[i]);//todo this vector needs to be simplified (mem management)
+        break; //each point only records one visible facet
       }
       ptr = ptr->next;
     } while (ptr != H);
   }
 
+  //given facet H, find furthest visible point (only among recorded)
   auto findPivot = [&](facet* H)
 		   {
 		     auto f = H;
@@ -165,6 +166,7 @@ _seq<intT> hull(point2d* P, intT n) {
   while(1) {
     if(verbose) cout << "--- iter" << i << endl;
 
+    //find a pivot point to be processed next
     pointNode pr;
     if (localPivot) {
       pointNode* prp = findPivot(H);
@@ -181,6 +183,7 @@ _seq<intT> hull(point2d* P, intT n) {
 
     if(verbose) cout << " pr = " << pr.p << endl;
 
+    //find range of visible facets [left, right)
     pair<facet*, facet*> conflicts;
     if (brute) {
       conflicts = findVisible(H, pr.p);
@@ -195,7 +198,7 @@ _seq<intT> hull(point2d* P, intT n) {
       facet* new1 = new facet(start->p1, pr.p);
       facet* new2 = new facet(pr.p, end->p1);
 
-      //go through list of faxcets pending to be deleted
+      //go through list of facets pending to be deleted
       if (verbose) {
         cout << "deleting = ";
         auto ptr = start;
@@ -206,6 +209,8 @@ _seq<intT> hull(point2d* P, intT n) {
         cout << endl;
       }
 
+      //if not finding visible facets by bruteforce
+      // update visibility pointers
       if (!brute) {
         auto ptr = start;
         do {
