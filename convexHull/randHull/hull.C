@@ -217,17 +217,23 @@ _seq<intT> hull(point2d* P, intT n) {
           //update points that see them
           for(intT j=0; j<ptr->seeList.size(); ++j) {
             auto seePt = ptr->seeList[j];
-            if (seePt->seeFacet == ptr) seePt->seeFacet = NULL;
-
+            // if (seePt->seeFacet == ptr) seePt->seeFacet = NULL;
+	    // else {
+	    //   cout << "error?" << endl;
+	    //   abort();
+	    // }
+	    seePt->seeFacet = NULL;
             if (new1->visibleFrom(seePt->p)) {
-              if (!seePt->seeFacet) {
-                seePt->seeFacet = new1;
-              }
+              // if (!seePt->seeFacet) {
+              //   seePt->seeFacet = new1;
+              // }
+	      seePt->seeFacet = new1;
               new1->seeList.push_back(seePt);
             } else if (new2->visibleFrom(seePt->p)) {
-              if (!seePt->seeFacet) {
-                seePt->seeFacet = new2;
-              }
+              // if (!seePt->seeFacet) {
+              //   seePt->seeFacet = new2;
+              // }
+	      seePt->seeFacet = new2;
               new2->seeList.push_back(seePt);
             }
           }
