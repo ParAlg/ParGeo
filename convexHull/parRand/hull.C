@@ -48,7 +48,23 @@ struct facet {
   pointNode*& at(intT i) {
     return seeList->at(s+i);
   }
+  facet() {}
   facet(point2d p11, point2d p22, ringBuffer<pointNode*> *sl): p1(p11), p2(p22), seeList(sl) {}
+  void init(point2d p11, point2d p22, ringBuffer<pointNode*> *sl) {
+    p1 = p11;
+    p2 = p22;
+    seeList = sl;
+  }
+  //todo check copy
+  void copy(facet* f) {
+    next = f->next;
+    prev = f->prev;
+    p1 = f->p1;
+    p2 = f->p2;
+    seeList = f->seeList;
+    s = f->s;
+    e = f->e;
+  }
   bool visibleFrom(point2d p) {return triArea(p1, p2, p) > 1e-9;}//todo numerical stability
 };
 
@@ -90,25 +106,35 @@ pair<facet*, facet*> findVisible(facet* head, point2d p) {
   return make_pair((facet*)NULL, (facet*)NULL);
 }
 
-void delHull(facet* start, facet* end) {
-  auto ptr = start;
-  do {
-    auto tmp = ptr->next;
-    delete ptr;
-    ptr = tmp;
-  } while (ptr != end);
-}
-
-void printHull(facet* start, facet* end) {
+void printHull(facet* start, facet* end, facet* H=NULL, intT n=-1) {
+  cout << "PRINT HULL" << endl;
   auto ptr = start;
   do {
     cout << ptr << ":" << *ptr << " ";
+    if (ptr->next->prev != ptr) {
+      cout << "next->prev link error" << endl;
+      cout << " next = " << ptr->next << endl;
+      cout << " next->prev = " << ptr->next->prev << endl;
+      abort();
+    }
+    if (ptr->prev->next != ptr) {
+      cout << "prev->next link error" << endl;
+      cout << " prev = " << ptr->prev << endl;
+      cout << " prev->next = " << ptr->prev->next << endl;
+      abort();
+    }
+    if (H) {
+      if (ptr-H >= n) {
+	cout << "error, access out of hull bound: " << ptr-H << endl;
+	abort();
+      }
+    }
     ptr = ptr->next;
   } while (ptr != end);
   cout << endl;
 }
 
-void increments(pointNode* PN, intT n, facet* H, ringBuffer<pointNode*>& listMem) {
+facet* increments(pointNode* PN, intT n, facet* H, facet* hullMem, ringBuffer<pointNode*>& listMem, intT listN) {
   static bool brute = false;//visibility check
   static bool verbose = false;
   static bool localPivot = false;
@@ -164,8 +190,8 @@ void increments(pointNode* PN, intT n, facet* H, ringBuffer<pointNode*>& listMem
     facet*   end = conflicts.second;
     if (start && end) {
       //compute new faces
-      facet* new1 = new facet(start->p1, pr.p, &listMem);//todo no allocation
-      facet* new2 = new facet(pr.p, end->p1, &listMem);
+      facet new1 = facet(start->p1, pr.p, &listMem);
+      facet new2 = facet(pr.p, end->p1, &listMem);
 
       //go through list of facets pending to be deleted
       if (verbose) {
@@ -221,85 +247,42 @@ void increments(pointNode* PN, intT n, facet* H, ringBuffer<pointNode*>& listMem
 	  new2->at(i) = lm2[i+rPt+1];
 	}
 	free(lm2);
+
+	auto prev = start->prev;
+	start->copy(new1);
+	start->prev = prev;
+	prev->next = start;
+
+	facet* new2new = start + start->size() + 1;
+	intT offset = new2new - hullMem;
+	if (offset >= listN)//wrap around
+	  new2new = hullMem + (offset % listN);
+	new2new->copy(new2);
+
+	start->next = new2new;
+	new2new->prev = start;
+	new2new->next = end;
+	end->prev = new2new;
+
+	//todo simplify this part
+	for(intT i=0; i<start->size(); ++i)
+	  start->at(i)->seeFacet = start;
+	for(intT i=0; i<new2new->size(); ++i)
+	  new2new->at(i)->seeFacet = new2new;
+
+	H = start;
       };//end naiveSplit
-
-      auto inplaceSplit = [&](facet* start, facet* end, facet* new1, facet*new2) {
-	intT lmSize = 0;
-	pointNode** lm = &start->at(0);
-
-	auto ptr = start;
-	//cout << "deleting ";
-	do {
-	  //cout << ptr << "(" << ptr->s << "," << ptr->e << "), ";
-	  for(intT i=0; i<ptr->size(); ++i) {
-	    auto pn = ptr->at(i);
-	    pn->seeFacet = NULL;
-	    if (new1->visibleFrom(pn->p) ||
-		new2->visibleFrom(pn->p)) {
-	      lm[lmSize++] = pn;}
-	  }
-	  ptr = ptr->next;
-	} while (ptr != end);
-	//cout << endl;
-
-	auto predicate = [&](intT i) {
-	  return new1->visibleFrom(lm[i]->p);// && !new2->visibleFrom(lm[i]->p);
-	};
-
-	intT lPt = 0;
-	intT rPt = lmSize-1;
-	while (lPt < rPt) {
-	  if (predicate(lPt)) {
-	    lm[lPt]->seeFacet = new1;
-	  } else {
-	    while (!predicate(rPt) && lPt < rPt) {
-	      lm[rPt]->seeFacet = new2;
-	      rPt--;
-	    }
-	    lm[lPt]->seeFacet = new2;
-	    if (lPt < rPt) {
-	      lm[rPt]->seeFacet = new1;
-	      swap(lm[lPt], lm[rPt]);
-	      rPt--; }
-	    else {break;}
-	  }
-	  lPt++;
-	}
-	if (predicate(lPt)) {
-	  lm[lPt]->seeFacet = new1;
-	  lPt++;
-	} else {
-	  lm[lPt]->seeFacet = new2;
-	}
-	// cout << "left size = " << lPt << endl;
-	// cout << "right size = " << lmSize-lPt << endl;
-	//cout << lPt << ", " << lmSize-lPt << endl;
-
-	new1->s = start->s;
-	new1->e = new1->s + lPt;
-	new2->s = new1->e;
-	new2->e = new2->s + lmSize-lPt;
-	//cout << "creating " << new1 << "(" << new1->s << "," << new1->e << "), " <<
-	//new2 << "(" << new2->s << "," << new2->e << ")" << endl;
-      };//end inplaceSplit
 
       //if not finding visible facets by bruteforce
       // update visibility pointers
       if (!brute) {
 	timing t0; t0.start();
-        naiveSplit(start, end, new1, new2);
-	//inplaceSplit(start, end, new1, new2);
+        naiveSplit(start, end, &new1, &new2);
+	//inplaceSplit(start, end, &new1, &new2);//todo
 	splitTime += t0.stop();
       }
 
-      if(verbose) cout << "adding = " << *new1 << ", " << *new2 << endl;
-
-      //update hull
-      start->prev->next = new1; new1->prev = start->prev;
-      new1->next = new2; new2->prev = new1;
-      new2->next = end; end->prev = new2;
-      H = new1;
-      delHull(start, end);
+      //if(verbose) cout << "adding = " << *new1 << ", " << *new2 << endl;
 
       if(verbose) {
         cout << "hull = ";
@@ -309,6 +292,7 @@ void increments(pointNode* PN, intT n, facet* H, ringBuffer<pointNode*>& listMem
   }
 
   cout << " split-time = " << splitTime << endl;
+  return H;
 }
 
 _seq<intT> hull(point2d* P, intT n) {
@@ -324,24 +308,26 @@ _seq<intT> hull(point2d* P, intT n) {
   ringBuffer<pointNode*> listMem = ringBuffer<pointNode*>(n*3);
   for(intT i=0; i<n*3; ++i) listMem[i] = NULL;
 
+  facet f0, f1, f2;
   facet* H;
   if (triArea(p0, p1, p2) > 0.0) {
-    auto f0 = new facet(p0, p2, &listMem);
-    auto f1 = new facet(p2, p1, &listMem);
-    auto f2 = new facet(p1, p0, &listMem);
-    f0->next = f1; f1->prev = f0;
-    f1->next = f2; f2->prev = f1;
-    f2->next = f0; f0->prev = f2;
-    H = f0;
+    f0.init(p0, p2, &listMem);
+    f1.init(p2, p1, &listMem);
+    f2.init(p1, p0, &listMem);
+    f0.next = &f1; f1.prev = &f0;
+    f1.next = &f2; f2.prev = &f1;
+    f2.next = &f0; f0.prev = &f2;
+    H = &f0;
   } else {
-    auto f0 = new facet(p0, p1, &listMem);
-    auto f1 = new facet(p1, p2, &listMem);
-    auto f2 = new facet(p2, p0, &listMem);
-    f0->next = f1; f1->prev = f0;
-    f1->next = f2; f2->prev = f1;
-    f2->next = f0; f0->prev = f2;
-    H = f0;
+    f0.init(p0, p1, &listMem);
+    f1.init(p1, p2, &listMem);
+    f2.init(p2, p0, &listMem);
+    f0.next = &f1; f1.prev = &f0;
+    f1.next = &f2; f2.prev = &f1;
+    f2.next = &f0; f0.prev = &f2;
+    H = &f0;
   }
+
   if(verbose) {
     cout << "initial-hull = ";
     printHull(H, H);
@@ -367,6 +353,30 @@ _seq<intT> hull(point2d* P, intT n) {
       ptr = ptr->next;
     } while (ptr != H);
   }
+
+  facet* H2 = newA(facet, n);
+  intT o1 = 1+H->size();
+  intT o2 = o1+1+H->next->size();
+  H2[0].copy(H);
+  H2[0].prev = &H2[o2];
+  H2[0].next = &H2[o1];
+  H2[o1].copy(H->next);
+  H2[o1].prev = &H2[0];
+  H2[o1].next = &H2[o2];
+  H2[o2].copy(H->next->next);
+  H2[o2].prev = &H2[o1];
+  H2[o2].next = &H2[0];
+
+  //todo simplify this part
+  for(intT i=0; i<H2[0].size(); ++i)
+    H2[0][i]->seeFacet = &H2[0];
+  for(intT i=0; i<H2[o1].size(); ++i)
+    H2[o1][i]->seeFacet = &H2[o1];
+  for(intT i=0; i<H2[o2].size(); ++i)
+    H2[o2][i]->seeFacet = &H2[o2];
+
+  H = H2;
+
   if(verbose) {
     auto ptr = H;
     do {
@@ -377,7 +387,7 @@ _seq<intT> hull(point2d* P, intT n) {
   }
   cout << "init-time = " << t.next() << endl;
 
-  increments(PN, n-3, H, listMem);
+  H = increments(PN, n-3, H, H, listMem, n);
   free(PN);
 
   cout << "increment-time = " << t.next() << endl;
