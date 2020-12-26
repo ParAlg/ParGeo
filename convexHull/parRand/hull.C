@@ -108,74 +108,12 @@ void printHull(facet* start, facet* end) {
   cout << endl;
 }
 
-_seq<intT> hull(point2d* P, intT n) {
-  static bool verbose = false;
+void increments(pointNode* PN, intT n, facet* H, ringBuffer<pointNode*>& listMem) {
   static bool brute = false;//visibility check
-  static bool verify = false;
+  static bool verbose = false;
   static bool localPivot = false;
 
-  timing t; t.start();
-
-  auto p0 = P[0].x() < P[1].x() ? P[0] : P[1];//left of p1
-  auto p1 = P[0].x() < P[1].x() ? P[1] : P[0];
-  auto p2 = P[2];
-
-  ringBuffer<pointNode*> listMem = ringBuffer<pointNode*>(n*3);
-  for(intT i=0; i<n*3; ++i) listMem[i] = NULL;
-
-  facet* H;
-  if (triArea(p0, p1, p2) > 0.0) {
-    auto f0 = new facet(p0, p2, &listMem);
-    auto f1 = new facet(p2, p1, &listMem);
-    auto f2 = new facet(p1, p0, &listMem);
-    f0->next = f1; f1->prev = f0;
-    f1->next = f2; f2->prev = f1;
-    f2->next = f0; f0->prev = f2;
-    H = f0;
-  } else {
-    auto f0 = new facet(p0, p1, &listMem);
-    auto f1 = new facet(p1, p2, &listMem);
-    auto f2 = new facet(p2, p0, &listMem);
-    f0->next = f1; f1->prev = f0;
-    f1->next = f2; f2->prev = f1;
-    f2->next = f0; f0->prev = f2;
-    H = f0;
-  }
-  if(verbose) {
-    cout << "initial-hull = ";
-    printHull(H, H);
-  }
-
-  H->s = 0;
-  H->e = 0;
-  H->next->s = n;
-  H->next->e = n;
-  H->next->next->s = 2*n;
-  H->next->next->e = 2*n;
-
-  pointNode* PN = newA(pointNode, n-3);
-  for(intT i=0; i<n-3; ++i) {
-    PN[i] = pointNode(P[i+3]);
-    auto ptr = H;
-    do {
-      if (ptr->visibleFrom(P[i+3])) {
-        PN[i].seeFacet = ptr;
-        ptr->push_back(&PN[i]);
-        break; //each point only records one visible facet
-      }
-      ptr = ptr->next;
-    } while (ptr != H);
-  }
-  if(verbose) {
-    auto ptr = H;
-    do {
-      cout << "facet size = " << ptr->size() << endl;
-      ptr = ptr->next;
-    } while (ptr != H);
-    cout << "init complete" << endl;
-  }
-
-  //given facet H, find furthest visible point (only among recorded)
+    //given facet H, find furthest visible point (only among recorded)
   auto findPivot = [&](facet* H)
     {
       auto f = H;
@@ -192,6 +130,7 @@ _seq<intT> hull(point2d* P, intT n) {
     };
 
   intT i = 0;
+  floatT splitTime = 0;
   while(1) {
     if(verbose) cout << "--- iter" << i << endl;
 
@@ -202,7 +141,8 @@ _seq<intT> hull(point2d* P, intT n) {
       if (!prp) break;
       pr = *prp;
     } else {//random pivot
-      if (i>=n-3) break;
+      //cout << "i check = " << i << ", n = " << n << endl;
+      if (i>=n) break;
       pr = PN[i];
       if (!pr.seeFacet) {
 	i++;
@@ -333,6 +273,7 @@ _seq<intT> hull(point2d* P, intT n) {
 	}
 	// cout << "left size = " << lPt << endl;
 	// cout << "right size = " << lmSize-lPt << endl;
+	//cout << lPt << ", " << lmSize-lPt << endl;
 
 	new1->s = start->s;
 	new1->e = new1->s + lPt;
@@ -340,60 +281,15 @@ _seq<intT> hull(point2d* P, intT n) {
 	new2->e = new2->s + lmSize-lPt;
 	//cout << "creating " << new1 << "(" << new1->s << "," << new1->e << "), " <<
 	//new2 << "(" << new2->s << "," << new2->e << ")" << endl;
-
-	// if (new1->size() + new2->size() != lmSize) {
-	//   cout << "something wrong" << endl;
-	//   cout << "split " << lmSize << " = " << new1->size() << " + " << new2->size() << endl;
-	//   abort();
-	// }
-
-	// for (intT i=0; i<new1->size(); ++i) {
-	//   new1->at(i)->seeFacet = new1;
-	//   if (!new1->visibleFrom(new1->at(i)->p)) {
-	//     cout << "new1, wrong point at " << i << endl;
-	//     abort();
-	//   }
-	// }
-	// for (intT i=0; i<new2->size(); ++i) {
-	//   new2->at(i)->seeFacet = new2;
-	//   if (!new2->visibleFrom(new2->at(i)->p)) {
-	//     cout << "new2, wrong point at " << i << endl;
-	//     abort();
-	//   }
-	// }
-	// for (intT i=0; i<new1->size(); ++i) {
-	//   if (new1->at(i)->seeFacet != new1) {
-	//     cout << "new1, wrong facet pointed at " << i << endl;
-	//     abort();
-	//   }
-	// }
-	// for (intT i=0; i<new2->size(); ++i) {
-	//   if (new2->at(i)->seeFacet != new2) {
-	//     cout << "new2, wrong facet pointed at " << i << endl;
-	//     abort();
-	//   }
-	// }
-
-	// ptr = start;
-	// do {
-	//   for(intT i=0; i<3*n; ++i) {
-	//     if (listMem[i]) {
-	//       if (listMem[i]->seeFacet == ptr) {
-	// 	cout << "referring to deleted facet " << ptr << " at " << i << endl;
-	// 	abort();
-	//       }
-	//     }
-	//   }
-	//   ptr = ptr->next;
-	// } while (ptr != end);
-
       };//end inplaceSplit
 
       //if not finding visible facets by bruteforce
       // update visibility pointers
       if (!brute) {
+	timing t0; t0.start();
         naiveSplit(start, end, new1, new2);
 	//inplaceSplit(start, end, new1, new2);
+	splitTime += t0.stop();
       }
 
       if(verbose) cout << "adding = " << *new1 << ", " << *new2 << endl;
@@ -412,8 +308,79 @@ _seq<intT> hull(point2d* P, intT n) {
     }
   }
 
+  cout << " split-time = " << splitTime << endl;
+}
+
+_seq<intT> hull(point2d* P, intT n) {
+  static bool verbose = false;
+  static bool verify = false;
+
+  timing t; t.start();
+
+  auto p0 = P[0].x() < P[1].x() ? P[0] : P[1];//left of p1
+  auto p1 = P[0].x() < P[1].x() ? P[1] : P[0];
+  auto p2 = P[2];
+
+  ringBuffer<pointNode*> listMem = ringBuffer<pointNode*>(n*3);
+  for(intT i=0; i<n*3; ++i) listMem[i] = NULL;
+
+  facet* H;
+  if (triArea(p0, p1, p2) > 0.0) {
+    auto f0 = new facet(p0, p2, &listMem);
+    auto f1 = new facet(p2, p1, &listMem);
+    auto f2 = new facet(p1, p0, &listMem);
+    f0->next = f1; f1->prev = f0;
+    f1->next = f2; f2->prev = f1;
+    f2->next = f0; f0->prev = f2;
+    H = f0;
+  } else {
+    auto f0 = new facet(p0, p1, &listMem);
+    auto f1 = new facet(p1, p2, &listMem);
+    auto f2 = new facet(p2, p0, &listMem);
+    f0->next = f1; f1->prev = f0;
+    f1->next = f2; f2->prev = f1;
+    f2->next = f0; f0->prev = f2;
+    H = f0;
+  }
+  if(verbose) {
+    cout << "initial-hull = ";
+    printHull(H, H);
+  }
+
+  H->s = 0;
+  H->e = 0;
+  H->next->s = n;
+  H->next->e = n;
+  H->next->next->s = 2*n;
+  H->next->next->e = 2*n;
+
+  pointNode* PN = newA(pointNode, n-3);
+  for(intT i=0; i<n-3; ++i) {
+    PN[i] = pointNode(P[i+3]);
+    auto ptr = H;
+    do {
+      if (ptr->visibleFrom(P[i+3])) {
+        PN[i].seeFacet = ptr;
+        ptr->push_back(&PN[i]);
+        break; //each point only records one visible facet
+      }
+      ptr = ptr->next;
+    } while (ptr != H);
+  }
+  if(verbose) {
+    auto ptr = H;
+    do {
+      cout << "facet size = " << ptr->size() << endl;
+      ptr = ptr->next;
+    } while (ptr != H);
+    cout << "init complete" << endl;
+  }
+  cout << "init-time = " << t.next() << endl;
+
+  increments(PN, n-3, H, listMem);
   free(PN);
-  cout << "hull-time = " << t.next() << endl;
+
+  cout << "increment-time = " << t.next() << endl;
 
   if (verify) {
     for (intT i=0; i<n; ++i) {
