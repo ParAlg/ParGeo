@@ -55,10 +55,7 @@ struct facet {
     p2 = p22;
     seeList = sl;
   }
-  //todo check copy
   void copy(facet* f) {
-    next = f->next;
-    prev = f->prev;
     p1 = f->p1;
     p2 = f->p2;
     seeList = f->seeList;
@@ -134,6 +131,82 @@ void printHull(facet* start, facet* end, facet* H=NULL, intT n=-1) {
   cout << endl;
 }
 
+facet* hullIncInPlace(facet* start, facet* end, facet* new1, facet*new2, facet* hullMem, intT listN) {
+  intT lmSize = 0;
+  pointNode** lm = &start->at(0);
+
+  auto ptr = start;
+  do {
+    for(intT i=0; i<ptr->size(); ++i) {
+      auto pn = ptr->at(i);
+      pn->seeFacet = NULL;
+      if (new1->visibleFrom(pn->p) ||
+	  new2->visibleFrom(pn->p)) {
+	lm[lmSize++] = pn;}
+    }
+    ptr = ptr->next;
+  } while (ptr != end);
+
+  auto predicate = [&](intT i) {
+		     return new1->visibleFrom(lm[i]->p);// && !new2->visibleFrom(lm[i]->p);
+		   };
+
+  intT lPt = 0;
+  intT rPt = lmSize-1;
+  while (lPt < rPt) {
+    if (predicate(lPt)) {
+      lm[lPt]->seeFacet = new1;
+    } else {
+      while (!predicate(rPt) && lPt < rPt) {
+	lm[rPt]->seeFacet = new2;
+	rPt--;
+      }
+      lm[lPt]->seeFacet = new2;
+      if (lPt < rPt) {
+	lm[rPt]->seeFacet = new1;
+	swap(lm[lPt], lm[rPt]);
+	rPt--; }
+      else {break;}
+    }
+    lPt++;
+  }
+  if (predicate(lPt)) {
+    lm[lPt]->seeFacet = new1;
+    lPt++;
+  } else {
+    lm[lPt]->seeFacet = new2;
+  }
+
+  new1->s = start->s;
+  new1->e = new1->s + lPt;
+  new2->s = new1->e;
+  new2->e = new2->s + lmSize-lPt;
+
+  auto prev = start->prev;
+  start->copy(new1);
+  start->prev = prev;
+  prev->next = start;
+
+  facet* new2new = start + start->size() + 1;
+  intT offset = new2new - hullMem;
+  if (offset >= listN)//wrap around
+    new2new = hullMem + (offset % listN);
+  new2new->copy(new2);
+
+  start->next = new2new;
+  new2new->prev = start;
+  new2new->next = end;
+  end->prev = new2new;
+
+  //todo simplify this part
+  for(intT i=0; i<start->size(); ++i)
+    start->at(i)->seeFacet = start;
+  for(intT i=0; i<new2new->size(); ++i)
+    new2new->at(i)->seeFacet = new2new;
+
+  return start;
+}
+
 facet* hullIncrement(facet* start, facet* end, facet* new1, facet*new2, facet* hullMem, intT listN) {
   intT lmSize = 0;
   auto ptr = start;
@@ -203,29 +276,188 @@ facet* hullIncrement(facet* start, facet* end, facet* new1, facet*new2, facet* h
   return start;
 }
 
+//given facet H, find furthest visible point (only among recorded)
+inline pointNode* findPivot(facet* H) {
+  auto f = H;
+  while (f->size()<=0 && f->next!=H) f = f->next;
+  if (f->size() <= 0) return (pointNode*)NULL;
+  point2d l = f->p1;
+  point2d r = f->p2;
+  auto triangArea = [&](intT idx)
+		    {
+		      return triArea(l, r, f->at(idx)->p);
+		    };
+  intT idx = sequence::maxIndex<double>((intT)0, (intT)f->size(), greater<floatT>(), triangArea);
+  return f->at(idx);
+}
+
+facet* incrementParallel(pointNode* PN, intT n, facet* H, facet* hullMem, ringBuffer<pointNode*>& listMem, intT listN) {
+  static bool brute = false;//bruteforce takes O(h) time to determine visible facets
+  static bool verbose = false;
+  static bool farPivot = false;
+  auto idx = [&](facet* f) {return f-hullMem;};
+
+  intT* reservation = newA(intT, listN);
+  parallel_for(0, listN, [&](intT i) {reservation[i]=intMax();});
+
+  intT* flag = newA(intT, n+1);
+
+  pointNode** pointers = newA(pointNode*, n);
+  pointNode** pointers2 = newA(pointNode*, n);
+  parallel_for(0, n, [&](intT i){pointers[i] = &PN[i];});
+
+  while(n > 10000) {
+
+    //reservation
+    parallel_for(0, n,
+		 [&](intT i) {
+		   auto pr = *pointers[i];
+		   if (pr.seeFacet) {//skip non-conflicting points
+
+		     //find range of visible facets [left, right)
+		     pair<facet*, facet*> conflicts;
+		     if (brute) {
+		       conflicts = findVisible(H, pr.p);
+		     } else {
+		       conflicts = findVisible(pr.seeFacet, pr.p);
+		     }
+
+		     facet* start = conflicts.first;
+		     facet*   end = conflicts.second;
+		     if (start && end) {
+		       auto ptr = start->prev;
+		       do {
+			 utils::writeMin(&reservation[idx(ptr)], i);
+			 ptr = ptr->next;
+		       } while (ptr != end->next);
+		     }
+		   };
+		 });
+
+    //processing
+    parallel_for(0, n,
+		 [&](intT i) {
+		   auto pr = *pointers[i];
+		   if (pr.seeFacet) {//skip non-conflicting points
+		     if(verbose) cout << " pr = " << pr.p << ", sees " << pr.seeFacet << endl;
+
+		     //find range of visible facets [left, right), AGAIN. todo make efficient
+		     pair<facet*, facet*> conflicts;
+		     if (brute) {
+		       conflicts = findVisible(H, pr.p);
+		     } else {
+		       conflicts = findVisible(pr.seeFacet, pr.p);
+		     }
+		     facet* start = conflicts.first;
+		     facet*   end = conflicts.second;
+
+		     //confirm reservation
+		     bool reserved = true;
+		     auto ptr = start->prev;
+		     do {
+		       if (reservation[idx(ptr)] != i) {
+			 reserved = false;
+			 break;}
+
+		       ptr = ptr->next;
+		     } while (ptr != end->next);
+
+		     if (start && end) {
+		       if(reserved) {
+			 //compute new faces
+			 facet new1 = facet(start->p1, pr.p, &listMem);
+			 facet new2 = facet(pr.p, end->p1, &listMem);
+
+			 if (verbose) {
+			   cout << "deleting = ";
+			   auto ptr = start;
+			   do {
+			     cout << *ptr << ", ";
+			     ptr = ptr->next;
+			   } while (ptr != end);
+			   cout << endl;
+			 }
+
+			 //if not finding visible facets by bruteforce
+			 // update visibility pointers
+			 if (!brute) {
+			   auto tmp = hullIncrement(start, end, &new1, &new2, hullMem, listN);
+			   if (i == 0) H = tmp;
+			   reservation[idx(H)] = intMax();
+			   reservation[idx(H->next)] = intMax();
+			   //todo inplace hull inc
+			 }
+
+			 flag[i] = 0;//processed
+		       } else {
+			 flag[i] = 1;//reservation fail
+		       }
+		     } else {
+		       flag[i] = 0;//inside hull
+		     }
+		   } else {
+		     flag[i] = 0;
+		   }
+		 });//end second for
+
+    flag[n] = sequence::prefixSum(flag, 0, n);
+    cout << "processed " << n-flag[n] << "/" << n << endl;
+    parallel_for(0, n, [&](intT i){
+			 if(flag[i] != flag[i+1]) {
+			   pointers2[flag[i]] = pointers[i];
+			 }
+		       });
+    swap(pointers, pointers2);
+
+    n = flag[n];
+  }//end while
+
+  free(reservation);
+  free(pointers2);
+  free(flag);
+
+  //processes remaining serially
+  intT i=0;
+  cout << "process-serial = " << n << endl;
+  while(i < n) {
+    auto pr = *pointers[i];
+    i++;
+
+    if (pr.seeFacet) {//skip non-conflicting points
+
+      //find range of visible facets [left, right), AGAIN. todo make efficient
+      pair<facet*, facet*> conflicts;
+      if (brute) {
+	conflicts = findVisible(H, pr.p);
+      } else {
+	conflicts = findVisible(pr.seeFacet, pr.p);
+      }
+      facet* start = conflicts.first;
+      facet*   end = conflicts.second;
+
+      if (start && end) {
+	//compute new faces
+	facet new1 = facet(start->p1, pr.p, &listMem);
+	facet new2 = facet(pr.p, end->p1, &listMem);
+
+	if (!brute) {
+	  H = hullIncrement(start, end, &new1, &new2, hullMem, listN);
+	  //todo inplace hull inc
+	}
+      }
+    }
+  }//end while
+
+  free(pointers);
+  return H;
+}
+
 facet* incrementSerial(pointNode* PN, intT n, facet* H, facet* hullMem, ringBuffer<pointNode*>& listMem, intT listN) {
   static bool brute = false;//bruteforce takes O(h) time to determine visible facets
   static bool verbose = false;
   static bool localPivot = false;
 
-    //given facet H, find furthest visible point (only among recorded)
-  auto findPivot = [&](facet* H)
-    {
-      auto f = H;
-      while (f->size()<=0 && f->next!=H) f = f->next;
-      if (f->size() <= 0) return (pointNode*)NULL;
-      point2d l = f->p1;
-      point2d r = f->p2;
-      auto triangArea = [&](intT idx)
-      {
-	return triArea(l, r, f->at(idx)->p);
-      };
-      intT idx = sequence::maxIndex<double>((intT)0, (intT)f->size(), greater<floatT>(), triangArea);
-      return f->at(idx);
-    };
-
   intT i = 0;
-  floatT splitTime = 0;
   while(1) {
     if(verbose) cout << "--- iter" << i << endl;
 
@@ -276,10 +508,8 @@ facet* incrementSerial(pointNode* PN, intT n, facet* H, facet* hullMem, ringBuff
       //if not finding visible facets by bruteforce
       // update visibility pointers
       if (!brute) {
-	timing t0; t0.start();
-        H = hullIncrement(start, end, &new1, &new2, hullMem, listN);
-	//inplaceSplit(start, end, &new1, &new2);//todo
-	splitTime += t0.stop();
+        //H = hullIncrement(start, end, &new1, &new2, hullMem, listN);
+        H = hullIncInPlace(start, end, &new1, &new2, hullMem, listN);
       }
 
       if(verbose) {
@@ -289,13 +519,12 @@ facet* incrementSerial(pointNode* PN, intT n, facet* H, facet* hullMem, ringBuff
     }
   }
 
-  cout << " split-time = " << splitTime << endl;
   return H;
 }
 
 _seq<intT> hull(point2d* P, intT n) {
   static bool verbose = false;
-  static bool verify = false;
+  static bool verify = true;
 
   timing t; t.start();
 
@@ -385,7 +614,8 @@ _seq<intT> hull(point2d* P, intT n) {
   }
   cout << "init-time = " << t.next() << endl;
 
-  H = incrementSerial(PN, n-3, H, H, listMem, n);
+  //H = incrementSerial(PN, n-3, H, H, listMem, n);
+  H = incrementParallel(PN, n-3, H, H, listMem, n);
   free(PN);
 
   cout << "increment-time = " << t.next() << endl;
