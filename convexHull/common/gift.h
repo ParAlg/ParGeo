@@ -19,6 +19,9 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#ifndef GIFT_H
+#define GIFT_H
+
 #include "geometry.h"
 #include "hull.h"
 
@@ -27,7 +30,7 @@ _seq<intT> giftWrapSerial(point2d* P, intT n, intT* I=NULL) {
   auto angle = [&](point2d& a, point2d& b, point2d& c) {
 		 point2d ab = b-a;
 		 point2d bc = c-b;
-		 return acos(ab.dot(bc) / (ab.length()*bc.length()));
+		 return acos(ab.dot(bc) / (ab.length()*bc.length()));//this is SUPER expensive, todo
 	       };
 
   if (!I) {
@@ -102,3 +105,5 @@ _seq<intT> giftWrapParallel(point2d* P, intT n, intT* I=NULL) {
   }
   return _seq<intT>(I, m);
 }
+
+#endif
