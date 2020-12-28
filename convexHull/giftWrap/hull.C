@@ -22,7 +22,6 @@
 #include "pbbs/gettime.h"
 #include "geometry.h"
 #include "hull.h"
-#include "serialQuick.h"
 #include "gift.h"
 
 using namespace std;

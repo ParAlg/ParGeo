@@ -20,17 +20,101 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#ifndef PAR_QUICK_H
-#define PAR_QUICK_H
+#ifndef QUICK_H
+#define QUICK_H
 
 #include <algorithm>
 #include "pbbs/parallel.h"
 #include "pbbs/sequence.h"
 #include "pbbs/gettime.h"
+#include "hull.h"
 #include "geometry.h"
-#include "serialQuick.h"
+
 using namespace std;
 using namespace sequence;
+
+template <class ET, class F>
+pair<intT,intT> split(ET* A, intT n, F lf, F rf) {
+  intT ll = 0, lm = 0;
+  intT rm = n-1, rr = n-1;
+  while (1) {
+    while ((lm <= rm) && !(rf(A[lm]) > 0)) {
+      if (lf(A[lm]) > 0) A[ll++] = A[lm];
+      lm++;
+    }
+    while ((rm >= lm) && !(lf(A[rm]) > 0)) {
+      if (rf(A[rm]) > 0) A[rr--] = A[rm];
+      rm--;
+    }
+    if (lm >= rm) break;
+    ET tmp = A[lm++];
+    A[ll++] = A[rm--];
+    A[rr--] = tmp;
+  }
+  intT n1 = ll;
+  intT n2 = n-rr-1;
+  return pair<intT,intT>(n1,n2);
+}
+
+struct aboveLine {
+  intT l, r;
+  point2d* P;
+  aboveLine(point2d* _P, intT _l, intT _r) : P(_P), l(_l), r(_r) {}
+  bool operator() (intT i) {return triArea(P[l], P[r], P[i]) > numericKnob;}
+};
+
+intT serialQuickHullHelper(intT* I, point2d* P, intT n, intT l, intT r) {
+  if (n < 2) return n;
+  intT maxP = I[0];
+  double maxArea = triArea(P[l],P[r],P[maxP]);
+  for (intT i=1; i < n; i++) {
+    intT j = I[i];
+    double a = triArea(P[l],P[r],P[j]);
+    if (a > maxArea) {
+      maxArea = a;
+      maxP = j;
+    }
+  }
+
+  pair<intT,intT> nn = split(I, n, aboveLine(P,l,maxP), aboveLine(P,maxP,r));
+  intT n1 = nn.first;
+  intT n2 = nn.second;
+
+  intT m1, m2;
+  m1 = serialQuickHullHelper(I,      P, n1, l,   maxP);
+  m2 = serialQuickHullHelper(I+n-n2, P, n2, maxP,r);
+  for (intT i=0; i < m2; i++) I[i+m1+1] = I[i+n-n2];
+  I[m1] = maxP;
+  return m1+1+m2;
+}
+
+_seq<intT> quickHullSerial(point2d* P, intT n, intT* I=NULL) {
+  if (!I) {
+    I = newA(intT, n);
+  }
+  for(intT i=0; i<n; ++i) {I[i] = i;}
+
+  intT l = 0;
+  intT r = 0;
+  for (intT i=1; i < n; i++) {
+    if (P[i].x() > P[r].x()) r = i;
+    if (P[i].x() < P[l].x() || ((P[i].x() == P[l].x()) && P[i].y() < P[l].y()))
+      l = i;
+  }
+
+  pair<intT,intT> nn = split(I, n, aboveLine(P, l, r), aboveLine(P, r, l));
+  intT n1 = nn.first;
+  intT n2 = nn.second;
+
+  intT m1 = serialQuickHullHelper(I, P, n1, l, r);
+  intT m2 = serialQuickHullHelper(I+n-n2, P, n2, r, l);
+
+  for (intT i=m1; i > 0; i--) I[i] = I[i-1];
+  for (intT i=0; i < m2; i++) I[i+m1+2] = I[i+n-n2];
+  I[0] = l;
+  I[m1+1] = r;
+  return _seq<intT>(I, m1+2+m2);
+}
 
 struct triangArea {
   intT l, r;
@@ -40,7 +124,7 @@ struct triangArea {
   double operator() (intT i) {return triArea(P[l], P[r], P[I[i]]);}
 };
 
-intT quickHull(intT* I, intT* Itmp, point2d* P, intT n, intT l, intT r, intT depth) {
+intT quickHullHelper(intT* I, intT* Itmp, point2d* P, intT n, intT l, intT r, intT depth) {
   if (n < 10000 || depth == 0)
     return serialQuickHullHelper(I, P, n, l, r);
   else {
@@ -52,8 +136,8 @@ intT quickHull(intT* I, intT* Itmp, point2d* P, intT n, intT l, intT r, intT dep
     intT n2 = filter(I, Itmp+n1, n, aboveLine(P, maxP, r));
 
     intT m1, m2;
-    par_do([&](){m1 = quickHull(Itmp, I ,P, n1, l, maxP, depth-1);},
-	   [&](){m2 = quickHull(Itmp+n1, I+n1, P, n2, maxP, r, depth-1);});
+    par_do([&](){m1 = quickHullHelper(Itmp, I ,P, n1, l, maxP, depth-1);},
+	   [&](){m2 = quickHullHelper(Itmp+n1, I+n1, P, n2, maxP, r, depth-1);});
 
     parallel_for (0, m1, [&](intT i) {I[i] = Itmp[i];});
     I[m1] = maxP;
@@ -79,7 +163,7 @@ struct minMaxIndex {
   }
 };
 
-_seq<intT> hullInternal(point2d* P, intT n) {
+_seq<intT> quickHullParallel(point2d* P, intT n) {
   static const intT DEPTH = 10;
 
   pair<intT,intT> minMax = reduce<pair<intT,intT> >((intT)0,n,minMaxIndex(P), makePair());
@@ -101,8 +185,8 @@ _seq<intT> hullInternal(point2d* P, intT n) {
   free(fTop); free(fBot);
 
   intT m1; intT m2;
-  par_do([&](){m1 = quickHull(I, Itmp, P, n1, l, r, DEPTH);},
-	 [&](){m2 = quickHull(I+n1, Itmp+n1, P, n2, r, l, DEPTH);});
+  par_do([&](){m1 = quickHullHelper(I, Itmp, P, n1, l, r, DEPTH);},
+	 [&](){m2 = quickHullHelper(I+n1, Itmp+n1, P, n2, r, l, DEPTH);});
 
   parallel_for (0, m1, [&](intT i) {Itmp[i+1] = I[i];});
   parallel_for (0, m2, [&](intT i) { Itmp[i+m1+2] = I[i+n1];});

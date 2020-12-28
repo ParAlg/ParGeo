@@ -26,25 +26,27 @@
 #include "pbbs/sampleSort.h"
 #include "pbbs/gettime.h"
 #include "geometry.h"
-#include "serialQuick.h"
-#include "parQuick.h"
+#include "quick.h"
+#include "gift.h"
 using namespace std;
 using namespace sequence;
 
 _seq<intT> hull(point2d* P, intT n) {
   static const bool sortPoint=false;
+  //0: quickHull, 1: giftWrap
+  static const intT baseMethod = 0;
   auto procs = getWorkers();
   timing t; t.start();
   timing t1; t1.start();
 
   if (n < 2000) {
-    intT* I = newA(intT, n);
-    for (intT i=0; i < n; i++) I[i] = i;
-    intT m = serialQuickHull(I, P, n);
+    _seq<intT> CH;
+    if (baseMethod == 0) CH = quickHullSerial(P, n);
+    else if (baseMethod == 1) CH = giftWrapSerial(P, n);
     cout << "serial-hull-time = " << t.stop() << endl;
 
-    check(P, n, I, m);
-    return _seq<intT>(I, m);
+    check(P, n, CH.A, CH.n);
+    return CH;
   }
 
   if (sortPoint) {
@@ -63,13 +65,13 @@ _seq<intT> hull(point2d* P, intT n) {
 	       [&](intT i) {
 		 intT o = blk*i;
 		 if (i != procs-1) {
-		   for(intT j=0; j<blk; ++j) I[j+o] = j;
-		   M[i] = serialQuickHull(I+o, P+o, blk);
+		   if (baseMethod == 0) M[i] = quickHullSerial(P+o, blk, I+o).n;
+		   else if (baseMethod == 1) M[i] = giftWrapSerial(P+o, blk, I+o).n;
 		   //check(P+o, blk, I+o, M[i]);
 		 } else {
 		   intT blkLast = max(blk, n-blk*(procs-1));
-		   for(intT j=0; j<blkLast; ++j) I[j+o] = j;
-		   M[i] = serialQuickHull(I+o, P+o, blkLast);
+		   if (baseMethod == 0) M[i] = quickHullSerial(P+o, blkLast, I+o).n;
+		   else if (baseMethod == 1) M[i] = giftWrapSerial(P+o, blkLast, I+o).n;
 		   //check(P+o, blkLast, I+o, M[i]);
 		 }
 	       }, 1);
@@ -92,10 +94,18 @@ _seq<intT> hull(point2d* P, intT n) {
 
   intT m2;
   if (M[procs] < 2000) {
-    parallel_for(0, M[procs], [&](intT i) {I[i] = i;});
-    m2 = serialQuickHull(I, PP, M[procs]);
+    if (baseMethod == 0) {
+      m2 = quickHullSerial(PP, M[procs], I).n;
+    } else if (baseMethod == 1) {
+      m2 = giftWrapSerial(PP, M[procs], I).n;
+    }
   } else {
-    auto CH = hullInternal(PP, M[procs]);
+    _seq<intT> CH;
+    if (baseMethod == 0) {
+      CH = quickHullParallel(PP, M[procs]);
+    } else if (baseMethod == 1) {
+      CH = giftWrapParallel(PP, M[procs]);
+    }
     m2 = CH.n;
     free(I);
     I = CH.A;

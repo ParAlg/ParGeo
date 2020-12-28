@@ -20,11 +20,11 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include "parQuick.h"
+#include "quick.h"
 
 _seq<intT> hull(point2d* P, intT n) {
   timing t; t.start();
-  auto CH = hullInternal(P,n);
+  auto CH = quickHullParallel(P,n);
   cout << "hull-time = " << t.stop() << endl;
   check(P, n, CH.A, CH.n);
   return CH;

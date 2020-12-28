@@ -22,7 +22,7 @@
 #include "geometry.h"
 #include "hull.h"
 
-_seq<intT> giftWrapSerial(point2d* P, intT n) {
+_seq<intT> giftWrapSerial(point2d* P, intT n, intT* I=NULL) {
   static const bool verbose = false;
   auto angle = [&](point2d& a, point2d& b, point2d& c) {
 		 point2d ab = b-a;
@@ -30,8 +30,9 @@ _seq<intT> giftWrapSerial(point2d* P, intT n) {
 		 return acos(ab.dot(bc) / (ab.length()*bc.length()));
 	       };
 
-  intT* I = newA(intT, n);
-  for (intT i=0; i < n; i++) I[i] = i;
+  if (!I) {
+    I = newA(intT, n);
+  }
   intT m=0;
 
   auto findLeft = [&](intT i) {return P[i].x();};
@@ -61,7 +62,7 @@ _seq<intT> giftWrapSerial(point2d* P, intT n) {
   return _seq<intT>(I, m);
 }
 
-_seq<intT> giftWrapParallel(point2d* P, intT n) {
+_seq<intT> giftWrapParallel(point2d* P, intT n, intT* I=NULL) {
   static const bool verbose = false;
   auto angle = [&](point2d& a, point2d& b, point2d& c) {
 		 point2d ab = b-a;
@@ -69,8 +70,10 @@ _seq<intT> giftWrapParallel(point2d* P, intT n) {
 		 return acos(ab.dot(bc) / (ab.length()*bc.length()));
 	       };
 
-  intT* I = newA(intT, n);
-  for (intT i=0; i < n; i++) I[i] = i;
+  if (!I) {
+    I = newA(intT, n);
+  }
+
   intT m=0;
 
   auto findLeft = [&](intT i) {return P[i].x();};
