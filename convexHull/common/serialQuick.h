@@ -112,6 +112,10 @@ intT serialQuickHull(intT* I, point2d* P, intT n) {
 
 void check(point2d* P, intT n, intT* I, intT m, point2d* CH=NULL) {
   if (!CH) CH = P;
+  // for(intT i=0; i<m; ++i) {
+  //   cout << CH[I[i]] << " ";
+  // }
+  // cout << endl;
   cout << "hull size = " << m << endl;
   intT nume = 0;
   for(intT i=0; i<m; ++i) {

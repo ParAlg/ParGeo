@@ -190,6 +190,11 @@ public:
     for (int i=0; i<dim; ++i) r[i] /= s;
     return r;
   }
+  floatT length() {
+    floatT xx=0;
+    for (int i=0; i<_dim; ++i) xx += x[i]*x[i];
+    return sqrt(xx);
+  }
 };
 
 template <int dim>
@@ -270,6 +275,7 @@ public:
   point2d operator/(floatT dd) {return point2d(x()/dd, y()/dd);}//todo
   point2d operator+(vect2d op2) {return point2d(x() + op2.x(), y() + op2.y());}//todo
   vect2d operator-(point2d op2) {return vect2d(x() - op2.x(), y() - op2.y());}
+  floatT dot(point2d op2) {return p.dot(op2.p);}
   floatT& operator[] (int i) {return p[i];};
   point2d minCoords(point2d b) {
     return point2d(min(x(),b.x()),min(y(),b.y()));}
@@ -305,6 +311,7 @@ public:
     return p.distSqr(p2.p);
   }
   point2d average(point2d p2) {return p.average(p2.p);}
+  floatT length() {return p.length();}
   static const int dim = 2;
 };
 
