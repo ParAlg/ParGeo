@@ -34,7 +34,7 @@ void bench(point<dim>* P, intT n) {
   cout << "testing " << n << ", dim " << dim << " points" << endl;
   if (n < 2) abort();
 
-  perfTest<dim>(P, n);
+  perfTest<dim>(P, n, n*10);
 }
 
 template void bench<2>(point<2>*, intT);
