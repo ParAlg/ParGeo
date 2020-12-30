@@ -532,79 +532,97 @@ _seq<intT> hull(point2d* P, intT n) {
   auto p1 = P[0].x() < P[1].x() ? P[1] : P[0];
   auto p2 = P[2];
 
-  ringBuffer<pointNode*> listMem = ringBuffer<pointNode*>(n*3);
-  for(intT i=0; i<n*3; ++i) listMem[i] = NULL;
+  ringBuffer<pointNode*> listMem = ringBuffer<pointNode*>(n*4);
+  for(intT i=0; i<n*4; ++i) listMem[i] = NULL;
 
-  //todo start with a half-constructed hull
-  facet f0, f1, f2;
-  facet* H;
-  if (triArea(p0, p1, p2) > 0.0) {
-    f0.init(p0, p2, &listMem);
-    f1.init(p2, p1, &listMem);
-    f2.init(p1, p0, &listMem);
-    f0.next = &f1; f1.prev = &f0;
-    f1.next = &f2; f2.prev = &f1;
-    f2.next = &f0; f0.prev = &f2;
-    H = &f0;
-  } else {
-    f0.init(p0, p1, &listMem);
-    f1.init(p1, p2, &listMem);
-    f2.init(p2, p0, &listMem);
-    f0.next = &f1; f1.prev = &f0;
-    f1.next = &f2; f2.prev = &f1;
-    f2.next = &f0; f0.prev = &f2;
-    H = &f0;
+  // Akl–Toussaint heuristic
+  intT iTop, iBot, iLeft, iRight;
+  floatT vTop, vBot, vLeft, vRight;
+  vTop = floatMin();
+  vBot = floatMax();
+  vLeft = floatMax();
+  vRight = floatMin();
+  for(intT i=0; i<n; ++i) {
+    floatT x = P[i].x();
+    floatT y = P[i].y();
+    if (y > vTop) {
+      vTop = y;
+      iTop = i;}
+    if (y < vBot) {
+      vBot = y;
+      iBot = i;}
+    if (x > vRight) {
+      vRight = x;
+      iRight = i;}
+    if (x < vLeft) {
+      vLeft = x;
+      iLeft = i;}
   }
+  facet f0, f1, f2, f3;
+  f0.init(P[iLeft], P[iTop], &listMem);
+  f1.init(P[iTop], P[iRight], &listMem);
+  f2.init(P[iRight], P[iBot], &listMem);
+  f3.init(P[iBot], P[iLeft], &listMem);
+
+  f0.s = 0;
+  f0.e = 0;
+  f1.s = n;
+  f1.e = n;
+  f2.s = 2*n;
+  f2.e = 2*n;
+  f3.s = 3*n;
+  f3.e = 3*n;
+
+  intT iSize = 0;
+
+  pointNode* PN = newA(pointNode, n-iSize);
+  for(intT i=0; i<n-iSize; ++i) {
+    PN[i] = pointNode(P[i+iSize]);
+    if (f0.visibleFrom(P[i+iSize])) {
+      f0.push_back(&PN[i]);
+    }
+    else if (f1.visibleFrom(P[i+iSize])) {
+      f1.push_back(&PN[i]);
+    }
+    else if (f2.visibleFrom(P[i+iSize])) {
+      f2.push_back(&PN[i]);
+    }
+    else if (f3.visibleFrom(P[i+iSize])) {
+      f3.push_back(&PN[i]);
+    }
+  }
+
+  facet* H = newA(facet, n);
+  intT o0 = 0;
+  intT o1 = 1+f0.size();
+  intT o2 = o1+1+f1.size();
+  intT o3 = o2+1+f2.size();
+  H[o0].copy(&f0);
+  H[o0].prev = &H[o3];
+  H[o0].next = &H[o1];
+  H[o1].copy(&f1);
+  H[o1].prev = &H[o0];
+  H[o1].next = &H[o2];
+  H[o2].copy(&f2);
+  H[o2].prev = &H[o1];
+  H[o2].next = &H[o3];
+  H[o3].copy(&f3);
+  H[o3].prev = &H[o2];
+  H[o3].next = &H[o0];
+
+  granular_for(0, H[0].size(), 2000,
+	       [&](intT i) {H[0][i]->seeFacet = &H[0];});
+  granular_for(0, H[o1].size(), 2000,
+	       [&](intT i){H[o1][i]->seeFacet = &H[o1];});
+  granular_for(0, H[o2].size(), 2000,
+	       [&](intT i){H[o2][i]->seeFacet = &H[o2];});
+  granular_for(0, H[o3].size(), 2000,
+	       [&](intT i){H[o3][i]->seeFacet = &H[o3];});
 
   if(verbose) {
     cout << "initial-hull = ";
     printHull(H, H);
-  }
 
-  H->s = 0;
-  H->e = 0;
-  H->next->s = n;
-  H->next->e = n;
-  H->next->next->s = 2*n;
-  H->next->next->e = 2*n;
-
-  pointNode* PN = newA(pointNode, n-3);
-  for(intT i=0; i<n-3; ++i) {
-    PN[i] = pointNode(P[i+3]);
-    auto ptr = H;
-    do {
-      if (ptr->visibleFrom(P[i+3])) {
-        PN[i].seeFacet = ptr;
-        ptr->push_back(&PN[i]);
-        break; //each point only records one visible facet
-      }
-      ptr = ptr->next;
-    } while (ptr != H);
-  }
-
-  facet* H2 = newA(facet, n);
-  intT o1 = 1+H->size();
-  intT o2 = o1+1+H->next->size();
-  H2[0].copy(H);
-  H2[0].prev = &H2[o2];
-  H2[0].next = &H2[o1];
-  H2[o1].copy(H->next);
-  H2[o1].prev = &H2[0];
-  H2[o1].next = &H2[o2];
-  H2[o2].copy(H->next->next);
-  H2[o2].prev = &H2[o1];
-  H2[o2].next = &H2[0];
-
-  granular_for(0, H2[0].size(), 2000,
-	       [&](intT i) {H2[0][i]->seeFacet = &H2[0];});
-  granular_for(0, H2[o1].size(), 2000,
-	       [&](intT i){H2[o1][i]->seeFacet = &H2[o1];});
-  granular_for(0, H2[o2].size(), 2000,
-	       [&](intT i){H2[o2][i]->seeFacet = &H2[o2];});
-
-  H = H2;
-
-  if(verbose) {
     auto ptr = H;
     do {
       cout << "facet size = " << ptr->size() << endl;
@@ -614,8 +632,7 @@ _seq<intT> hull(point2d* P, intT n) {
   }
   cout << "init-time = " << t.next() << endl;
 
-  //H = incrementSerial(PN, n-3, H, H, listMem, n);
-  H = incrementParallel(PN, n-3, H, H, listMem, n);
+  H = incrementParallel(PN, n-iSize, H, H, listMem, n);
   free(PN);
 
   cout << "increment-time = " << t.next() << endl;

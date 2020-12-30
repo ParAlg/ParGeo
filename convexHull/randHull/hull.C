@@ -101,43 +101,55 @@ _seq<intT> hull(point2d* P, intT n) {
   static bool verbose = false;
   static bool brute = false;//visibility check
   static bool verify = false;
-  static bool localPivot = false;
+  static bool localPivot = true;
 
   timing t; t.start();
 
-  auto p0 = P[0].x() < P[1].x() ? P[0] : P[1];//left of p1
-  auto p1 = P[0].x() < P[1].x() ? P[1] : P[0];
-  auto p2 = P[2];
-
-  facet* H;
-  if (triArea(p0, p1, p2) > 0.0) {
-    auto f0 = new facet(p0, p2);
-    auto f1 = new facet(p2, p1);
-    auto f2 = new facet(p1, p0);
-    f0->next = f1; f1->prev = f0;
-    f1->next = f2; f2->prev = f1;
-    f2->next = f0; f0->prev = f2;
-    H = f0;
-  } else {
-    auto f0 = new facet(p0, p1);
-    auto f1 = new facet(p1, p2);
-    auto f2 = new facet(p2, p0);
-    f0->next = f1; f1->prev = f0;
-    f1->next = f2; f2->prev = f1;
-    f2->next = f0; f0->prev = f2;
-    H = f0;
+  // Akl–Toussaint heuristic
+  intT iTop, iBot, iLeft, iRight;
+  floatT vTop, vBot, vLeft, vRight;
+  vTop = floatMin();
+  vBot = floatMax();
+  vLeft = floatMax();
+  vRight = floatMin();
+  for(intT i=0; i<n; ++i) {
+    floatT x = P[i].x();
+    floatT y = P[i].y();
+    if (y > vTop) {
+      vTop = y;
+      iTop = i;}
+    if (y < vBot) {
+      vBot = y;
+      iBot = i;}
+    if (x > vRight) {
+      vRight = x;
+      iRight = i;}
+    if (x < vLeft) {
+      vLeft = x;
+      iLeft = i;}
   }
+  auto f0 = new facet(P[iLeft], P[iTop]);
+  auto f1 = new facet(P[iTop], P[iRight]);
+  auto f2 = new facet(P[iRight], P[iBot]);
+  auto f3 = new facet(P[iBot], P[iLeft]);
+  f0->next = f1; f1->prev = f0;
+  f1->next = f2; f2->prev = f1;
+  f2->next = f3; f3->prev = f2;
+  f3->next = f0; f0->prev = f3;
+  facet* H = f0;
+  intT iSize = 0;
+
   if(verbose) {
     cout << "initial-hull = ";
     printHull(H, H);
   }
 
-  pointNode* PN = newA(pointNode, n-3);
-  for(intT i=0; i<n-3; ++i) {
-    PN[i] = pointNode(P[i+3]);
+  pointNode* PN = newA(pointNode, n-iSize);
+  for(intT i=0; i<n-iSize; ++i) {
+    PN[i] = pointNode(P[i+iSize]);
     auto ptr = H;
     do {
-      if (ptr->visibleFrom(P[i+3])) {
+      if (ptr->visibleFrom(P[i+iSize])) {
         PN[i].seeFacet = ptr;
         ptr->seeList.push_back(&PN[i]);//todo this vector needs to be simplified (mem management)
         break; //each point only records one visible facet
@@ -173,7 +185,7 @@ _seq<intT> hull(point2d* P, intT n) {
       if (!prp) break;
       pr = *prp;
     } else {
-      if (i>=n-3) break;
+      if (i>=n-iSize) break;
       pr = PN[i];
       if (!pr.seeFacet) {
 	i++;

@@ -28,12 +28,13 @@
 #include "geometry.h"
 #include "quick.h"
 #include "gift.h"
+#include "graham.h"
 using namespace std;
 using namespace sequence;
 
 _seq<intT> hull(point2d* P, intT n) {
   static const bool sortPoint=false;
-  //0: quickHull, 1: giftWrap
+  //0: quickHull, 1: giftWrap, 2: graham
   static const intT baseMethod = 0;
   auto procs = getWorkers();
   timing t; t.start();
@@ -43,6 +44,9 @@ _seq<intT> hull(point2d* P, intT n) {
     _seq<intT> CH;
     if (baseMethod == 0) CH = quickHullSerial(P, n);
     else if (baseMethod == 1) CH = giftWrapSerial(P, n);
+    else if (baseMethod == 2) CH = grahamScanSerial(P, n);
+    else {
+      cout << "Error, wrong method number, abort." << endl; abort();}
     cout << "serial-hull-time = " << t.stop() << endl;
 
     check(P, n, CH.A, CH.n);
@@ -67,11 +71,17 @@ _seq<intT> hull(point2d* P, intT n) {
 		 if (i != procs-1) {
 		   if (baseMethod == 0) M[i] = quickHullSerial(P+o, blk, I+o).n;
 		   else if (baseMethod == 1) M[i] = giftWrapSerial(P+o, blk, I+o).n;
+		   else if (baseMethod == 2) M[i] = grahamScanSerial(P+o, blk, I+o).n;
+		   else {
+		     cout << "Error, wrong method number, abort." << endl; abort();}
 		   //check(P+o, blk, I+o, M[i]);
 		 } else {
 		   intT blkLast = max(blk, n-blk*(procs-1));
 		   if (baseMethod == 0) M[i] = quickHullSerial(P+o, blkLast, I+o).n;
 		   else if (baseMethod == 1) M[i] = giftWrapSerial(P+o, blkLast, I+o).n;
+		   else if (baseMethod == 2) M[i] = grahamScanSerial(P+o, blkLast, I+o).n;
+		   else {
+		     cout << "Error, wrong method number, abort." << endl; abort();}
 		   //check(P+o, blkLast, I+o, M[i]);
 		 }
 	       }, 1);
@@ -98,14 +108,18 @@ _seq<intT> hull(point2d* P, intT n) {
       m2 = quickHullSerial(PP, M[procs], I).n;
     } else if (baseMethod == 1) {
       m2 = giftWrapSerial(PP, M[procs], I).n;
-    }
+    } else if (baseMethod == 2) {
+      m2 = grahamScanSerial(PP, M[procs], I).n;
+    } else {
+      cout << "Error, wrong method number, abort." << endl; abort();}
   } else {
     _seq<intT> CH;
-    if (baseMethod == 0) {
+    if (baseMethod == 0 || baseMethod == 2) {
       CH = quickHullParallel(PP, M[procs]);
     } else if (baseMethod == 1) {
       CH = giftWrapParallel(PP, M[procs]);
-    }
+    } else {
+      cout << "Error, wrong method number, abort." << endl; abort();}
     m2 = CH.n;
     free(I);
     I = CH.A;
