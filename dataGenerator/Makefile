@@ -43,13 +43,10 @@ GENERATORS = uniform
 .PHONY: all clean
 all: $(GENERATORS)
 
-$(COMMON) :
-	ln -s ../../common/$@ .
-
 %.o : %.C $(COMMON)
-	$(CC) $(PFLAGS) -c $< -o $@
+	$(CC) $(PFLAGS) $(CFLAGS) -c $< -o $@
 
 uniform : uniform.C geometryData.h $(COMMON)
-	$(CC) $(PFLAGS) -o $@ $@.C
+	$(CC) $(PFLAGS) $(CFLAGS) -o $@ $@.C
 clean :
 	rm -f *.o $(GENERATORS)
