@@ -56,21 +56,22 @@ void bench(point<dim>* P, intT n) {
 
   auto cmp = [&](pointT a, pointT b)
              {
-               if (a[0] < b[0]) {
-                 return true;
-               } else {
-                 return false;
-               }
+	       for (intT i=0; i<dim; ++i) {
+		 if (a[i] != b[i]) return a[i] < b[i];
+	       }
+	       return true;
              };
   sampleSort(P, n, cmp);
   sampleSort(Q, n, cmp);
   for (int i=0; i<n; ++i) {
     if(Q[i] != P[i]) {
-      cout << "something wrong" << endl;
+      cout << "something wrong at " << i << endl;
+      cout << Q[i] << " vs " << P[i] << endl;
       abort();
     }
   }
   free(Q);
+  cout << "checked" << endl;
 }
 
 template void bench<2>(point<2>*, intT);
