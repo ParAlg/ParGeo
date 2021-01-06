@@ -40,7 +40,7 @@ _seq<intT> lineSweepSerial(point2d* P, intT n, intT* I=NULL) {
   };
 
   if (!I) {
-    I = newA(intT, n+1);//note +1, todo remove
+    I = newA(intT, n);
   }
 
   timing t1;t1.start();
@@ -57,16 +57,15 @@ _seq<intT> lineSweepSerial(point2d* P, intT n, intT* I=NULL) {
   /* cout << "x-right = " << xRight << endl; */
 
   intT ml = 0;
-  intT mr = n;
+  intT mr = n-1;
 
   auto pushLeft = [&](intT i) {I[ml++] = i;};
   auto popLeft = [&]() {ml--;};
   auto pushRight = [&](intT i) {I[mr--] = i;};
   auto popRight = [&]() {mr++;};
   auto sizeLeft = [&]{return ml;};
-  auto sizeRight = [&]{return n-mr;};
+  auto sizeRight = [&]{return n-1-mr;};
   pushLeft(0);
-  pushRight(0);
 
   //scan from bottom up
   for (intT i=1; i<n; ++i) {
@@ -77,8 +76,13 @@ _seq<intT> lineSweepSerial(point2d* P, intT n, intT* I=NULL) {
 	popLeft();
       pushLeft(i);
     } else {//>=xRight
-      while (sizeRight() >= 2 && !leftTurn(P[I[mr+2]], P[I[mr+1]], P[i]))
-	popRight();
+      while (1) {
+	if (sizeRight() >= 2 && !leftTurn(P[I[mr+2]], P[I[mr+1]], P[i]))
+	  popRight();
+	else if (sizeRight() == 1 && !leftTurn(P[I[0]], P[I[mr+1]], P[i]))
+	  popRight();
+	else break;
+      }
       pushRight(i);
     }
   }
@@ -88,13 +92,14 @@ _seq<intT> lineSweepSerial(point2d* P, intT n, intT* I=NULL) {
 
   cout << " scan-time = " << t1.next() << endl;
 
-  auto AR = I+n+1-sizeRight();
-  for(intT i=0; i<sizeRight()-1; ++i) {
-    I[sizeLeft()+i] = AR[i];}
+  auto AR = I+n-sizeRight();
+  for(intT i=0; i<sizeRight(); ++i) {
+    I[sizeLeft()+i] = AR[i];
+  }
 
   cout << " move-time = " << t1.stop() << endl;
 
-  return _seq<intT>(I, sizeLeft()+sizeRight()-1);
+  return _seq<intT>(I, sizeLeft()+sizeRight());
 }
 
 #endif
