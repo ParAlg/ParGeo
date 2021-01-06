@@ -47,8 +47,9 @@ _seq<intT> hull(point2d* P, intT n) {
     else if (baseMethod == 2) CH = grahamScanSerial(P, n);
     else {
       cout << "Error, wrong method number, abort." << endl; abort();}
+#ifndef SILENT
     cout << "serial-hull-time = " << t.stop() << endl;
-
+#endif
     check(P, n, CH.A, CH.n);
     return CH;
   }
@@ -57,7 +58,9 @@ _seq<intT> hull(point2d* P, intT n) {
     auto xLess = [&](point2d p1, point2d p2) {
 		   return p1.x()<p2.x();};
     sampleSort(P, n, xLess);
+#ifndef SILENT
     cout << "sort-time = " << t1.next() << endl;
+#endif
   }
 
   intT blk = n/procs;
@@ -85,15 +88,17 @@ _seq<intT> hull(point2d* P, intT n) {
 		   //check(P+o, blkLast, I+o, M[i]);
 		 }
 	       }, 1);
+#ifndef SILENT
   cout << "subhull-time = " << t1.next() << endl;
-
+#endif
   for(intT i=1; i<procs; ++i) {
     M[i] += M[i-1];}
   for(intT i=procs; i>0; --i) {
     M[i] = M[i-1];}
   M[0] = 0;
+#ifndef SILENT
   cout << "subhull-size = " << M[procs] << endl;
-
+#endif
   point2d* PP = newA(point2d, M[procs]);
 
   parallel_for(0, procs, [&](intT i) {
@@ -124,12 +129,14 @@ _seq<intT> hull(point2d* P, intT n) {
     free(I);
     I = CH.A;
   }
+#ifndef SILENT
   cout << "merge-time = " << t1.next() << endl;
-
   cout << "total-hull-time = " << t.stop() << endl;
-
   //hull is in (PP, I), size is m2
   check(P, n, I, m2, PP);
+#else
+  cout << t.stop() << endl;
+#endif
 
   free(I);
   free(PP);

@@ -271,7 +271,11 @@ _seq<intT> hull(point2d* P, intT n) {
   }
 
   free(PN);
+#ifndef SILENT
   cout << "hull-time = " << t.next() << endl;
+#else
+  cout << t.next() << endl;
+#endif
 
   if (verify) {
     for (intT i=0; i<n; ++i) {
@@ -288,6 +292,7 @@ _seq<intT> hull(point2d* P, intT n) {
     cout << "hull verified, time = " << t.stop() << endl;
   }
 
+#ifndef SILENT
   intT hSize = 0;
   auto ptr = H;
   do {
@@ -295,6 +300,7 @@ _seq<intT> hull(point2d* P, intT n) {
     ptr = ptr->next;
   } while (ptr != H);
   cout << "hull size = " << hSize << endl;
+#endif
 
   intT* I = newA(intT, n);
   return _seq<intT>(I,1);//dummy

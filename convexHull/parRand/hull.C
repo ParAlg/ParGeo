@@ -401,7 +401,7 @@ facet* incrementParallel(pointNode* PN, intT n, facet* H, facet* hullMem, ringBu
 		 });//end second for
 
     flag[n] = sequence::prefixSum(flag, 0, n);
-    cout << "processed " << n-flag[n] << "/" << n << endl;
+    if(verbose) cout << "processed " << n-flag[n] << "/" << n << endl;
     parallel_for(0, n, [&](intT i){
 			 if(flag[i] != flag[i+1]) {
 			   pointers2[flag[i]] = pointers[i];
@@ -630,12 +630,16 @@ _seq<intT> hull(point2d* P, intT n) {
     } while (ptr != H);
     cout << "init complete" << endl;
   }
-  cout << "init-time = " << t.next() << endl;
 
+#ifndef SILENT
+  cout << "init-time = " << t.next() << endl;
+#endif
   H = incrementParallel(PN, n-iSize, H, H, listMem, n);
   free(PN);
 
+#ifndef SILENT
   cout << "increment-time = " << t.next() << endl;
+#endif
 
   if (verify) {
     for (intT i=0; i<n; ++i) {
@@ -652,6 +656,7 @@ _seq<intT> hull(point2d* P, intT n) {
     cout << "hull verified, time = " << t.stop() << endl;
   }
 
+#ifndef SILENT
   intT hSize = 0;
   auto ptr = H;
   do {
@@ -659,7 +664,7 @@ _seq<intT> hull(point2d* P, intT n) {
     ptr = ptr->next;
   } while (ptr != H);
   cout << "hull size = " << hSize << endl;
-
+#endif
   intT* I = newA(intT, n);
   return _seq<intT>(I,1);//dummy
 }

@@ -38,11 +38,17 @@ void timeHull(point2d* P, intT n, int rounds, char* outFile) {
   _seq<intT> I;
   for (intT i=0; i < rounds; i++) {
     if (i != 0) I.del();
+#ifndef SILENT
     timing t0;t0.start();
+#endif
     I = hull(P, n);
+#ifndef SILENT
     cout << "timing = " << t0.stop() << endl;
+#endif
   }
+#ifndef SILENT
   cout << endl;
+#endif
   if (outFile != NULL) writeIntArrayToFile(I.A, I.n, outFile);
 }
 
@@ -54,7 +60,9 @@ int main(int argc, char* argv[]) {
   int rounds = P.getOptionIntValue("-r",1);
   int csvCol = P.getOptionIntValue("-csv",-1);
 
+#ifndef SILENT
   printScheduler();
+#endif
 
   _seq<point2d> PIn;
   if(csvCol>0) {

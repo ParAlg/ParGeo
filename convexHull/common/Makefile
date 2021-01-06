@@ -5,8 +5,12 @@ JEMALLOCLD = $(shell jemalloc-config --libdir)
 JEMALLOC = -DUSEJEMALLOC -L$(JEMALLOCLD) -ljemalloc
 endif
 
+ifndef SILENT
 #CFLAGS = -mcx16 -O3 -std=c++14 -march=native -Wall -Wextra
 CFLAGS = -mcx16 -O3 -std=c++17 -march=native
+else
+CFLAGS = -mcx16 -O3 -std=c++17 -march=native -DSILENT
+endif
 
 OMPFLAGS = -DOPENMP -fopenmp
 CILKFLAGS = -DCILK -fcilkplus
