@@ -40,21 +40,21 @@ _seq<intT> lineSweepSerial(point2d* P, intT n, intT* I=NULL) {
   };
 
   if (!I) {
-    I = newA(intT, n+1);//note +1
+    I = newA(intT, n+1);//note +1, todo remove
   }
 
-  timing t; t.start();
+  timing t1;t1.start();
 
   auto yCmp = [&](point2d& a, point2d& b) {
     return a.y() < b.y();
   };
   sampleSort(&P[0], n, yCmp);
-  cout << "sort-time = " << t.next() << endl;
+  cout << " sort-time = " << t1.next() << endl;
 
   floatT xLeft = min(P[0].x(), P[n-1].x());
   floatT xRight = max(P[0].x(), P[n-1].x());
-  cout << "x-left = " << xLeft << endl;
-  cout << "x-right = " << xRight << endl;
+  /* cout << "x-left = " << xLeft << endl; */
+  /* cout << "x-right = " << xRight << endl; */
 
   intT ml = 0;
   intT mr = n;
@@ -73,26 +73,28 @@ _seq<intT> lineSweepSerial(point2d* P, intT n, intT* I=NULL) {
     if (P[i].x()>xLeft && P[i].x()<xRight) {
       continue;
     } else if (P[i].x()<=xLeft) {
-      if (sizeLeft() >= 2 && !rightTurn(P[I[ml-2]], P[I[ml-1]], P[i])) {
+      while (sizeLeft() >= 2 && !rightTurn(P[I[ml-2]], P[I[ml-1]], P[i]))
 	popLeft();
-	while (sizeLeft()>1 && !rightTurn(P[I[ml-2]], P[I[ml-1]], P[i])) popLeft();
-      }
       pushLeft(i);
     } else {//>=xRight
-      if (sizeRight() >= 2 && !leftTurn(P[I[mr+2]], P[I[mr+1]], P[i])) {
+      while (sizeRight() >= 2 && !leftTurn(P[I[mr+2]], P[I[mr+1]], P[i]))
 	popRight();
-	while (sizeRight()>1 && !leftTurn(P[I[mr+2]], P[I[mr+1]], P[i])) popRight();
-      }
       pushRight(i);
     }
   }
 
-  cout << sizeLeft() + sizeRight() << endl;
-  cout << "scan-time = " << t.stop() << endl;
+  while (sizeLeft() >= 2 && !rightTurn(P[I[ml-2]], P[I[ml-1]], P[I[mr+1]]))
+    popLeft();
 
-  //todo reorder
+  cout << " scan-time = " << t1.next() << endl;
 
-  return _seq<intT>(I, 1);//todo
+  auto AR = I+n+1-sizeRight();
+  for(intT i=0; i<sizeRight()-1; ++i) {
+    I[sizeLeft()+i] = AR[i];}
+
+  cout << " move-time = " << t1.stop() << endl;
+
+  return _seq<intT>(I, sizeLeft()+sizeRight()-1);
 }
 
 #endif
