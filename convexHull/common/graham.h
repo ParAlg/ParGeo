@@ -29,14 +29,19 @@
 
 _seq<intT> grahamScanSerial(point2d* P, intT n, intT* I=NULL) {
   static const bool verbose = false;
-  /* auto angle = [&](point2d& a, point2d& b, point2d& c) { */
-  /* 		 point2d ab = b-a; */
-  /* 		 point2d bc = c-b; */
-  /* 		 return acos(ab.dot(bc) / (ab.length()*bc.length())); */
-  /* 	       }; */
-  auto rightTurn = [&](point2d& a, point2d& b, point2d& c) {
+  auto angle = [&](point2d& a, point2d& b, point2d& c) {
+    point2d ab = b-a;
+    point2d bc = c-b;
+    return acos(ab.dot(bc) / (ab.length()*bc.length()));
+  };
+  static const intT left = 0;
+  static const intT right = 1;
+  static const intT straight = 2;
+  auto turn = [&](point2d& a, point2d& b, point2d& c) {
     auto cross = (b.x()-a.x())*(c.y()-a.y()) - (b.y()-a.y())*(c.x()-a.x());
-    return cross <= 0;
+    if (cross > 0) return left;
+    else if (cross < 0) return right;
+    else return straight;
   };
 
   if (!I) {
@@ -48,35 +53,37 @@ _seq<intT> grahamScanSerial(point2d* P, intT n, intT* I=NULL) {
   auto findLeft = [&](intT i) {return P[i].x();};
   intT si = sequence::minIndexSerial<floatT>(0, n, findLeft);
   point2d s = P[si];
+  //point2d sbelow = s;
+  //sbelow[0] = s.x()-1;
   cout << "init-time = " << t.next() << endl;
 
   auto sp = point2d(s.x(), s.y()-1);
-  auto angleLess = [&](point2d& a, point2d& b) {
-    return rightTurn(s, a, b);
+  auto angleLess = [&](point2d a, point2d b) {
+    //return angle(sbelow, s, a) < angle(sbelow, s, b);
+    intT myTurn = turn(s, a, b);
+    if (myTurn == right) return true;
+    else if (myTurn == left) return false;
+    else return a.x() < b.x();
   };
   swap(P[0], P[si]);
   sampleSort(&P[1], n-1, angleLess);
+  //sort(&P[1], &P[n-1], angleLess);
+
   I[m++] = 0;
   I[m++] = 1;
-  //cout << "initial = " << P[I[0]] << ", " << P[I[1]] << endl;
   cout << "sort-time = " << t.next() << endl;
 
-  intT pushes = 0;
-  intT pops = 0;
-  
-  auto push = [&](intT i) {I[m++] = i;pushes++;};
-  auto pop = [&]() {m--;pops++;};
+  auto push = [&](intT i) {I[m++] = i;};
+  auto pop = [&]() {m--;};
   auto isEmpty = [&]() {return m==0;};
 
   for (intT i=2; i<n; ++i) {
-    if (!rightTurn(P[I[m-2]], P[I[m-1]], P[i])) {
+    if (turn(P[I[m-2]], P[I[m-1]], P[i])!=right) {
       pop();
-      while (!rightTurn(P[I[m-2]], P[I[m-1]], P[i])) pop();
+      while (turn(P[I[m-2]], P[I[m-1]], P[i])!=right) pop();
     }
     push(i);
   }
-  cout << "pushes = " << pushes << endl;
-  cout << "pops = " << pops << endl;
   cout << "scan-time = " << t.stop() << endl;
 
   return _seq<intT>(I, m);
