@@ -30,13 +30,14 @@
 _seq<intT> lineSweepSerial(point2d* P, intT n, intT* I=NULL) {
   static const bool verbose = false;
 
-  //whether a,b,c forms a right turn
+  //whether a,b,c forms a right/left turn, disallows straight line
   auto rightTurn = [&](point2d& a, point2d& b, point2d& c) {
     auto cross = (b.x()-a.x())*(c.y()-a.y()) - (b.y()-a.y())*(c.x()-a.x());
-    return cross <= 0;
+    return cross < 0;
   };
   auto leftTurn = [&](point2d& a, point2d& b, point2d& c) {
-    return !rightTurn(a,b,c);
+    auto cross = (b.x()-a.x())*(c.y()-a.y()) - (b.y()-a.y())*(c.x()-a.x());
+    return cross > 0;
   };
 
   if (!I) {
