@@ -51,11 +51,6 @@ _seq<intT> lineSweepSerial(point2d* P, intT n, intT* I=NULL) {
   sampleSort(&P[0], n, yCmp);
   cout << " sort-time = " << t1.next() << endl;
 
-  floatT xLeft = min(P[0].x(), P[n-1].x());
-  floatT xRight = max(P[0].x(), P[n-1].x());
-  /* cout << "x-left = " << xLeft << endl; */
-  /* cout << "x-right = " << xRight << endl; */
-
   intT ml = 0;
   intT mr = n-1;
 
@@ -69,13 +64,11 @@ _seq<intT> lineSweepSerial(point2d* P, intT n, intT* I=NULL) {
 
   //scan from bottom up
   for (intT i=1; i<n; ++i) {
-    if (P[i].x()>xLeft && P[i].x()<xRight) {
-      continue;
-    } else if (P[i].x()<=xLeft) {
+    if (triArea(P[0], P[n-1], P[i]) > numericKnob) {
       while (sizeLeft() >= 2 && !rightTurn(P[I[ml-2]], P[I[ml-1]], P[i]))
 	popLeft();
       pushLeft(i);
-    } else {//>=xRight
+    } else {
       while (1) {
 	if (sizeRight() >= 2 && !leftTurn(P[I[mr+2]], P[I[mr+1]], P[i]))
 	  popRight();
