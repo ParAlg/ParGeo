@@ -54,7 +54,7 @@ _seq<intT> grahamScanSerial(point2d* P, intT n, intT* I=NULL) {
   intT si = sequence::minIndexSerial<floatT>(0, n, findLeft);
   point2d s = P[si];
   //point2d sbelow = s;
-  //sbelow[0] = s.x()-1;
+  //sbelow[1] = s.y()-1;
   cout << "init-time = " << t.next() << endl;
 
   auto sp = point2d(s.x(), s.y()-1);
