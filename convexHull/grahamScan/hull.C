@@ -30,8 +30,11 @@ _seq<intT> hull(point2d* P, intT n) {
   timing t; t.start();
   auto CH = grahamScanSerial(P, n);
 
+#ifndef SILENT
   cout << "hull-time = " << t.stop() << endl;
-
   check(P, n, CH.A, CH.n);
+#else
+  cout << t.stop() << endl;
+#endif
   return CH;
 }

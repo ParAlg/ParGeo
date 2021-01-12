@@ -48,15 +48,17 @@ _seq<intT> grahamScanSerial(point2d* P, intT n, intT* I=NULL) {
     I = newA(intT, n);
   }
   intT m=0;
-
+#ifndef SILENT
   timing t; t.start();
+#endif
   auto findLeft = [&](intT i) {return P[i].x();};
   intT si = sequence::minIndexSerial<floatT>(0, n, findLeft);
   point2d s = P[si];
   //point2d sbelow = s;
   //sbelow[1] = s.y()-1;
+#ifndef SILENT
   cout << "init-time = " << t.next() << endl;
-
+#endif
   auto sp = point2d(s.x(), s.y()-1);
   auto angleLess = [&](point2d a, point2d b) {
     //return angle(sbelow, s, a) < angle(sbelow, s, b);
@@ -71,8 +73,9 @@ _seq<intT> grahamScanSerial(point2d* P, intT n, intT* I=NULL) {
 
   I[m++] = 0;
   I[m++] = 1;
+#ifndef SILENT
   cout << "sort-time = " << t.next() << endl;
-
+#endif
   auto push = [&](intT i) {I[m++] = i;};
   auto pop = [&]() {m--;};
   auto isEmpty = [&]() {return m==0;};
@@ -84,8 +87,9 @@ _seq<intT> grahamScanSerial(point2d* P, intT n, intT* I=NULL) {
     }
     push(i);
   }
+#ifndef SILENT
   cout << "scan-time = " << t.stop() << endl;
-
+#endif
   return _seq<intT>(I, m);
 }
 
