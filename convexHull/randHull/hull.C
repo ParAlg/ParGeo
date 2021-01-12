@@ -32,13 +32,22 @@ using namespace std;
 struct pointNode;
 
 struct facet {
+  // Data fields
   facet* next;
   facet* prev;
   point2d p1;
   point2d p2;//(p1->p2) is clockwise
-  vector<pointNode*> seeList;//points that can see facet
-  facet(point2d p11, point2d p22): p1(p11), p2(p22) {}
-  bool visibleFrom(point2d p) {return triArea(p1, p2, p) > 1e-10;}//todo numerical stability needs better hack
+  vector<pointNode*>* seeList;//points that can see facet
+
+  // Constructors
+  facet(point2d p11, point2d p22): p1(p11), p2(p22) {
+    seeList = new vector<pointNode*>();}//todo allocation
+
+  // Methods
+  bool visibleFrom(point2d p) {return triArea(p1, p2, p) > numericKnob;}
+  void push_back(pointNode* p) {seeList->push_back(p);}
+  intT size() {return seeList->size();};
+  pointNode* at(intT i) {return seeList->at(i);}
 };
 
 static std::ostream& operator<<(std::ostream& os, const facet f) {
@@ -49,7 +58,7 @@ static std::ostream& operator<<(std::ostream& os, const facet f) {
 struct pointNode {
   point2d p;
   facet* seeFacet;//maintain one edge visible, change from time to time
-  //don't have to maintain all, can search pretty easily
+  //don't have to maintain all facets, can search pretty easily
   pointNode(point2d pp): p(pp), seeFacet(NULL) {};
   pointNode() {};
 };
@@ -68,24 +77,13 @@ pair<facet*, facet*> findVisible(facet* head, point2d p) {
       }
     } else {
       if (!ptr->visibleFrom(p)) {
-        //cout << "num conflicts = " << n << endl;
         return make_pair(start, ptr);
       }
       n++;
     }
     ptr = ptr->next;
   } while (ptr != head);
-  //cout << "num conflicts = " << 0 << endl;
   return make_pair((facet*)NULL, (facet*)NULL);
-}
-
-void delHull(facet* start, facet* end) {
-  auto ptr = start;
-  do {
-    auto tmp = ptr->next;
-    delete ptr;
-    ptr = tmp;
-  } while (ptr != end);
 }
 
 void printHull(facet* start, facet* end) {
@@ -101,7 +99,18 @@ _seq<intT> hull(point2d* P, intT n) {
   static bool verbose = false;
   static bool brute = false;//visibility check
   static bool verify = false;
-  static bool localPivot = true;
+  static bool farPivot = true;
+
+  auto facets = newA(facet, 2*n);
+
+  auto newFacetLeft = [&](intT i, point2d p11, point2d p22) {
+			facets[2*i] = facet(p11, p22);
+			return &facets[2*i];
+		      };
+  auto newFacetRight = [&](intT i, point2d p11, point2d p22) {
+			 facets[2*i+1] = facet(p11, p22);
+			 return &facets[2*i+1];
+		       };
 
   timing t; t.start();
 
@@ -128,30 +137,33 @@ _seq<intT> hull(point2d* P, intT n) {
       vLeft = x;
       iLeft = i;}
   }
-  auto f0 = new facet(P[iLeft], P[iTop]);
-  auto f1 = new facet(P[iTop], P[iRight]);
-  auto f2 = new facet(P[iRight], P[iBot]);
-  auto f3 = new facet(P[iBot], P[iLeft]);
+  swap(P[iTop], P[0]); iTop = 0;
+  swap(P[iBot], P[1]); iBot = 1;
+  swap(P[iLeft], P[2]); iLeft = 2;
+  swap(P[iRight], P[3]); iRight = 3;
+  auto f0 = newFacetLeft(iTop, P[iLeft], P[iTop]);
+  auto f1 = newFacetRight(iTop, P[iTop], P[iRight]);
+  auto f2 = newFacetRight(iBot, P[iRight], P[iBot]);
+  auto f3 = newFacetLeft(iBot, P[iBot], P[iLeft]);
   f0->next = f1; f1->prev = f0;
   f1->next = f2; f2->prev = f1;
   f2->next = f3; f3->prev = f2;
   f3->next = f0; f0->prev = f3;
   facet* H = f0;
-  intT iSize = 0;
 
   if(verbose) {
     cout << "initial-hull = ";
     printHull(H, H);
   }
 
-  pointNode* PN = newA(pointNode, n-iSize);
-  for(intT i=0; i<n-iSize; ++i) {
-    PN[i] = pointNode(P[i+iSize]);
+  pointNode* PN = newA(pointNode, n);
+  for(intT i=0; i<n; ++i) {
+    PN[i] = pointNode(P[i]);
     auto ptr = H;
     do {
-      if (ptr->visibleFrom(P[i+iSize])) {
+      if (ptr->visibleFrom(P[i])) {
         PN[i].seeFacet = ptr;
-        ptr->seeList.push_back(&PN[i]);//todo this vector needs to be simplified (mem management)
+        ptr->push_back(&PN[i]);
         break; //each point only records one visible facet
       }
       ptr = ptr->next;
@@ -162,36 +174,35 @@ _seq<intT> hull(point2d* P, intT n) {
   auto findPivot = [&](facet* H)
 		   {
 		     auto f = H;
-		     while (f->seeList.size()<=0 && f->next!=H) f = f->next;
-		     if (f->seeList.size() <= 0) return (pointNode*)NULL;
+		     while (f->size()<=0 && f->next!=H) f = f->next;
+		     if (f->size() <= 0) return (pointNode*)NULL;
 		     point2d l = f->p1;
 		     point2d r = f->p2;
 		     auto triangArea = [&](intT idx)
 				       {
-					 return triArea(l, r, f->seeList[idx]->p);
+					 return triArea(l, r, f->at(idx)->p);
 				       };
-		     intT idx = sequence::maxIndex<double>((intT)0, (intT)f->seeList.size(), greater<floatT>(), triangArea);
-		     return f->seeList[idx];
+		     intT idx = sequence::maxIndex<double>((intT)0, (intT)f->size(), greater<floatT>(), triangArea);
+		     return f->at(idx);
 		   };
 
-  intT i = 0;
+  intT i = 4;//first four points are in
   while(1) {
     if(verbose) cout << "--- iter" << i << endl;
 
     //find a pivot point to be processed next
     pointNode pr;
-    if (localPivot) {
+    if (farPivot) {
       pointNode* prp = findPivot(H);
       if (!prp) break;
       pr = *prp;
     } else {
-      if (i>=n-iSize) break;
+      if (i>=n) break;
       pr = PN[i];
       if (!pr.seeFacet) {
 	i++;
 	continue;}
     }
-    i++;
 
     if(verbose) cout << " pr = " << pr.p << endl;
 
@@ -207,8 +218,8 @@ _seq<intT> hull(point2d* P, intT n) {
     facet*   end = conflicts.second;
     if (start && end) {
       //compute new faces
-      facet* new1 = new facet(start->p1, pr.p);
-      facet* new2 = new facet(pr.p, end->p1);
+      facet* new1 = newFacetLeft(i, start->p1, pr.p);
+      facet* new2 = newFacetRight(i, pr.p, end->p1);
 
       //go through list of facets pending to be deleted
       if (verbose) {
@@ -227,29 +238,17 @@ _seq<intT> hull(point2d* P, intT n) {
         auto ptr = start;
         do {
           //update points that see them
-          for(intT j=0; j<ptr->seeList.size(); ++j) {
-            auto seePt = ptr->seeList[j];
-            // if (seePt->seeFacet == ptr) seePt->seeFacet = NULL;
-	    // else {
-	    //   cout << "error?" << endl;
-	    //   abort();
-	    // }
+          for(intT j=0; j<ptr->size(); ++j) {
+            auto seePt = ptr->at(j);
 	    seePt->seeFacet = NULL;
             if (new1->visibleFrom(seePt->p)) {
-              // if (!seePt->seeFacet) {
-              //   seePt->seeFacet = new1;
-              // }
 	      seePt->seeFacet = new1;
-              new1->seeList.push_back(seePt);
+              new1->push_back(seePt);
             } else if (new2->visibleFrom(seePt->p)) {
-              // if (!seePt->seeFacet) {
-              //   seePt->seeFacet = new2;
-              // }
 	      seePt->seeFacet = new2;
-              new2->seeList.push_back(seePt);
+              new2->push_back(seePt);
             }
           }
-
           ptr = ptr->next;
         } while (ptr != end);
       }
@@ -261,13 +260,13 @@ _seq<intT> hull(point2d* P, intT n) {
       new1->next = new2; new2->prev = new1;
       new2->next = end; end->prev = new2;
       H = new1;
-      delHull(start, end);
 
       if(verbose) {
         cout << "hull = ";
         printHull(H, H);
       }
     }
+    i++;
   }
 
   free(PN);
