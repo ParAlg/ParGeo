@@ -48,6 +48,10 @@ struct facet {
   void push_back(pointNode* p) {seeList->push_back(p);}
   intT size() {return seeList->size();};
   pointNode* at(intT i) {return seeList->at(i);}
+  void cacheStart(facet* start) {prev = start;}
+  void cacheEnd(facet* end) {next = end;}
+  facet* getStart() {return prev;}
+  facet* getEnd() {return next;}
 };
 
 static std::ostream& operator<<(std::ostream& os, const facet f) {
@@ -111,8 +115,12 @@ _seq<intT> hull(point2d* P, intT n) {
 			 facets[2*i+1] = facet(p11, p22);
 			 return &facets[2*i+1];
 		       };
+  auto getFacetTmp = [&](intT i) {
+			return &facets[2*i];
+		      };
 
   timing t; t.start();
+  timing tt; tt.start();
 
   // Akl–Toussaint heuristic
   intT iTop, iBot, iLeft, iRight;
@@ -196,9 +204,16 @@ _seq<intT> hull(point2d* P, intT n) {
   pointers[2] = NULL;
   pointers[3] = NULL;
 
+  floatT initTime = tt.stop();
+
   intT processed = 4;//first four points are initialized
 
   auto idx = [&](facet* f) {return f-facets;};
+
+  floatT reserveTime = 0;
+  floatT confirmTime = 0;
+  floatT processTime = 0;
+  floatT packTime = 0;
 
   while(processed < n) {
 
@@ -207,26 +222,26 @@ _seq<intT> hull(point2d* P, intT n) {
     intT s = processed;
 
     // Reservation
+    tt.start();
 
     parallel_for(s, s+b, [&](intT i) {
-
-			   pointNode pr;
-			   pr = *pointers[i];
+			   pointNode pr = *pointers[i];
 
 			   if (pr.seeFacet) {
 
-			     if(verbose) cout << " pr = " << pr.p << endl;
-
 			     //find range of visible facets [left, right)
 			     pair<facet*, facet*> conflicts;
-			     if (brute) {
+			     if (brute)
 			       conflicts = findVisible(H, pr.p);
-			     } else {
+			     else
 			       conflicts = findVisible(pr.seeFacet, pr.p);
-			     }
-
 			     facet* start = conflicts.first;
 			     facet*   end = conflicts.second;
+
+			     facet* tmp = getFacetTmp(pointers[i]-PN);
+			     tmp->cacheStart(start);
+			     tmp->cacheEnd(end);
+
 			     if (start && end) {
 			       auto ptr = start->prev;
 			       do {
@@ -237,25 +252,18 @@ _seq<intT> hull(point2d* P, intT n) {
 			   }
 			 });
 
+    reserveTime += tt.next();
+
     // Confirm reservation
 
     parallel_for(s, s+b, [&](intT i) {
-
-			   pointNode pr;
-			   pr = *pointers[i];
+			   pointNode pr = *pointers[i];
 
 			   if (pr.seeFacet) {
+			     facet* tmp = getFacetTmp(pointers[i]-PN);
+			     facet* start = tmp->getStart();
+			     facet* end = tmp->getEnd();
 
-			     //find range of visible facets [left, right)
-			     pair<facet*, facet*> conflicts;
-			     if (brute) {
-			       conflicts = findVisible(H, pr.p);
-			     } else {
-			       conflicts = findVisible(pr.seeFacet, pr.p);
-			     }
-
-			     facet* start = conflicts.first;
-			     facet*   end = conflicts.second;
 			     if (start && end) {
 
 			       //confirm reservation
@@ -270,12 +278,15 @@ _seq<intT> hull(point2d* P, intT n) {
 				 ptr = ptr->next;
 			       } while (ptr != end->next);
 
-			       if(reserved)
+			       if(reserved) {
 				 reservation[idx(start)] = i;//marker
+			       }
 
 			     }
 			   }
 			 });
+
+    confirmTime += tt.next();
 
     // Processing
 
@@ -290,16 +301,9 @@ _seq<intT> hull(point2d* P, intT n) {
 
 			     if(verbose) cout << " pr = " << pr.p << endl;
 
-			     //find range of visible facets [left, right)
-			     pair<facet*, facet*> conflicts;
-			     if (brute) {
-			       conflicts = findVisible(H, pr.p);
-			     } else {
-			       conflicts = findVisible(pr.seeFacet, pr.p);
-			     }
-
-			     facet* start = conflicts.first;
-			     facet*   end = conflicts.second;
+			     facet* tmp = getFacetTmp(pointers[i]-PN);
+			     facet* start = tmp->getStart();
+			     facet* end = tmp->getEnd();
 			     if (start && end) {
 			       //confirm reservation
 			       bool reserved = reservation[idx(start)]==i;
@@ -341,7 +345,7 @@ _seq<intT> hull(point2d* P, intT n) {
 				 start->prev->next = new1; new1->prev = start->prev;
 				 new1->next = new2; new2->prev = new1;
 				 new2->next = end; end->prev = new2;
-				 H = new1;
+				 if (i==s) H = new1;
 
 				 if(verbose) {
 				   cout << "hull = ";
@@ -352,7 +356,12 @@ _seq<intT> hull(point2d* P, intT n) {
 			   }
 			 });//end par_for
 
-    //todo pack unprocessed, serial for now (see if work dominates)
+
+    processTime += tt.next();
+
+    //pack unprocessed
+    // serial for now todo
+
     intT lPt = s;
     intT rPt = s+b-1;
 
@@ -370,12 +379,21 @@ _seq<intT> hull(point2d* P, intT n) {
     }
     if (pointers[lPt]==NULL) lPt++;//left
 
+    packTime += tt.stop();
+
+    cout << "new processed = " << lPt - s << "/" << b << endl;
+
     processed = lPt;//only the successfull reservations succeed
   }//end while
 
   free(PN);
 #ifndef SILENT
   cout << "hull-time = " << t.next() << endl;
+  cout << " init-time = " << initTime << endl;
+  cout << " reserve-time = " << reserveTime << endl;
+  cout << " confirm-time = " << confirmTime << endl;
+  cout << " process-time = " << processTime << endl;
+  cout << " pack-time = " << packTime << endl;
 #else
   cout << t.next() << endl;
 #endif
