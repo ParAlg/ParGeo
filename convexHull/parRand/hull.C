@@ -98,7 +98,7 @@ void printHull(facet* start, facet* end) {
 _seq<intT> hull(point2d* P, intT n) {
   static bool verbose = false;
   static bool brute = false;//visibility check
-  static bool verify = false;
+  static bool verify = true;
   static bool farPivot = false;//todo add in farpivot optimization
 
   auto facets = newA(facet, 2*n);
@@ -187,7 +187,7 @@ _seq<intT> hull(point2d* P, intT n) {
 		   };
 
   intT* reservation = newA(intT, 2*n);
-  parallel_for(0, n, [&](intT i) {reservation[i]=intMax();});
+  parallel_for(0, 2*n, [&](intT i) {reservation[i]=intMax();});
 
   auto pointers = newA(pointNode*, n);//set to NULL when processed
   parallel_for(0, n, [&](intT i) {pointers[i] = &PN[i];});
@@ -198,18 +198,20 @@ _seq<intT> hull(point2d* P, intT n) {
 
   intT processed = 4;//first four points are initialized
 
+  auto idx = [&](facet* f) {return f-facets;};
+
   while(processed < n) {
-    cout << "--- iter" << processed << endl;
 
-    intT b = min(processed, n-processed);
+    intT b = min(processed, n-processed);//processed #points already processed
 
-    //todo, no reservation yet, all will succeed
     intT s = processed;
+
+    // Reservation
+
     parallel_for(s, s+b, [&](intT i) {
 
 			   pointNode pr;
 			   pr = *pointers[i];
-			   pointers[i] = NULL;//todo now that all processed will succeed
 
 			   if (pr.seeFacet) {
 
@@ -226,61 +228,149 @@ _seq<intT> hull(point2d* P, intT n) {
 			     facet* start = conflicts.first;
 			     facet*   end = conflicts.second;
 			     if (start && end) {
-			       //compute new faces
-			       facet* new1 = newFacetLeft(i, start->p1, pr.p);
-			       facet* new2 = newFacetRight(i, pr.p, end->p1);
+			       auto ptr = start->prev;
+			       do {
+				 utils::writeMin(&reservation[idx(ptr)], i);
+				 ptr = ptr->next;
+			       } while (ptr != end->next);
+			     }
+			   }
+			 });
 
-			       //go through list of facets pending to be deleted
-			       if (verbose) {
-				 cout << "deleting = ";
-				 auto ptr = start;
-				 do {
-				   cout << *ptr << ", ";
-				   ptr = ptr->next;
-				 } while (ptr != end);
-				 cout << endl;
-			       }
+    // Confirm reservation
 
-			       //if not finding visible facets by bruteforce
-			       // update visibility pointers
-			       if (!brute) {
-				 auto ptr = start;
-				 do {
-				   //update points that see them
-				   for(intT j=0; j<ptr->size(); ++j) {
-				     auto seePt = ptr->at(j);
-				     seePt->seeFacet = NULL;
-				     if (new1->visibleFrom(seePt->p)) {
-				       seePt->seeFacet = new1;
-				       new1->push_back(seePt);
-				     } else if (new2->visibleFrom(seePt->p)) {
-				       seePt->seeFacet = new2;
-				       new2->push_back(seePt);
+    parallel_for(s, s+b, [&](intT i) {
+
+			   pointNode pr;
+			   pr = *pointers[i];
+
+			   if (pr.seeFacet) {
+
+			     //find range of visible facets [left, right)
+			     pair<facet*, facet*> conflicts;
+			     if (brute) {
+			       conflicts = findVisible(H, pr.p);
+			     } else {
+			       conflicts = findVisible(pr.seeFacet, pr.p);
+			     }
+
+			     facet* start = conflicts.first;
+			     facet*   end = conflicts.second;
+			     if (start && end) {
+
+			       //confirm reservation
+			       bool reserved = true;
+			       auto ptr = start->prev;
+			       do {
+				 if (reservation[idx(ptr)] == i) {
+				   reservation[idx(ptr)] = intMax();//reset
+				 } else {
+				   reserved = false;
+				 }
+				 ptr = ptr->next;
+			       } while (ptr != end->next);
+
+			       if(reserved)
+				 reservation[idx(start)] = i;//marker
+
+			     }
+			   }
+			 });
+
+    // Processing
+
+    parallel_for(s, s+b, [&](intT i) {
+
+			   pointNode pr;
+			   pr = *pointers[i];
+
+			   if (!pr.seeFacet) {
+			     pointers[i] = NULL; //in hull, no further actions needed
+			   } else {
+
+			     if(verbose) cout << " pr = " << pr.p << endl;
+
+			     //find range of visible facets [left, right)
+			     pair<facet*, facet*> conflicts;
+			     if (brute) {
+			       conflicts = findVisible(H, pr.p);
+			     } else {
+			       conflicts = findVisible(pr.seeFacet, pr.p);
+			     }
+
+			     facet* start = conflicts.first;
+			     facet*   end = conflicts.second;
+			     if (start && end) {
+			       //confirm reservation
+			       bool reserved = reservation[idx(start)]==i;
+			       reservation[idx(start)] = intMax();
+
+			       if (reserved) {
+				 //compute new faces
+				 //note: the index for new facet memory should be based on PN
+				 // since i indexes into pointers array that is reordered
+				 // after each round
+				 facet* new1 = newFacetLeft(pointers[i]-PN, start->p1, pr.p);
+				 facet* new2 = newFacetRight(pointers[i]-PN, pr.p, end->p1);
+				 pointers[i] = NULL; //will process now, no further actions needed
+
+				 //if not finding visible facets by bruteforce
+				 // update visibility pointers
+				 if (!brute) {
+				   auto ptr = start;
+				   do {
+				     //update points that see them
+				     for(intT j=0; j<ptr->size(); ++j) {
+				       auto seePt = ptr->at(j);
+				       seePt->seeFacet = NULL;
+				       if (new1->visibleFrom(seePt->p)) {
+					 seePt->seeFacet = new1;
+					 new1->push_back(seePt);
+				       } else if (new2->visibleFrom(seePt->p)) {
+					 seePt->seeFacet = new2;
+					 new2->push_back(seePt);
+				       }
 				     }
-				   }
-				   ptr = ptr->next;
-				 } while (ptr != end);
-			       }
+				     ptr = ptr->next;
+				   } while (ptr != end);
+				 }
 
-			       if(verbose) cout << "adding = " << *new1 << ", " << *new2 << endl;
+				 if(verbose) cout << "adding = " << *new1 << ", " << *new2 << endl;
 
-			       //update hull
-			       start->prev->next = new1; new1->prev = start->prev;
-			       new1->next = new2; new2->prev = new1;
-			       new2->next = end; end->prev = new2;
-			       H = new1;
+				 //update hull
+				 start->prev->next = new1; new1->prev = start->prev;
+				 new1->next = new2; new2->prev = new1;
+				 new2->next = end; end->prev = new2;
+				 H = new1;
 
-			       if(verbose) {
-				 cout << "hull = ";
-				 printHull(H, H);
+				 if(verbose) {
+				   cout << "hull = ";
+				   printHull(H, H);
+				 }
 			       }
 			     }
 			   }
 			 });//end par_for
 
-    //todo pack unprocessed
+    //todo pack unprocessed, serial for now (see if work dominates)
+    intT lPt = s;
+    intT rPt = s+b-1;
 
-    processed += b;
+    while (lPt < rPt) {
+      if (pointers[lPt]) {//right
+        while (pointers[rPt] && lPt < rPt) {//right
+          rPt--;
+        }
+        if (lPt < rPt) {
+          swap(pointers[lPt], pointers[rPt]);
+          rPt--; }
+        else { break;}
+      }
+      lPt++;
+    }
+    if (pointers[lPt]==NULL) lPt++;//left
+
+    processed = lPt;//only the successfull reservations succeed
   }//end while
 
   free(PN);
