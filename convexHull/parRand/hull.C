@@ -90,6 +90,14 @@ pair<facet*, facet*> findVisible(facet* head, point2d p) {
   return make_pair((facet*)NULL, (facet*)NULL);
 }
 
+void delHull(facet* start, facet* end) {
+  auto ptr = start;
+  do {
+    delete ptr->seeList;
+    ptr = ptr->next;
+  } while (ptr != end);
+}
+
 void printHull(facet* start, facet* end) {
   auto ptr = start;
   do {
@@ -216,6 +224,7 @@ _seq<intT> hull(point2d* P, intT n) {
   floatT packTime = 0;
 
   while(processed < n) {
+    timing rt; rt.start();
 
     intT b = min(processed, n-processed);//processed #points already processed
 
@@ -247,7 +256,7 @@ _seq<intT> hull(point2d* P, intT n) {
 			       do {
 				 utils::writeMin(&reservation[idx(ptr)], i);
 				 ptr = ptr->next;
-			       } while (ptr != end->next);
+			       } while (ptr != end);
 			     }
 			   }
 			 });
@@ -276,7 +285,7 @@ _seq<intT> hull(point2d* P, intT n) {
 				   reserved = false;
 				 }
 				 ptr = ptr->next;
-			       } while (ptr != end->next);
+			       } while (ptr != end);
 
 			       if(reserved) {
 				 reservation[idx(start)] = i;//marker
@@ -346,6 +355,7 @@ _seq<intT> hull(point2d* P, intT n) {
 				 new1->next = new2; new2->prev = new1;
 				 new2->next = end; end->prev = new2;
 				 if (i==s) H = new1;
+				 delHull(start, end);
 
 				 if(verbose) {
 				   cout << "hull = ";
@@ -355,7 +365,6 @@ _seq<intT> hull(point2d* P, intT n) {
 			     }
 			   }
 			 });//end par_for
-
 
     processTime += tt.next();
 
@@ -381,7 +390,7 @@ _seq<intT> hull(point2d* P, intT n) {
 
     packTime += tt.stop();
 
-    cout << "new processed = " << lPt - s << "/" << b << endl;
+    cout << "new processed = " << lPt - s << "/" << b << ": " << rt.stop() << endl;
 
     processed = lPt;//only the successfull reservations succeed
   }//end while
@@ -422,6 +431,10 @@ _seq<intT> hull(point2d* P, intT n) {
   } while (ptr != H);
   cout << "hull size = " << hSize << endl;
 #endif
+
+  free(facets);
+  free(reservation);
+  free(pointers);
 
   intT* I = newA(intT, n);
   return _seq<intT>(I,1);//dummy
