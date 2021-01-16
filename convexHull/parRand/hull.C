@@ -130,29 +130,63 @@ _seq<intT> hull(point2d* P, intT n) {
   timing t; t.start();
   timing tt; tt.start();
 
-  // Akl–Toussaint heuristic
+  auto findExtreme = [&] (intT s, intT e, intT& iTop, intT &iBot, intT &iLeft, intT &iRight, floatT& vTop, floatT& vBot, floatT& vLeft, floatT& vRight) {
+		       // Akl–Toussaint heuristic
+		       vTop = floatMin();
+		       vBot = floatMax();
+		       vLeft = floatMax();
+		       vRight = floatMin();
+		       for(intT i=s; i<e; ++i) {
+			 floatT x = P[i].x();
+			 floatT y = P[i].y();
+			 if (y > vTop) {
+			   vTop = y;
+			   iTop = i;}
+			 if (y < vBot) {
+			   vBot = y;
+			   iBot = i;}
+			 if (x > vRight) {
+			   vRight = x;
+			   iRight = i;}
+			 if (x < vLeft) {
+			   vLeft = x;
+			   iLeft = i;}
+		       }
+		     };
+
+  intT numWorkers = getWorkers();
+  intT batchSize = floor(n/numWorkers);
+  intT indice[numWorkers*4];
+  floatT vals[numWorkers*4];
+  parallel_for(0, numWorkers, [&](intT i){
+				intT s = i*batchSize;
+				intT e;
+				if (i < numWorkers-1) e = s+batchSize;
+				else e = s+max(batchSize, n-s);
+				intT iTopLoc; intT iBotLoc;
+				intT iLeftLoc; intT iRightLoc;
+				floatT vTopLoc; floatT vBotLoc;
+				floatT vLeftLoc; floatT vRightLoc;
+				findExtreme(s, e, iTopLoc, iBotLoc, iLeftLoc, iRightLoc,
+					    vTopLoc, vBotLoc, vLeftLoc, vRightLoc);
+				indice[i*4+0] = iTopLoc; indice[i*4+1] = iBotLoc;
+				indice[i*4+2] = iLeftLoc; indice[i*4+3] = iRightLoc;
+				vals[i*4+0] = vTopLoc; vals[i*4+1] = vBotLoc;
+				vals[i*4+2] = iLeftLoc; vals[i*4+3] = iRightLoc;
+			      }, 1);
+
   intT iTop, iBot, iLeft, iRight;
-  floatT vTop, vBot, vLeft, vRight;
-  vTop = floatMin();
-  vBot = floatMax();
-  vLeft = floatMax();
-  vRight = floatMin();
-  for(intT i=0; i<n; ++i) {
-    floatT x = P[i].x();
-    floatT y = P[i].y();
-    if (y > vTop) {
-      vTop = y;
-      iTop = i;}
-    if (y < vBot) {
-      vBot = y;
-      iBot = i;}
-    if (x > vRight) {
-      vRight = x;
-      iRight = i;}
-    if (x < vLeft) {
-      vLeft = x;
-      iLeft = i;}
+  floatT vTop = floatMin();
+  floatT vBot = floatMax();
+  floatT vLeft = floatMax();
+  floatT vRight = floatMin();
+  for(intT i=0; i<numWorkers; ++i) {
+    if (vals[i*4+0]>vTop) iTop = indice[i*4+0];
+    if (vals[i*4+1]<vBot) iBot = indice[i*4+1];
+    if (vals[i*4+2]<vLeft) iLeft = indice[i*4+2];
+    if (vals[i*4+3]>vRight) iRight = indice[i*4+3];
   }
+
   swap(P[iTop], P[0]); iTop = 0;
   swap(P[iBot], P[1]); iBot = 1;
   swap(P[iLeft], P[2]); iLeft = 2;
