@@ -1,6 +1,6 @@
 # pargeo
 
-This repository uses a submodule (parlaylib).    To pull the submodule, in pbbsbench:
+This repository uses a submodule (parlaylib).    To pull the submodule, in pargeo:
 
 \> git submodule init
 
