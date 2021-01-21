@@ -23,7 +23,7 @@
 #include <iostream>
 #include <algorithm>
 #include "parlay/parallel.h"
-#include "parlay/internal/get_time.h"
+#include "common/get_time.h"
 #include "common/geometry.h"
 #include "common/geometryIO.h"
 #include "common/parse_command_line.h"
@@ -36,10 +36,10 @@ using coord = double;
 
 template<int dim>
 void timeTree(parlay::sequence<point<dim>> const &P, int rounds, char const *outFile) {
-  parlay::internal::timer t;
+  timer t; t.start();
   for(int i=0; i<rounds; ++i) {
     tree<dim>(P);
-    cout << "round-time = " << t.next_time() << endl;
+    cout << "round-time = " << t.get_next() << endl;
   }
   t.stop();
   //if (outFile != NULL) writeIntSeqToFile(I, outFile);
