@@ -250,7 +250,8 @@ _seq<intT> hull(point2d* P, intT n) {
 
   intT processed = 4;//first four points are initialized
 
-  auto idx = [&](facet* f) {return f-facets;};
+  auto fIdx = [&](facet* f) {return intT(f-facets);};
+  auto pIdx = [&](pointNode* p) {return intT(p-PN);};
 
   floatT reserveTime = 0;
   floatT confirmTime = 0;
@@ -268,29 +269,29 @@ _seq<intT> hull(point2d* P, intT n) {
     tt.start();
 
     parallel_for(s, s+b, [&](intT i) {
-			   pointNode pr = *pointers[i];
+			   pointNode* pr = pointers[i];
 
-			   if (pr.seeFacet) {
+			   if (pr->seeFacet) {
 
 			     //find range of visible facets [left, right)
 			     pair<facet*, facet*> conflicts;
 			     if (brute)
-			       conflicts = findVisible(H, pr.p);
+			       conflicts = findVisible(H, pr->p);
 			     else
-			       conflicts = findVisible(pr.seeFacet, pr.p);
+			       conflicts = findVisible(pr->seeFacet, pr->p);
 			     facet* start = conflicts.first;
 			     facet*   end = conflicts.second;
 
-			     facet* tmp = getFacetTmp(pointers[i]-PN);
+			     facet* tmp = getFacetTmp(pIdx(pr));
 			     tmp->cacheStart(start);
 			     tmp->cacheEnd(end);
 
 			     if (start && end) {
 			       auto ptr = start->prev;
 			       do {
-				 utils::writeMin(&reservation[idx(ptr)], i);
+				 utils::writeMin(&reservation[fIdx(ptr)], pIdx(pr));
 				 ptr = ptr->next;
-			       } while (ptr != end);
+			       } while (ptr != end->next);
 			     }
 			   }
 			 });
@@ -300,10 +301,10 @@ _seq<intT> hull(point2d* P, intT n) {
     // Confirm reservation
 
     parallel_for(s, s+b, [&](intT i) {
-			   pointNode pr = *pointers[i];
+			   pointNode* pr = pointers[i];
 
-			   if (pr.seeFacet) {
-			     facet* tmp = getFacetTmp(pointers[i]-PN);
+			   if (pr->seeFacet) {
+			     facet* tmp = getFacetTmp(pIdx(pr));
 			     facet* start = tmp->getStart();
 			     facet* end = tmp->getEnd();
 
@@ -313,18 +314,15 @@ _seq<intT> hull(point2d* P, intT n) {
 			       bool reserved = true;
 			       auto ptr = start->prev;
 			       do {
-				 if (reservation[idx(ptr)] == i) {
-				   reservation[idx(ptr)] = intMax();//reset
+				 if (reservation[fIdx(ptr)] == pIdx(pr)) {
+				   reservation[fIdx(ptr)] = intMax();//reset
 				 } else {
 				   reserved = false;
 				 }
 				 ptr = ptr->next;
-			       } while (ptr != end);
+			       } while (ptr != end->next);
 
-			       if(reserved) {
-				 reservation[idx(start)] = i;//marker
-			       }
-
+			       if (reserved) reservation[fIdx(start)] = pIdx(pr);//marker
 			     }
 			   }
 			 });
@@ -333,32 +331,32 @@ _seq<intT> hull(point2d* P, intT n) {
 
     // Processing
 
+    //permuted_serial_for(s, s+b, [&](intT i) {
     parallel_for(s, s+b, [&](intT i) {
 
-			   pointNode pr;
-			   pr = *pointers[i];
+			   pointNode *pr = pointers[i];
 
-			   if (!pr.seeFacet) {
+			   if (!pr->seeFacet) {
 			     pointers[i] = NULL; //in hull, no further actions needed
 			   } else {
 
-			     if(verbose) cout << " pr = " << pr.p << endl;
+			     if(verbose) cout << " pr = " << pr->p << endl;
 
-			     facet* tmp = getFacetTmp(pointers[i]-PN);
+			     facet* tmp = getFacetTmp(pIdx(pr));
 			     facet* start = tmp->getStart();
 			     facet* end = tmp->getEnd();
 			     if (start && end) {
 			       //confirm reservation
-			       bool reserved = reservation[idx(start)]==i;
-			       reservation[idx(start)] = intMax();
+			       bool reserved = reservation[fIdx(start)]==pIdx(pr);
 
 			       if (reserved) {
+				 reservation[fIdx(start)] = intMax();//late reset
 				 //compute new faces
 				 //note: the index for new facet memory should be based on PN
 				 // since i indexes into pointers array that is reordered
 				 // after each round
-				 facet* new1 = newFacetLeft(pointers[i]-PN, start->p1, pr.p);
-				 facet* new2 = newFacetRight(pointers[i]-PN, pr.p, end->p1);
+				 facet* new1 = newFacetLeft(pIdx(pr), start->p1, pr->p);
+				 facet* new2 = newFacetRight(pIdx(pr), pr->p, end->p1);
 				 pointers[i] = NULL; //will process now, no further actions needed
 
 				 //if not finding visible facets by bruteforce
@@ -388,8 +386,8 @@ _seq<intT> hull(point2d* P, intT n) {
 				 start->prev->next = new1; new1->prev = start->prev;
 				 new1->next = new2; new2->prev = new1;
 				 new2->next = end; end->prev = new2;
-				 if (i==s) H = new1;
-				 delHull(start, end);
+				 H = new1;//todo
+				 delHull(start, end);//todo
 
 				 if(verbose) {
 				   cout << "hull = ";
