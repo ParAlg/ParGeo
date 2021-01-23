@@ -240,6 +240,8 @@ _seq<intT> hull(point2d* P, intT n) {
   parallel_for(0, 2*n, [&](intT i) {reservation[i]=intMax();});
 
   auto pointers = newA(pointNode*, n);//set to NULL when processed
+  auto pointers2 = newA(pointNode*, n);//extra memory for packing
+  auto flag = newA(intT, n+1);//packing flag
   parallel_for(0, n, [&](intT i) {pointers[i] = &PN[i];});
   pointers[0] = NULL;
   pointers[1] = NULL;
@@ -314,7 +316,9 @@ _seq<intT> hull(point2d* P, intT n) {
 			     // of these points here, since during processing
 			     // there hull and visibility will be updated
 			     pointers[i] = NULL; // Not visible to OLD hull, skip
+			     flag[i] = 0;
 			   } else {
+			     flag[i] = 1;
 			     facet* tmp = getFacetTmp(pIdx(pr));
 			     facet* start = tmp->getStart();
 			     facet* end = tmp->getEnd();
@@ -366,6 +370,7 @@ _seq<intT> hull(point2d* P, intT n) {
 				 facet* new1 = newFacetLeft(pIdx(pr), start->p1, pr->p);
 				 facet* new2 = newFacetRight(pIdx(pr), pr->p, end->p1);
 				 pointers[i] = NULL; //will process now, no further actions needed
+				 flag[i] = 0;
 
 				 //if not finding visible facets by bruteforce
 				 // update visibility pointers
@@ -416,35 +421,52 @@ _seq<intT> hull(point2d* P, intT n) {
     processTime += tt.next();
 
     //pack unprocessed
-    // serial for now todo
 
-    intT lPt = s;
-    intT rPt = s+b-1;
+    intT roundProcessed;
+    if (b < 2000) {
+      intT lPt = s;
+      intT rPt = s+b-1;
 
-    while (lPt < rPt) {
-      if (pointers[lPt]) {//right
-        while (pointers[rPt] && lPt < rPt) {//right
-          rPt--;
+      while (lPt < rPt) {
+        if (pointers[lPt]) {//right
+          while (pointers[rPt] && lPt < rPt) {//right
+            rPt--;
+          }
+          if (lPt < rPt) {
+            swap(pointers[lPt], pointers[rPt]);
+            rPt--; }
+          else { break;}
         }
-        if (lPt < rPt) {
-          swap(pointers[lPt], pointers[rPt]);
-          rPt--; }
-        else { break;}
+        lPt++;
       }
-      lPt++;
+      if (pointers[lPt]==NULL) lPt++;//left
+      roundProcessed = lPt - s;
+    } else {
+      flag[s+b] = sequence::prefixSum(flag, s, s+b);
+      intT numConf = flag[s+b];
+      parallel_for(s, s+b, [&](intT i) {
+			     if (flag[i] != flag[i+1]) {
+			       pointers2[flag[i]] = pointers[i];
+			     }
+			   });
+      parallel_for(0, numConf, [&](intT i) {
+				 pointers[s+b-numConf+i] = pointers2[i];
+			       });
+      roundProcessed = b - numConf;
     }
-    if (pointers[lPt]==NULL) lPt++;//left
 
     packTime += tt.stop();
 
-    cout << "new processed = " << lPt - s << "/" << b << ": " << rt.stop() << endl;
+    cout << "new processed = " << roundProcessed << "/" << b << ": " << rt.stop() << endl;
 
-    processed = lPt;//only the successfull reservations succeed
+    processed = s+roundProcessed;
 
   }//end while
 
   free(PN);
   free(hullStarts);
+  free(pointers2);
+  free(flag);
 
 #ifndef SILENT
   cout << "hull-time = " << t.next() << endl;
