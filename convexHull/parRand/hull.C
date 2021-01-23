@@ -258,12 +258,18 @@ _seq<intT> hull(point2d* P, intT n) {
   floatT processTime = 0;
   floatT packTime = 0;
 
+  // Thread private memory for storing new hull
+  intT numWorker = num_workers();
+  facet** hullStarts = newA(facet*, numWorker);
+
   while(processed < n) {
     timing rt; rt.start();
 
     intT b = min(processed, n-processed);//processed #points already processed
 
     intT s = processed;
+
+    for(intT i=0; i<numWorker; ++i) hullStarts[i] = NULL;
 
     // Reservation
     tt.start();
@@ -388,8 +394,8 @@ _seq<intT> hull(point2d* P, intT n) {
 				 start->prev->next = new1; new1->prev = start->prev;
 				 new1->next = new2; new2->prev = new1;
 				 new2->next = end; end->prev = new2;
-				 H = new1;//todo
-				 delHull(start, end);//todo
+				 hullStarts[worker_id()] = new1;
+				 delHull(start, end);//bench perf todo
 
 				 if(verbose) {
 				   cout << "hull = ";
@@ -399,6 +405,13 @@ _seq<intT> hull(point2d* P, intT n) {
 			     }
 			   }
 			 });//end par_for
+
+    for(intT i=0; i<numWorker; ++i) {
+      if (hullStarts[i]) {
+	H = hullStarts[i];
+	break;
+      }
+    }
 
     processTime += tt.next();
 
@@ -427,9 +440,12 @@ _seq<intT> hull(point2d* P, intT n) {
     cout << "new processed = " << lPt - s << "/" << b << ": " << rt.stop() << endl;
 
     processed = lPt;//only the successfull reservations succeed
+
   }//end while
 
   free(PN);
+  free(hullStarts);
+
 #ifndef SILENT
   cout << "hull-time = " << t.next() << endl;
   cout << " init-time = " << initTime << endl;
