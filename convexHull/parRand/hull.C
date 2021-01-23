@@ -303,7 +303,12 @@ _seq<intT> hull(point2d* P, intT n) {
     parallel_for(s, s+b, [&](intT i) {
 			   pointNode* pr = pointers[i];
 
-			   if (pr->seeFacet) {
+			   if (!pr->seeFacet) {
+			     // Note: it's important to memorize the invisibility
+			     // of these points here, since during processing
+			     // there hull and visibility will be updated
+			     pointers[i] = NULL; // Not visible to OLD hull, skip
+			   } else {
 			     facet* tmp = getFacetTmp(pIdx(pr));
 			     facet* start = tmp->getStart();
 			     facet* end = tmp->getEnd();
@@ -331,14 +336,11 @@ _seq<intT> hull(point2d* P, intT n) {
 
     // Processing
 
-    //permuted_serial_for(s, s+b, [&](intT i) {
     parallel_for(s, s+b, [&](intT i) {
 
 			   pointNode *pr = pointers[i];
 
-			   if (!pr->seeFacet) {
-			     pointers[i] = NULL; //in hull, no further actions needed
-			   } else {
+			   if (pr) {
 
 			     if(verbose) cout << " pr = " << pr->p << endl;
 
