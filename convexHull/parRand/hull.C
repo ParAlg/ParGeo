@@ -60,11 +60,14 @@ static std::ostream& operator<<(std::ostream& os, const facet f) {
 }
 
 struct pointNode {
+  typedef double floatT;
   point2d p;
   facet* seeFacet;//maintain one edge visible, change from time to time
   //don't have to maintain all facets, can search pretty easily
   pointNode(point2d pp): p(pp), seeFacet(NULL) {};
   pointNode() {};
+  inline floatT x() {return p.x();}
+  inline floatT y() {return p.y();}
 };
 
 pair<facet*, facet*> findVisible(facet* head, point2d p) {
@@ -109,7 +112,7 @@ void printHull(facet* start, facet* end) {
 
 _seq<intT> hull(point2d* P, intT n) {
   static bool verbose = false;
-  static bool brute = false;//visibility check
+  static bool brute = false;//visibility check todo remove
   static bool verify = true;
   static bool farPivot = false;//todo add in farpivot optimization
 
@@ -130,6 +133,9 @@ _seq<intT> hull(point2d* P, intT n) {
   timing t; t.start();
   timing tt; tt.start();
 
+  pointNode* PN = newA(pointNode, n);
+  parallel_for(0, n, [&](intT i) {PN[i] = pointNode(P[i]);});
+
   auto findExtreme = [&] (intT s, intT e, intT& iTop, intT &iBot, intT &iLeft, intT &iRight, floatT& vTop, floatT& vBot, floatT& vLeft, floatT& vRight) {
 		       // Akl–Toussaint heuristic
 		       vTop = floatMin();
@@ -137,8 +143,8 @@ _seq<intT> hull(point2d* P, intT n) {
 		       vLeft = floatMax();
 		       vRight = floatMin();
 		       for(intT i=s; i<e; ++i) {
-			 floatT x = P[i].x();
-			 floatT y = P[i].y();
+			 floatT x = PN[i].x();
+			 floatT y = PN[i].y();
 			 if (y > vTop) {
 			   vTop = y;
 			   iTop = i;}
@@ -187,14 +193,14 @@ _seq<intT> hull(point2d* P, intT n) {
     if (vals[i*4+3]>vRight) iRight = indice[i*4+3];
   }
 
-  swap(P[iTop], P[0]); iTop = 0;
-  swap(P[iBot], P[1]); iBot = 1;
-  swap(P[iLeft], P[2]); iLeft = 2;
-  swap(P[iRight], P[3]); iRight = 3;
-  auto f0 = newFacetLeft(iTop, P[iLeft], P[iTop]);
-  auto f1 = newFacetRight(iTop, P[iTop], P[iRight]);
-  auto f2 = newFacetRight(iBot, P[iRight], P[iBot]);
-  auto f3 = newFacetLeft(iBot, P[iBot], P[iLeft]);
+  swap(PN[iTop], PN[0]); iTop = 0;
+  swap(PN[iBot], PN[1]); iBot = 1;
+  swap(PN[iLeft], PN[2]); iLeft = 2;
+  swap(PN[iRight], PN[3]); iRight = 3;
+  auto f0 = newFacetLeft(iTop, PN[iLeft].p, PN[iTop].p);
+  auto f1 = newFacetRight(iTop, PN[iTop].p, PN[iRight].p);
+  auto f2 = newFacetRight(iBot, PN[iRight].p, PN[iBot].p);
+  auto f3 = newFacetLeft(iBot, PN[iBot].p, PN[iLeft].p);
   f0->next = f1; f1->prev = f0;
   f1->next = f2; f2->prev = f1;
   f2->next = f3; f3->prev = f2;
@@ -206,9 +212,8 @@ _seq<intT> hull(point2d* P, intT n) {
     printHull(H, H);
   }
 
-  pointNode* PN = newA(pointNode, n);
+  //todo parallelize
   for(intT i=0; i<n; ++i) {
-    PN[i] = pointNode(P[i]);
     auto ptr = H;
     do {
       if (ptr->visibleFrom(P[i])) {
@@ -220,25 +225,6 @@ _seq<intT> hull(point2d* P, intT n) {
     } while (ptr != H);
   }
 
-  //given facet H, find furthest visible point (only among recorded)
-  auto findPivot = [&](facet* H)
-		   {
-		     auto f = H;
-		     while (f->size()<=0 && f->next!=H) f = f->next;
-		     if (f->size() <= 0) return (pointNode*)NULL;
-		     point2d l = f->p1;
-		     point2d r = f->p2;
-		     auto triangArea = [&](intT idx)
-				       {
-					 return triArea(l, r, f->at(idx)->p);
-				       };
-		     intT idx = sequence::maxIndex<double>((intT)0, (intT)f->size(), greater<floatT>(), triangArea);
-		     return f->at(idx);
-		   };
-
-  intT* reservation = newA(intT, 2*n);
-  parallel_for(0, 2*n, [&](intT i) {reservation[i]=intMax();});
-
   auto pointers = newA(pointNode*, n);//set to NULL when processed
   auto pointers2 = newA(pointNode*, n);//extra memory for packing
   auto flag = newA(intT, n+1);//packing flag
@@ -247,6 +233,9 @@ _seq<intT> hull(point2d* P, intT n) {
   pointers[1] = NULL;
   pointers[2] = NULL;
   pointers[3] = NULL;
+
+  intT* reservation = newA(intT, 2*n);
+  parallel_for(0, 2*n, [&](intT i) {reservation[i]=intMax();});
 
   floatT initTime = tt.stop();
 
