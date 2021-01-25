@@ -25,6 +25,7 @@
 #include "pbbs/utils.h"
 #include "pbbs/gettime.h"
 #include "pbbs/sequence.h"
+#include "pbbs/sampleSort.h"
 #include "geometry.h"
 #include "hull.h"
 using namespace std;
@@ -37,17 +38,23 @@ struct facet {
   facet* prev;
   point2d p1;
   point2d p2;//(p1->p2) is clockwise
-  vector<pointNode*>* seeList;//points that can see facet
+  pointNode** seeList;
+  intT seeListSize;
 
   // Constructors
   facet(point2d p11, point2d p22): p1(p11), p2(p22) {
-    seeList = new vector<pointNode*>();}//todo allocation
+    seeList = NULL;
+    seeListSize = 0;
+  }
 
   // Methods
+  void assign(pointNode** seeIn, intT seeSizeIn) {
+    //if (seeSizeIn < 0) abort();
+    seeList = seeIn;
+    seeListSize = seeSizeIn;}
   bool visibleFrom(point2d p) {return triArea(p1, p2, p) > numericKnob;}
-  void push_back(pointNode* p) {seeList->push_back(p);}
-  intT size() {return seeList->size();};
-  pointNode* at(intT i) {return seeList->at(i);}
+  intT size() {return seeListSize;};
+  pointNode* at(intT i) {return seeList[i];}
   void cacheStart(facet* start) {prev = start;}
   void cacheEnd(facet* end) {next = end;}
   facet* getStart() {return prev;}
@@ -63,7 +70,6 @@ struct pointNode {
   typedef double floatT;
   point2d p;
   facet* seeFacet;//maintain one edge visible, change from time to time
-  //don't have to maintain all facets, can search pretty easily
   pointNode(point2d pp): p(pp), seeFacet(NULL) {};
   pointNode() {};
   inline floatT x() {return p.x();}
@@ -91,14 +97,6 @@ pair<facet*, facet*> findVisible(facet* head, point2d p) {
     ptr = ptr->next;
   } while (ptr != head);
   return make_pair((facet*)NULL, (facet*)NULL);
-}
-
-void delHull(facet* start, facet* end) {
-  auto ptr = start;
-  do {
-    delete ptr->seeList;
-    ptr = ptr->next;
-  } while (ptr != end);
 }
 
 void printHull(facet* start, facet* end) {
@@ -212,34 +210,67 @@ _seq<intT> hull(point2d* P, intT n) {
     printHull(H, H);
   }
 
-  //todo parallelize
-  for(intT i=0; i<n; ++i) {
-    auto ptr = H;
-    do {
-      if (ptr->visibleFrom(P[i])) {
-        PN[i].seeFacet = ptr;
-        ptr->push_back(&PN[i]);
-        break; //each point only records one visible facet
-      }
-      ptr = ptr->next;
-    } while (ptr != H);
-  }
+  // Sort points so those assigned to the same facet are adjacent
+  parallel_for(4, n, [&](intT i) {
+		       auto ptr = H;
+		       do {
+			 if (ptr->visibleFrom(PN[i].p)) {
+			   PN[i].seeFacet = ptr;
+			   break;
+			 }
+			 ptr = ptr->next;
+		       } while (ptr != H);
+		     });
+  sampleSort(PN+4, n-4, [&](pointNode p1, pointNode p2) {
+			  return p1.seeFacet < p2.seeFacet;
+			}); // Note: reordering pointers is an alternative
 
   auto pointers = newA(pointNode*, n);//set to NULL when processed
   auto pointers2 = newA(pointNode*, n);//extra memory for packing
   auto flag = newA(intT, n+1);//packing flag
-  parallel_for(0, n, [&](intT i) {pointers[i] = &PN[i];});
-  pointers[0] = NULL;
-  pointers[1] = NULL;
-  pointers[2] = NULL;
-  pointers[3] = NULL;
+  pointers[0] = NULL; pointers[1] = NULL;
+  pointers[2] = NULL; pointers[3] = NULL;
+  parallel_for(4, n, [&](intT i) {pointers[i] = &PN[i];});
+
+  auto SL = newA(pointNode*, n);
+  parallel_for(0, n, [&](intT i) {SL[i] = &PN[i];});
+
+  // Assign segments of pointers to 4 initial facets
+  pair<intT, facet*> assignment[5];
+  intT cnt = 0;
+  parallel_for(4, n, [&](intT i) {
+		       if (i == 4) {
+			 if (SL[i]->seeFacet)
+			   assignment[utils::fetchAndAdd(&cnt, 1)]
+			     = make_pair(i, SL[i]->seeFacet);
+		       } else if (SL[i]->seeFacet != SL[i-1]->seeFacet) {
+			 assignment[utils::fetchAndAdd(&cnt, 1)]
+			   = make_pair(i, SL[i]->seeFacet);
+		       }
+		     });
+  assignment[4] = make_pair(n, (facet*)NULL);
+  sort(assignment, assignment+5);
+
+  auto ptr = H;
+  do {
+    for (int j=0; j<4; ++j) {
+      if (assignment[j].second == ptr) {
+	ptr->assign(&SL[assignment[j].first],
+		    assignment[j+1].first-assignment[j].first);
+      }
+    }
+    ptr = ptr->next;
+  } while (ptr != H);
 
   intT* reservation = newA(intT, 2*n);
   parallel_for(0, 2*n, [&](intT i) {reservation[i]=intMax();});
 
+  pointNode*** seeLists = newA(pointNode**, 2*n);
+  parallel_for(0, 2*n, [&](intT i) {seeLists[i]=NULL;});
+
   floatT initTime = tt.stop();
 
-  intT processed = 4;//first four points are initialized
+  intT processed = assignment[0].first;//skip points that are already in
 
   auto fIdx = [&](facet* f) {return intT(f-facets);};
   auto pIdx = [&](pointNode* p) {return intT(p-PN);};
@@ -253,10 +284,14 @@ _seq<intT> hull(point2d* P, intT n) {
   intT numWorker = num_workers();
   facet** hullStarts = newA(facet*, numWorker);
 
+  floatT batch = 4;
+  static const intT maxBatch = 2000;
+
   while(processed < n) {
     timing rt; rt.start();
 
-    intT b = min(processed, n-processed);//processed #points already processed
+    intT b = min(min((intT)batch, n-processed), maxBatch);
+    if (batch <= maxBatch) batch *= 1.1;
 
     intT s = processed;
 
@@ -361,26 +396,60 @@ _seq<intT> hull(point2d* P, intT n) {
 				 pointers[i] = NULL; //will process now, no further actions needed
 				 flag[i] = 0;
 
-				 //if not finding visible facets by bruteforce
-				 // update visibility pointers
-				 if (!brute) {
-				   auto ptr = start;
+				 intT cnt = 0;
+				 auto ptr = start;
+				 do {
+				   cnt += ptr->size();
+				   ptr = ptr->next;
+				 } while (ptr != end);
+
+				 if (cnt > 0) { // Re-assign visible points
+
+				   auto SLM = newA(pointNode*, cnt);
+				   seeLists[fIdx(new1)] = SLM;
+
+				   // Update points that see facet* ptr
+				   pointNode** SLP = SLM;
+				   ptr = start;
 				   do {
-				     //update points that see them
-				     for(intT j=0; j<ptr->size(); ++j) {
-				       auto seePt = ptr->at(j);
-				       seePt->seeFacet = NULL;
-				       if (new1->visibleFrom(seePt->p)) {
-					 seePt->seeFacet = new1;
-					 new1->push_back(seePt);
-				       } else if (new2->visibleFrom(seePt->p)) {
-					 seePt->seeFacet = new2;
-					 new2->push_back(seePt);
-				       }
-				     }
+				     granular_for(0, ptr->size(), 2000,
+						  [&](intT j) {
+						    auto seePt = ptr->at(j);
+						    SLP[j] = seePt;
+						    seePt->seeFacet = NULL;
+						    if (new1->visibleFrom(seePt->p)) {
+						      seePt->seeFacet = new1;
+						    } else if (new2->visibleFrom(seePt->p)) {
+						      seePt->seeFacet = new2;
+						    }
+						  });
+				     SLP += ptr->size();
 				     ptr = ptr->next;
 				   } while (ptr != end);
-				 }
+
+				   // Update new facets' visible points list
+				   sampleSort(SLM, cnt, [&](pointNode* p1, pointNode* p2) {
+							  return p1->seeFacet < p2->seeFacet;});
+				   intT asn[3]; asn[0] = -1; asn[1] = -1;
+				   granular_for(0, cnt, 2000, [&](intT j) {
+							  if (j == 0 || (SLM[j]->seeFacet != SLM[j-1]->seeFacet)) {
+							    if (SLM[j]->seeFacet==new1)
+							      asn[0] = j;
+							    else if (SLM[j]->seeFacet==new2)
+							      asn[1] = j;
+							  }
+							});
+				   asn[2] = cnt;
+				   if (asn[0]>= 0) {
+				     intT new1Size;
+				     if (asn[1]>=0) new1Size = asn[1]-asn[0];
+				     else new1Size = asn[2]-asn[0];
+				     if (new1Size>0)
+				       new1->assign(&SLM[asn[0]], new1Size);
+				   }
+				   if (asn[1]>=0 && asn[2]-asn[1] > 0)
+				     new2->assign(&SLM[asn[1]], asn[2]-asn[1]);
+				 } // End re-assigning visible points
 
 				 if(verbose) cout << "adding = " << *new1 << ", " << *new2 << endl;
 
@@ -389,7 +458,6 @@ _seq<intT> hull(point2d* P, intT n) {
 				 new1->next = new2; new2->prev = new1;
 				 new2->next = end; end->prev = new2;
 				 hullStarts[worker_id()] = new1;
-				 delHull(start, end);//bench perf todo
 
 				 if(verbose) {
 				   cout << "hull = ";
@@ -452,6 +520,12 @@ _seq<intT> hull(point2d* P, intT n) {
 
   }//end while
 
+  parallel_for(0, 2*n, [&](intT i) {
+			 // Freeing see lists allocated
+			 if (seeLists[i]) free(seeLists[i]);
+		       });
+  free(SL);
+  free(seeLists);
   free(PN);
   free(hullStarts);
   free(pointers2);
@@ -484,13 +558,15 @@ _seq<intT> hull(point2d* P, intT n) {
   }
 
 #ifndef SILENT
-  intT hSize = 0;
-  auto ptr = H;
-  do {
-    hSize ++;
-    ptr = ptr->next;
-  } while (ptr != H);
-  cout << "hull size = " << hSize << endl;
+  {
+    intT hSize = 0;
+    auto ptr = H;
+    do {
+      hSize ++;
+      ptr = ptr->next;
+    } while (ptr != H);
+    cout << "hull size = " << hSize << endl;
+  }
 #endif
 
   free(facets);
