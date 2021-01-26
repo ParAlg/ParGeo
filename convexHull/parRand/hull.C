@@ -210,7 +210,6 @@ _seq<intT> hull(point2d* P, intT n) {
     printHull(H, H);
   }
 
-  // Sort points so those assigned to the same facet are adjacent
   parallel_for(4, n, [&](intT i) {
 		       auto ptr = H;
 		       do {
@@ -221,19 +220,19 @@ _seq<intT> hull(point2d* P, intT n) {
 			 ptr = ptr->next;
 		       } while (ptr != H);
 		     });
-  sampleSort(PN+4, n-4, [&](pointNode p1, pointNode p2) {
-			  return p1.seeFacet < p2.seeFacet;
-			}); // Note: reordering pointers is an alternative
 
-  auto pointers = newA(pointNode*, n);//set to NULL when processed
-  auto pointers2 = newA(pointNode*, n);//extra memory for packing
-  auto flag = newA(intT, n+1);//packing flag
-  pointers[0] = NULL; pointers[1] = NULL;
+  auto pointers = newA(pointNode*, n);
+  pointers[0] = NULL; pointers[1] = NULL; // Set to NULL when processed
   pointers[2] = NULL; pointers[3] = NULL;
   parallel_for(4, n, [&](intT i) {pointers[i] = &PN[i];});
 
+  // Sort points so those assigned to the same facet are adjacent
+  sampleSort(pointers+4, n-4, [&](pointNode* p1, pointNode* p2) {
+			  return p1->seeFacet < p2->seeFacet;
+			});
+
   auto SL = newA(pointNode*, n);
-  parallel_for(0, n, [&](intT i) {SL[i] = &PN[i];});
+  parallel_for(0, n, [&](intT i) {SL[i] = pointers[i];});
 
   // Assign segments of pointers to 4 initial facets
   pair<intT, facet*> assignment[5];
@@ -262,6 +261,9 @@ _seq<intT> hull(point2d* P, intT n) {
     ptr = ptr->next;
   } while (ptr != H);
 
+  auto flag = newA(intT, n+1);//packing flag
+  auto pointers2 = newA(pointNode*, n);//extra memory for packing
+
   intT* reservation = newA(intT, 2*n);
   parallel_for(0, 2*n, [&](intT i) {reservation[i]=intMax();});
 
@@ -285,13 +287,15 @@ _seq<intT> hull(point2d* P, intT n) {
   facet** hullStarts = newA(facet*, numWorker);
 
   floatT batch = 4;
-  static const intT maxBatch = 2000;
+  static const intT maxBatch = n;
 
+  intT totalRounds = 0;
   while(processed < n) {
     timing rt; rt.start();
+    totalRounds ++;
 
     intT b = min(min((intT)batch, n-processed), maxBatch);
-    if (batch <= maxBatch) batch *= 1.1;
+    if (batch <= maxBatch) batch *= 2;
 
     intT s = processed;
 
@@ -514,7 +518,16 @@ _seq<intT> hull(point2d* P, intT n) {
 
     packTime += tt.stop();
 
-    cout << "new processed = " << roundProcessed << "/" << b << ": " << rt.stop() << endl;
+    //cout << "new processed = " << roundProcessed << "/" << b << ": " << rt.stop() << endl;
+    // intT hSize = 0;
+    // {
+    //   auto ptr = H;
+    //   do {
+    // 	hSize ++;
+    // 	ptr = ptr->next;
+    //   } while (ptr != H);
+    // }
+    //cout << rt.stop() << endl;
 
     processed = s+roundProcessed;
 
@@ -532,6 +545,7 @@ _seq<intT> hull(point2d* P, intT n) {
   free(flag);
 
 #ifndef SILENT
+  cout << "rounds = " << totalRounds << endl;
   cout << "hull-time = " << t.next() << endl;
   cout << " init-time = " << initTime << endl;
   cout << " reserve-time = " << reserveTime << endl;
