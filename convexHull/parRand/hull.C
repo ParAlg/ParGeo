@@ -177,7 +177,7 @@ _seq<intT> hull(point2d* P, intT n) {
 				indice[i*4+0] = iTopLoc; indice[i*4+1] = iBotLoc;
 				indice[i*4+2] = iLeftLoc; indice[i*4+3] = iRightLoc;
 				vals[i*4+0] = vTopLoc; vals[i*4+1] = vBotLoc;
-				vals[i*4+2] = iLeftLoc; vals[i*4+3] = iRightLoc;
+				vals[i*4+2] = vLeftLoc; vals[i*4+3] = vRightLoc;
 			      }, 1);
 
   intT iTop, iBot, iLeft, iRight;
