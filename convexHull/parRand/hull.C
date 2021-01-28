@@ -109,6 +109,7 @@ void printHull(facet* start, facet* end) {
 }
 
 _seq<intT> hull(point2d* P, intT n) {
+  static bool sampling = false;
   static bool verbose = false;
   static bool brute = false;//visibility check todo remove
   static bool verify = true;
@@ -344,9 +345,7 @@ _seq<intT> hull(point2d* P, intT n) {
 			     // of these points here, since during processing
 			     // there hull and visibility will be updated
 			     pointers[i] = NULL; // Not visible to OLD hull, skip
-			     flag[i] = 0;
 			   } else {
-			     flag[i] = 1;
 			     facet* tmp = getFacetTmp(pIdx(pr));
 			     facet* start = tmp->getStart();
 			     facet* end = tmp->getEnd();
@@ -398,7 +397,6 @@ _seq<intT> hull(point2d* P, intT n) {
 				 facet* new1 = newFacetLeft(pIdx(pr), start->p1, pr->p);
 				 facet* new2 = newFacetRight(pIdx(pr), pr->p, end->p1);
 				 pointers[i] = NULL; //will process now, no further actions needed
-				 flag[i] = 0;
 
 				 intT cnt = 0;
 				 auto ptr = start;
@@ -485,8 +483,14 @@ _seq<intT> hull(point2d* P, intT n) {
 
     intT roundProcessed;
     if (b < 2000) {
+      if (sampling) {
+	parallel_for(s+b, n, [&](intT i){
+				       if (!pointers[i]->seeFacet)
+					 pointers[i] = NULL;
+				     });
+      }
       intT lPt = s;
-      intT rPt = s+b-1;
+      intT rPt = sampling ? n-1 : s+b-1;
 
       while (lPt < rPt) {
         if (pointers[lPt]) {//right
@@ -503,17 +507,30 @@ _seq<intT> hull(point2d* P, intT n) {
       if (pointers[lPt]==NULL) lPt++;//left
       roundProcessed = lPt - s;
     } else {
-      flag[s+b] = sequence::prefixSum(flag, s, s+b);
-      intT numConf = flag[s+b];
-      parallel_for(s, s+b, [&](intT i) {
-			     if (flag[i] != flag[i+1]) {
-			       pointers2[flag[i]] = pointers[i];
+      intT e = sampling ? n : s+b;
+      parallel_for(s, e, [&](intT i){
+			   if (pointers[i]) {
+			     if (!pointers[i]->seeFacet) {
+			       pointers[i] = NULL;
+			       flag[i] = 0;
+			     } else {
+			       flag[i] = 1;
 			     }
-			   });
+			   } else {
+			     flag[i] = 0;
+			   }
+			 });
+      flag[e] = sequence::prefixSum(flag, s, e);
+      intT numConf = flag[e];
+      parallel_for(s, e, [&](intT i) {
+			   if (flag[i] != flag[i+1]) {
+			     pointers2[flag[i]] = pointers[i];
+			   }
+			 });
       parallel_for(0, numConf, [&](intT i) {
-				 pointers[s+b-numConf+i] = pointers2[i];
+				 pointers[e-numConf+i] = pointers2[i];
 			       });
-      roundProcessed = b - numConf;
+      roundProcessed = sampling ? n - numConf - s : b - numConf;
     }
 
     packTime += tt.stop();
