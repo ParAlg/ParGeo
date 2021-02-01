@@ -41,7 +41,9 @@ struct facet {
 
   // Constructors
   facet(intT p11, intT p22): p1(p11), p2(p22) {
-    seeList = new vector<pointNode*>();}//todo allocation
+    seeList = new vector<pointNode*>();}//todo allocation make more efficient (might call in parallel)
+
+  facet(): p1(-1), p2(-1), seeList(NULL), next(NULL), prev(NULL) {}
 
   // Methods
   bool visibleFrom(point2d* P, intT p) {return triArea(P[p1], P[p2], P[p]) > numericKnob;}
@@ -86,13 +88,17 @@ pair<facet*, facet*> findVisible(point2d* P, facet* head, intT p) {
   return make_pair((facet*)NULL, (facet*)NULL);
 }
 
-_seq<intT> randHullSerial(point2d* P, intT n, intT* I=NULL) {
+// Internal, takes in a partial hull
+// H is an existing partial hull
+// facets need to be at least of size 2*n
+facet* randHullSerialInternal(point2d* P, intT n, facet* H, facet* facets=NULL) {
   static bool verbose = false;
   static bool farPivot = true;
   static bool pivotSample = true;
   static intT sampleSize = 1000;
 
-  auto facets = newA(facet, 2*n);
+  if (!facets)
+    auto facets = newA(facet, 2*n);
 
   auto newFacetLeft = [&](intT i, intT p11, intT p22) {
 			facets[2*i] = facet(p11, p22);
@@ -105,44 +111,7 @@ _seq<intT> randHullSerial(point2d* P, intT n, intT* I=NULL) {
 
   timing t; t.start();
 
-  // Akl–Toussaint heuristic
-  intT iTop, iBot, iLeft, iRight;
-  floatT vTop, vBot, vLeft, vRight;
-  vTop = floatMin();
-  vBot = floatMax();
-  vLeft = floatMax();
-  vRight = floatMin();
-  for(intT i=0; i<n; ++i) {
-    floatT x = P[i].x();
-    floatT y = P[i].y();
-    if (y > vTop) {
-      vTop = y;
-      iTop = i;}
-    if (y < vBot) {
-      vBot = y;
-      iBot = i;}
-    if (x > vRight) {
-      vRight = x;
-      iRight = i;}
-    if (x < vLeft) {
-      vLeft = x;
-      iLeft = i;}
-  }
-  swap(P[iTop], P[0]); iTop = 0;
-  swap(P[iBot], P[1]); iBot = 1;
-  swap(P[iLeft], P[2]); iLeft = 2;
-  swap(P[iRight], P[3]); iRight = 3;
-  auto f0 = newFacetLeft(iTop, iLeft, iTop);
-  auto f1 = newFacetRight(iTop, iTop, iRight);
-  auto f2 = newFacetRight(iBot, iRight, iBot);
-  auto f3 = newFacetLeft(iBot, iBot, iLeft);
-  f0->next = f1; f1->prev = f0;
-  f1->next = f2; f2->prev = f1;
-  f2->next = f3; f3->prev = f2;
-  f3->next = f0; f0->prev = f3;
-  facet* H = f0;
-
-  pointNode* PN = newA(pointNode, n);
+  pointNode* PN = newA(pointNode, n);//todo consider allocate outside
   for(intT i=0; i<n; ++i) {
     PN[i] = pointNode(i);
     auto ptr = H;
@@ -267,19 +236,74 @@ _seq<intT> randHullSerial(point2d* P, intT n, intT* I=NULL) {
     }
     i++;
   }
-  cout << "#rounds = " << roundCount << endl;
+  if(verbose) cout << "#rounds = " << roundCount << endl;
 
   free(PN);
+  return H;
+}
+
+// Call from a partial hull
+// I contains indices for the existing hull, it is required that
+// it has enough space to hold the entire hull (size n)
+// I will be overwritten
+_seq<intT> randHullSerial(point2d* P, intT n, intT* I, intT m) {
+  auto H = newA(facet, m+2*n);
+  for(intT i=0; i<m; ++i) {
+    H[i].p1 = I[i];
+    H[i].p2 = I[(i+1)%m];
+    H[i].seeList = new vector<pointNode*>();//todo allocation
+    H[i].prev = &H[(i+m-1)%m];
+    H[i].next = &H[(i+1)%m];
+  }
+
+  auto facets = H+m;
+  auto newH = randHullSerialInternal(P, n, H, facets);
+
+  intT mm = 0;
+  auto ptr = newH;
+  do {
+    I[mm++] = ptr->p1;
+    ptr = ptr->next;
+  } while (ptr != newH);
+  free(H);
+
+  return _seq<intT>(I,mm);
+}
+
+// Call from scratch
+_seq<intT> randHullSerial(point2d* P, intT n, intT* I=NULL) {
+  // Akl–Toussaint heuristic
+  // picks the left, right, top, bottom points to form an initial hull of size 4
+
+  intT iTop, iBot, iLeft, iRight;
+  floatT vTop, vBot, vLeft, vRight;
+  vTop = floatMin();
+  vBot = floatMax();
+  vLeft = floatMax();
+  vRight = floatMin();
+  for(intT i=0; i<n; ++i) {
+    floatT x = P[i].x();
+    floatT y = P[i].y();
+    if (y > vTop) {
+      vTop = y;
+      iTop = i;}
+    if (y < vBot) {
+      vBot = y;
+      iBot = i;}
+    if (x > vRight) {
+      vRight = x;
+      iRight = i;}
+    if (x < vLeft) {
+      vLeft = x;
+      iLeft = i;}
+  }
 
   if (!I) {
-    I = newA(intT, n);
-  }
-  intT m = 0;
-  auto ptr = H;
-  do {
-    I[m++] = ptr->p1;
-    ptr = ptr->next;
-  } while (ptr != H);
+    I = newA(intT, n);}
+  I[0] = iLeft;
+  I[1] = iTop;
+  I[2] = iRight;
+  I[3] = iBot;
 
-  return _seq<intT>(I,m);
+  return randHullSerial(P, n, I, 4);
 }
