@@ -91,7 +91,7 @@ pair<facet*, facet*> findVisible(point2d* P, facet* head, intT p) {
 // Internal, takes in a partial hull
 // H is an existing partial hull
 // facets need to be at least of size 2*n
-facet* randHullSerialInternal(point2d* P, intT n, facet* H, facet* facets=NULL) {
+facet* randHullInternalSerial(point2d* P, intT n, facet* H, facet* facets=NULL) {
   static bool verbose = false;
   static bool farPivot = true;
   static bool pivotSample = true;
@@ -257,7 +257,7 @@ _seq<intT> randHullSerial(point2d* P, intT n, intT* I, intT m) {
   }
 
   auto facets = H+m;
-  auto newH = randHullSerialInternal(P, n, H, facets);
+  auto newH = randHullInternalSerial(P, n, H, facets);
 
   intT mm = 0;
   auto ptr = newH;
@@ -306,4 +306,14 @@ _seq<intT> randHullSerial(point2d* P, intT n, intT* I=NULL) {
   I[3] = iBot;
 
   return randHullSerial(P, n, I, 4);
+}
+
+// Start from scratch, with a random facet
+_seq<intT> randHullNaiveSerial(point2d* P, intT n, intT* I=NULL) {
+  if (!I) {
+    I = newA(intT, n);}
+  I[0] = 0;
+  I[1] = 1;
+
+  return randHullSerial(P, n, I, 2);
 }
