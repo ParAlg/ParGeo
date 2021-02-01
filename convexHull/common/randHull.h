@@ -89,6 +89,8 @@ pair<facet*, facet*> findVisible(point2d* P, facet* head, intT p) {
 _seq<intT> randHullSerial(point2d* P, intT n, intT* I=NULL) {
   static bool verbose = false;
   static bool farPivot = true;
+  static bool pivotSample = true;
+  static intT sampleSize = 1000;
 
   auto facets = newA(facet, 2*n);
 
@@ -169,17 +171,39 @@ _seq<intT> randHullSerial(point2d* P, intT n, intT* I=NULL) {
 		     intT idx = sequence::maxIndex<double>((intT)0, (intT)f->size(), greater<floatT>(), triangArea);
 		     return f->at(idx);
 		   };
+  auto findPivotSample = [&](facet* H)
+		   {
+		     auto f = H;
+		     while (f->size()<=0 && f->next!=H) f = f->next;
+		     if (f->size() <= 0) return (pointNode*)NULL;
+		     point2d l = P[f->p1];
+		     point2d r = P[f->p2];
+		     auto triangArea = [&](intT idx)
+				       {
+					 return triArea(l, r, P[f->at(idx)->p]);
+				       };
+		     intT reductionSize = min((intT)f->size(), sampleSize);
+		     intT idx = sequence::maxIndex<double>((intT)0, reductionSize, greater<floatT>(), triangArea);
+		     return f->at(idx);
+		   };
 
   intT i = 4;//first four points are in
+  intT roundCount = 0;
   while(1) {
     if(verbose) cout << "--- iter" << i << endl;
 
     //find a pivot point to be processed next
     pointNode pr;
     if (farPivot) {
-      pointNode* prp = findPivot(H);
-      if (!prp) break;
-      pr = *prp;
+      if (pivotSample) {
+	pointNode* prp = findPivotSample(H);
+	if (!prp) break;
+	pr = *prp;
+      } else {
+	pointNode* prp = findPivot(H);
+	if (!prp) break;
+	pr = *prp;
+      }
     } else {
       if (i>=n) break;
       pr = PN[i];
@@ -187,6 +211,8 @@ _seq<intT> randHullSerial(point2d* P, intT n, intT* I=NULL) {
 	i++;
 	continue;}
     }
+
+    roundCount ++;
 
     if(verbose) cout << " pr = " << pr.p << endl;
 
@@ -241,6 +267,7 @@ _seq<intT> randHullSerial(point2d* P, intT n, intT* I=NULL) {
     }
     i++;
   }
+  cout << "#rounds = " << roundCount << endl;
 
   free(PN);
 
