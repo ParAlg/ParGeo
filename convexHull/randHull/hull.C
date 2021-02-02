@@ -24,8 +24,8 @@
 
 _seq<intT> hull(point2d* P, intT n) {
   timing t; t.start();
-  //auto CH = randHullNaiveSerial(P,n);
-  auto CH = randHullSerial(P,n);
+  auto CH = randHullNaiveSerial(P,n);
+  //auto CH = randHullSerial(P,n);
 #ifdef SILENT
   cout << t.stop() << endl;
 #else

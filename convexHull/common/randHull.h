@@ -91,14 +91,14 @@ pair<facet*, facet*> findVisible(point2d* P, facet* head, intT p) {
 // Internal, takes in a partial hull
 // H is an existing partial hull
 // facets need to be at least of size 2*n
-facet* randHullInternalSerial(point2d* P, intT n, facet* H, facet* facets=NULL) {
+facet* randHullInternalSerial(point2d* P, pointNode* PN, intT n, facet* H, facet* facets=NULL) {
   static bool verbose = false;
   static bool farPivot = true;
   static bool pivotSample = true;
   static intT sampleSize = 1000;
 
-  if (!facets)
-    auto facets = newA(facet, 2*n);
+  if (!facets) {
+    auto facets = newA(facet, 2*n);}
 
   auto newFacetLeft = [&](intT i, intT p11, intT p22) {
 			facets[2*i] = facet(p11, p22);
@@ -110,20 +110,6 @@ facet* randHullInternalSerial(point2d* P, intT n, facet* H, facet* facets=NULL) 
 		       };
 
   timing t; t.start();
-
-  pointNode* PN = newA(pointNode, n);//todo consider allocate outside
-  for(intT i=0; i<n; ++i) {
-    PN[i] = pointNode(i);
-    auto ptr = H;
-    do {
-      if (ptr->visibleFrom(P, i)) {
-        PN[i].seeFacet = ptr;
-        ptr->push_back(&PN[i]);
-        break; //each point only records one visible facet
-      }
-      ptr = ptr->next;
-    } while (ptr != H);
-  }
 
   //given facet H, find furthest visible point (only among recorded)
   auto findPivot = [&](facet* H)
@@ -156,7 +142,7 @@ facet* randHullInternalSerial(point2d* P, intT n, facet* H, facet* facets=NULL) 
 		     return f->at(idx);
 		   };
 
-  intT i = 4;//first four points are in
+  intT i = 0;
   intT roundCount = 0;
   while(1) {
     if(verbose) cout << "--- iter" << i << endl;
@@ -238,8 +224,83 @@ facet* randHullInternalSerial(point2d* P, intT n, facet* H, facet* facets=NULL) 
   }
   if(verbose) cout << "#rounds = " << roundCount << endl;
 
-  free(PN);
   return H;
+}
+
+facet* randHullInternalSerial(point2d* P, intT n, facet* H, facet* facets=NULL) {
+  pointNode* PN = newA(pointNode, n);//todo consider allocate outside
+
+  for(intT i=0; i<n; ++i) {
+    PN[i] = pointNode(i);
+    auto ptr = H;
+    do {
+      if (ptr->visibleFrom(P, i)) {
+        PN[i].seeFacet = ptr;
+        ptr->push_back(&PN[i]);
+        break; //each point only records one visible facet
+      }
+      ptr = ptr->next;
+    } while (ptr != H);
+  }
+
+  auto CH = randHullInternalSerial(P, PN, n, H, facets);
+  free(PN);
+  return CH;
+}
+
+//Can be plugged in to an external hull algorithm where
+// P[I[0,n)] stores points to be processed
+// P[Itmp[0,m)] stores a partial convex hull
+// Resulting hull will be stored in I (overwrite)
+// Hull size will be returned
+intT randHullExternalSerial(point2d* P, intT* I, intT n, intT* Itmp, intT m) {
+  facet* H = newA(facet, m+2*n);
+  facet* facets = H+m;
+
+  for(intT i=0; i<m; ++i) {
+    H[i].p1 = Itmp[i];
+    H[i].p2 = Itmp[(i+1)%m];
+    H[i].seeList = new vector<pointNode*>();//todo allocation
+    H[i].prev = &H[(i+m-1)%m];
+    H[i].next = &H[(i+1)%m];
+  }
+
+  pointNode* PN = newA(pointNode, n);
+  for(intT i=0; i<n; ++i) {
+    PN[i] = pointNode(I[i]);
+    auto ptr = H;
+    do {
+      if (ptr->visibleFrom(P, I[i])) {
+        PN[i].seeFacet = ptr;
+        ptr->push_back(&PN[i]);
+        break; //each point only records one visible facet
+      }
+      ptr = ptr->next;
+    } while (ptr != H);
+  }
+
+  auto newH = randHullInternalSerial(P, PN, n, H, facets);
+
+  intT mm = 0;
+  auto head = newH;
+  do {
+    if (head->p1 == Itmp[0]) break;
+    head = head->next;
+  } while (head != newH);
+
+  auto ptr = head;
+  do {
+    if (ptr - H < m || ptr->p1 == Itmp[0]) {
+      ptr = ptr->next;
+    } else {
+      I[mm++] = ptr->p1;
+      ptr = ptr->next;
+    }
+  } while (ptr != head);
+
+  free(H);
+  free(PN);
+  return mm;
 }
 
 // Call from a partial hull
@@ -270,7 +331,7 @@ _seq<intT> randHullSerial(point2d* P, intT n, intT* I, intT m) {
   return _seq<intT>(I,mm);
 }
 
-// Call from scratch
+// Call from scratch, finds 4 extreme as initialization
 _seq<intT> randHullSerial(point2d* P, intT n, intT* I=NULL) {
   // Akl–Toussaint heuristic
   // picks the left, right, top, bottom points to form an initial hull of size 4
