@@ -48,8 +48,10 @@ _seq<intT> hull(point2d* P, intT n) {
     else if (baseMethod == 1) CH = giftWrapSerial(P, n);
     else if (baseMethod == 2) CH = grahamScanSerial(P, n);
     else if (baseMethod == 3) CH = lineSweepSerial(P, n);
-    else if (baseMethod == 4) CH = randHullSerial(P, n);
-    else {
+    else if (baseMethod == 4) {
+      CH.A = newA(intT, n);
+      CH.n = randHullSerial(P, n, CH.A);
+    } else {
       cout << "Error, wrong method number, abort." << endl; abort();}
 #ifndef SILENT
     cout << "serial-hull-time = " << t.stop() << endl;
@@ -80,7 +82,7 @@ _seq<intT> hull(point2d* P, intT n) {
 		   else if (baseMethod == 1) M[i] = giftWrapSerial(P+o, blk, I+o).n;
 		   else if (baseMethod == 2) M[i] = grahamScanSerial(P+o, blk, I+o).n;
 		   else if (baseMethod == 3) M[i] = lineSweepSerial(P+o, blk, I+o).n;
-		   else if (baseMethod == 4) M[i] = randHullSerial(P+o, blk, I+o).n;
+		   else if (baseMethod == 4) M[i] = randHullSerial(P+o, blk, I+o);
 		   else {
 		     cout << "Error, wrong method number, abort." << endl; abort();}
 		   //check(P+o, blk, I+o, M[i]);
@@ -90,7 +92,7 @@ _seq<intT> hull(point2d* P, intT n) {
 		   else if (baseMethod == 1) M[i] = giftWrapSerial(P+o, blkLast, I+o).n;
 		   else if (baseMethod == 2) M[i] = grahamScanSerial(P+o, blkLast, I+o).n;
 		   else if (baseMethod == 3) M[i] = lineSweepSerial(P+o, blkLast, I+o).n;
-		   else if (baseMethod == 4) M[i] = randHullSerial(P+o, blkLast, I+o).n;
+		   else if (baseMethod == 4) M[i] = randHullSerial(P+o, blkLast, I+o);
 		   else {
 		     cout << "Error, wrong method number, abort." << endl; abort();}
 		   //check(P+o, blkLast, I+o, M[i]);
@@ -126,7 +128,7 @@ _seq<intT> hull(point2d* P, intT n) {
     } else if (baseMethod == 3) {
       m2 = lineSweepSerial(PP, M[procs], I).n;
     } else if (baseMethod == 4) {
-      m2 = randHullSerial(PP, M[procs], I).n;
+      m2 = randHullSerial(PP, M[procs], I);
     } else {
       cout << "Error, wrong method number, abort." << endl; abort();}
   } else {

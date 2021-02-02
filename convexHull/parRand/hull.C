@@ -288,9 +288,10 @@ _seq<intT> hull(point2d* P, intT n) {
   facet** hullStarts = newA(facet*, numWorker);
 
   floatT batch = 4;
-  static const intT maxBatch = n;
+  static const intT maxBatch = 1000;
 
   intT totalRounds = 0;
+  floatT totalTime = 0;
   while(processed < n) {
     timing rt; rt.start();
     totalRounds ++;
@@ -336,6 +337,9 @@ _seq<intT> hull(point2d* P, intT n) {
     reserveTime += tt.next();
 
     // Confirm reservation
+    intT confCounter = 0;
+    intT skipCounter = 0;
+    intT procCounter = 0;
 
     parallel_for(s, s+b, [&](intT i) {
 			   pointNode* pr = pointers[i];
@@ -345,6 +349,7 @@ _seq<intT> hull(point2d* P, intT n) {
 			     // of these points here, since during processing
 			     // there hull and visibility will be updated
 			     pointers[i] = NULL; // Not visible to OLD hull, skip
+			     skipCounter++;
 			   } else {
 			     facet* tmp = getFacetTmp(pIdx(pr));
 			     facet* start = tmp->getStart();
@@ -365,6 +370,7 @@ _seq<intT> hull(point2d* P, intT n) {
 			       } while (ptr != end->next);
 
 			       if (reserved) reservation[fIdx(start)] = pIdx(pr);//marker
+			       else confCounter ++;
 			     }
 			   }
 			 });
@@ -397,6 +403,7 @@ _seq<intT> hull(point2d* P, intT n) {
 				 facet* new1 = newFacetLeft(pIdx(pr), start->p1, pr->p);
 				 facet* new2 = newFacetRight(pIdx(pr), pr->p, end->p1);
 				 pointers[i] = NULL; //will process now, no further actions needed
+				 procCounter ++;
 
 				 intT cnt = 0;
 				 auto ptr = start;
@@ -544,7 +551,10 @@ _seq<intT> hull(point2d* P, intT n) {
     // 	ptr = ptr->next;
     //   } while (ptr != H);
     // }
-    //cout << rt.stop() << endl;
+    totalTime += rt.stop();
+    //cout << roundProcessed << endl;
+    //cout << confCounter << ", " << skipCounter << ", " << procCounter << endl;
+    cout << totalTime << endl;
 
     processed = s+roundProcessed;
 

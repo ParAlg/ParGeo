@@ -24,13 +24,14 @@
 
 _seq<intT> hull(point2d* P, intT n) {
   timing t; t.start();
-  auto CH = randHullNaiveSerial(P,n);
-  //auto CH = randHullSerial(P,n);
+  intT *I = newA(intT, n);
+  intT m = randHullNaiveSerial(P, n, I);
+  //intT m = randHullSerial(P, n, I);
 #ifdef SILENT
   cout << t.stop() << endl;
 #else
   cout << "hull-time = " << t.stop() << endl;
-  check(P, n, CH.A, CH.n);
+  check(P, n, I, m);
 #endif
-  return CH;
+  return _seq<intT>(I, m);
 }

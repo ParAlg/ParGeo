@@ -73,7 +73,7 @@ intT quickDivideHelper(intT* I, intT* Itmp, point2d* P, intT n, intT l, intT r, 
     if (true) {
       Itmp[0] = l;
       Itmp[1] = r;
-      return  randHullExternalSerial(P, I, n, Itmp, 2);
+      return randHullExternalSerial(P, I, n, Itmp, 2);
     } else {
       return serialQuickHullHelper(I, P, n, l, r);
     }

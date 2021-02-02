@@ -88,9 +88,8 @@ pair<facet*, facet*> findVisible(point2d* P, facet* head, intT p) {
   return make_pair((facet*)NULL, (facet*)NULL);
 }
 
-// Internal, takes in a partial hull
-// H is an existing partial hull
-// facets need to be at least of size 2*n
+// Internal rand hull, takes in a partial hull H
+// - array facets, if allocated needs to be at least of size 2*n
 facet* randHullInternalSerial(point2d* P, pointNode* PN, intT n, facet* H, facet* facets=NULL) {
   static bool verbose = false;
   static bool farPivot = true;
@@ -227,32 +226,11 @@ facet* randHullInternalSerial(point2d* P, pointNode* PN, intT n, facet* H, facet
   return H;
 }
 
-facet* randHullInternalSerial(point2d* P, intT n, facet* H, facet* facets=NULL) {
-  pointNode* PN = newA(pointNode, n);//todo consider allocate outside
-
-  for(intT i=0; i<n; ++i) {
-    PN[i] = pointNode(i);
-    auto ptr = H;
-    do {
-      if (ptr->visibleFrom(P, i)) {
-        PN[i].seeFacet = ptr;
-        ptr->push_back(&PN[i]);
-        break; //each point only records one visible facet
-      }
-      ptr = ptr->next;
-    } while (ptr != H);
-  }
-
-  auto CH = randHullInternalSerial(P, PN, n, H, facets);
-  free(PN);
-  return CH;
-}
-
-//Can be plugged in to an external hull algorithm where
-// P[I[0,n)] stores points to be processed
-// P[Itmp[0,m)] stores a partial convex hull
-// Resulting hull will be stored in I (overwrite)
-// Hull size will be returned
+// Start with an externally computed partial-hull
+// - P[I[0,n)] stores points to be processed
+// - P[Itmp[0,m)] stores a partial convex hull
+// - Resulting hull will be stored in I (overwrite)
+// - Hull size will be returned
 intT randHullExternalSerial(point2d* P, intT* I, intT n, intT* Itmp, intT m) {
   facet* H = newA(facet, m+2*n);
   facet* facets = H+m;
@@ -307,7 +285,7 @@ intT randHullExternalSerial(point2d* P, intT* I, intT n, intT* Itmp, intT m) {
 // I contains indices for the existing hull, it is required that
 // it has enough space to hold the entire hull (size n)
 // I will be overwritten
-_seq<intT> randHullSerial(point2d* P, intT n, intT* I, intT m) {
+intT randHullSerial(point2d* P, intT n, intT* I, intT m) {
   auto H = newA(facet, m+2*n);
   for(intT i=0; i<m; ++i) {
     H[i].p1 = I[i];
@@ -318,7 +296,22 @@ _seq<intT> randHullSerial(point2d* P, intT n, intT* I, intT m) {
   }
 
   auto facets = H+m;
-  auto newH = randHullInternalSerial(P, n, H, facets);
+
+  pointNode* PN = newA(pointNode, n);//todo consider allocate outside
+  for(intT i=0; i<n; ++i) {
+    PN[i] = pointNode(i);
+    auto ptr = H;
+    do {
+      if (ptr->visibleFrom(P, i)) {
+        PN[i].seeFacet = ptr;
+        ptr->push_back(&PN[i]);
+        break; //each point only records one visible facet
+      }
+      ptr = ptr->next;
+    } while (ptr != H);
+  }
+
+  auto newH = randHullInternalSerial(P, PN, n, H, facets);
 
   intT mm = 0;
   auto ptr = newH;
@@ -328,11 +321,11 @@ _seq<intT> randHullSerial(point2d* P, intT n, intT* I, intT m) {
   } while (ptr != newH);
   free(H);
 
-  return _seq<intT>(I,mm);
+  return mm;
 }
 
-// Call from scratch, finds 4 extreme as initialization
-_seq<intT> randHullSerial(point2d* P, intT n, intT* I=NULL) {
+// Start from scratch, initialize with 4 extremum
+intT randHullSerial(point2d* P, intT n, intT* I) {
   // Akl–Toussaint heuristic
   // picks the left, right, top, bottom points to form an initial hull of size 4
 
@@ -359,8 +352,6 @@ _seq<intT> randHullSerial(point2d* P, intT n, intT* I=NULL) {
       iLeft = i;}
   }
 
-  if (!I) {
-    I = newA(intT, n);}
   I[0] = iLeft;
   I[1] = iTop;
   I[2] = iRight;
@@ -370,9 +361,7 @@ _seq<intT> randHullSerial(point2d* P, intT n, intT* I=NULL) {
 }
 
 // Start from scratch, with a random facet
-_seq<intT> randHullNaiveSerial(point2d* P, intT n, intT* I=NULL) {
-  if (!I) {
-    I = newA(intT, n);}
+intT randHullNaiveSerial(point2d* P, intT n, intT* I) {
   I[0] = 0;
   I[1] = 1;
 
