@@ -27,6 +27,8 @@
 #include "pbbs/sequence.h"
 #include "pbbs/gettime.h"
 #include "randHull.h"
+#include "graham.h"
+#include "line.h"
 #include "hull.h"
 #include "geometry.h"
 
@@ -70,10 +72,32 @@ namespace qdInternal {
 
 intT quickDivideHelper(intT* I, intT* Itmp, point2d* P, intT n, intT l, intT r, intT depth) {
   if (n < 10000 || depth == 0) {
-    if (true) {
+    if (false) {
       Itmp[0] = l;
       Itmp[1] = r;
       return randHullExternalSerial(P, I, n, Itmp, 2);
+    } else if (true) {
+      intT* II = newA(intT, (n+2)*2);// Inefficient, try inplace todo
+      intT* IItmp = II + n+2;
+      for(intT i=0; i<n; ++i) II[i] = I[i];
+      II[n] = l; II[n+1] = r;
+
+      //intT m = grahamScanExternalSerial(P, II, n+2, IItmp);
+      intT m = lineSweepExternalSerial(P, II, n+2, IItmp);
+
+      intT s = 0;
+      for(; s<m; ++s)
+	if (IItmp[s] == l) break;
+
+      intT mm = 0;
+      for(intT i=0; i<m; ++i) {
+	intT ii = (s+i)%m;
+	if (IItmp[ii] != l && IItmp[ii] != r)
+	  I[mm++] = IItmp[ii];
+      }
+      free(II);
+
+      return mm;
     } else {
       return serialQuickHullHelper(I, P, n, l, r);
     }
@@ -97,7 +121,7 @@ intT quickDivideHelper(intT* I, intT* Itmp, point2d* P, intT n, intT l, intT r, 
 }
 
 _seq<intT> quickDivide(point2d* P, intT n) {
-  static const intT DEPTH = 8;
+  static const intT DEPTH = 8; // Has to be even? todo
 
   pair<intT,intT> minMax = reduce<pair<intT,intT> >((intT)0,n,minMaxIndex(P), qdInternal::makePair());
   intT l = minMax.first;
