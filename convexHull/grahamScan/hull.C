@@ -30,14 +30,13 @@ _seq<intT> hull(point2d* P, intT n) {
   timing t; t.start();
 
   _seq<intT> CH;
+  CH.A = newA(intT, n);
   if (true) {
-    CH = grahamScanSerial(P, n);
+    CH.n = grahamScanSerial(P, n, CH.A);
   } else {
     intT *Idx = newA(intT, n);
     for(intT i=0; i<n; ++i) Idx[i] = i;
-    intT *I = newA(intT, n);
-    CH.n = grahamScanExternalSerial(P, Idx, n, I);
-    CH.A = I;
+    CH.n = grahamScanExternalSerial(P, Idx, n, CH.A);
     free(Idx);
   }
 

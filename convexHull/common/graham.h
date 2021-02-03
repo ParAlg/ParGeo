@@ -46,10 +46,10 @@ namespace grahamInternal {
   }
 }
 
-_seq<intT> grahamScanSerial(point2d* P, intT n, intT* I=NULL) {
+intT grahamScanSerial(point2d* P, intT n, intT* I) {
   static const bool verbose = false;
 
-  if (!I) I = newA(intT, n);
+  if (!I) abort();
 
   intT m=0;
 #ifndef SILENT
@@ -97,7 +97,7 @@ _seq<intT> grahamScanSerial(point2d* P, intT n, intT* I=NULL) {
 #ifndef SILENT
   cout << "scan-time = " << t.stop() << endl;
 #endif
-  return _seq<intT>(I, m);
+  return m;
 }
 
 intT grahamScanExternalSerial(point2d* P, intT* Idx, intT n, intT* I) {
