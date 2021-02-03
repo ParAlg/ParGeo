@@ -27,33 +27,38 @@
 #include "geometry.h"
 #include "hull.h"
 
-_seq<intT> lineSweepSerial(point2d* P, intT n, intT* I=NULL) {
-  static const bool verbose = false;
+namespace lineInternal {
 
   //whether a,b,c forms a right/left turn, disallows straight line
-  auto rightTurn = [&](point2d& a, point2d& b, point2d& c) {
+  inline bool rightTurn(point2d& a, point2d& b, point2d& c) {
     auto cross = (b.x()-a.x())*(c.y()-a.y()) - (b.y()-a.y())*(c.x()-a.x());
     return cross < 0;
   };
-  auto leftTurn = [&](point2d& a, point2d& b, point2d& c) {
+
+  inline bool leftTurn(point2d& a, point2d& b, point2d& c) {
     auto cross = (b.x()-a.x())*(c.y()-a.y()) - (b.y()-a.y())*(c.x()-a.x());
     return cross > 0;
   };
 
-  if (!I) {
-    I = newA(intT, n);
-  }
+}
+
+intT lineSweepSerial(point2d* P, intT n, intT* I) {
+  static const bool verbose = false;
+
+  if (!I) abort();
 
 #ifndef SILENT
   timing t1;t1.start();
 #endif
+
   auto yCmp = [&](point2d& a, point2d& b) {
     return a.y() < b.y();
   };
-  sampleSort(&P[0], n, yCmp);
+  quickSortSerial(&P[0], n, yCmp);
 #ifndef SILENT
   cout << " sort-time = " << t1.next() << endl;
 #endif
+
   intT ml = 0;
   intT mr = n-1;
 
@@ -68,26 +73,26 @@ _seq<intT> lineSweepSerial(point2d* P, intT n, intT* I=NULL) {
   //scan from bottom up
   for (intT i=1; i<n; ++i) {
     if (triArea(P[0], P[n-1], P[i]) > numericKnob) {
-      while (sizeLeft() >= 2 && !rightTurn(P[I[ml-2]], P[I[ml-1]], P[i]))
+      while (sizeLeft() >= 2 && !lineInternal::rightTurn(P[I[ml-2]], P[I[ml-1]], P[i]))
 	popLeft();
       pushLeft(i);
     } else {
       while (1) {
-	if (sizeRight() >= 2 && !leftTurn(P[I[mr+2]], P[I[mr+1]], P[i]))
+	if (sizeRight() >= 2 && !lineInternal::leftTurn(P[I[mr+2]], P[I[mr+1]], P[i]))
 	  popRight();
-	else if (sizeRight() == 1 && !leftTurn(P[I[0]], P[I[mr+1]], P[i]))
+	else if (sizeRight() == 1 && !lineInternal::leftTurn(P[I[0]], P[I[mr+1]], P[i]))
 	  popRight();
 	else break;
       }
       pushRight(i);
     }
   }
-
-  while (sizeLeft() >= 2 && !rightTurn(P[I[ml-2]], P[I[ml-1]], P[I[mr+1]]))
+  while (sizeLeft() >= 2 && !lineInternal::rightTurn(P[I[ml-2]], P[I[ml-1]], P[I[mr+1]]))
     popLeft();
 #ifndef SILENT
   cout << " scan-time = " << t1.next() << endl;
 #endif
+
   auto AR = I+n-sizeRight();
   for(intT i=0; i<sizeRight(); ++i) {
     I[sizeLeft()+i] = AR[i];
@@ -95,7 +100,59 @@ _seq<intT> lineSweepSerial(point2d* P, intT n, intT* I=NULL) {
 #ifndef SILENT
   cout << " move-time = " << t1.stop() << endl;
 #endif
-  return _seq<intT>(I, sizeLeft()+sizeRight());
+
+  return sizeLeft()+sizeRight();
+}
+
+intT lineSweepExternalSerial(point2d* P, intT* Idx, intT n, intT* I) {
+  static const bool verbose = false;
+
+  if (!I || !Idx) abort();
+
+  auto yCmp = [&](intT i, intT j) {
+    point2d a = P[i];
+    point2d b = P[j];
+    return a.y() < b.y();
+  };
+  quickSortSerial(&Idx[0], n, yCmp);
+
+  intT ml = 0;
+  intT mr = n-1;
+
+  auto pushLeft = [&](intT i) {I[ml++] = i;};
+  auto popLeft = [&]() {ml--;};
+  auto pushRight = [&](intT i) {I[mr--] = i;};
+  auto popRight = [&]() {mr++;};
+  auto sizeLeft = [&]{return ml;};
+  auto sizeRight = [&]{return n-1-mr;};
+  pushLeft(Idx[0]);
+
+  //scan from bottom up
+  for (intT i=1; i<n; ++i) {
+    if (triArea(P[Idx[0]], P[Idx[n-1]], P[Idx[i]]) > numericKnob) {
+      while (sizeLeft() >= 2 && !lineInternal::rightTurn(P[I[ml-2]], P[I[ml-1]], P[Idx[i]]))
+	popLeft();
+      pushLeft(Idx[i]);
+    } else {
+      while (1) {
+	if (sizeRight() >= 2 && !lineInternal::leftTurn(P[I[mr+2]], P[I[mr+1]], P[Idx[i]]))
+	  popRight();
+	else if (sizeRight() == 1 && !lineInternal::leftTurn(P[I[0]], P[I[mr+1]], P[Idx[i]]))
+	  popRight();
+	else break;
+      }
+      pushRight(Idx[i]);
+    }
+  }
+  while (sizeLeft() >= 2 && !lineInternal::rightTurn(P[I[ml-2]], P[I[ml-1]], P[I[mr+1]]))
+    popLeft();
+
+  auto AR = I+n-sizeRight();
+  for(intT i=0; i<sizeRight(); ++i) {
+    I[sizeLeft()+i] = AR[i];
+  }
+
+  return sizeLeft()+sizeRight();
 }
 
 #endif

@@ -28,7 +28,16 @@ using namespace std;
 
 _seq<intT> hull(point2d* P, intT n) {
   timing t; t.start();
-  auto CH = lineSweepSerial(P, n);
+  _seq<intT> CH;
+  CH.A = newA(intT, n);
+  if (false) {
+    CH.n = lineSweepSerial(P, n, CH.A);
+  } else {
+    auto Idx = newA(intT, n);
+    for(intT i=0; i<n; ++i) Idx[i] = i;
+    CH.n = lineSweepExternalSerial(P, Idx, n, CH.A);
+    free(Idx);
+  }
 
 #ifndef SILENT
   cout << "hull-time = " << t.stop() << endl;
