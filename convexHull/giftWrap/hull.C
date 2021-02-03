@@ -28,7 +28,13 @@ using namespace std;
 
 _seq<intT> hull(point2d* P, intT n) {
   timing t; t.start();
-  auto CH = giftWrapParallel(P, n);
+  _seq<intT> CH;
+  CH.A = newA(intT, n);
+  if (false) {
+    CH.n = giftWrapSerial(P, n, CH.A);
+  } else if (true) {
+    CH.n = giftWrapParallel(P, n, CH.A);
+  }
 
 #ifdef SILENT
   cout << t.stop() << endl;

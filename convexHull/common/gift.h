@@ -25,17 +25,19 @@
 #include "geometry.h"
 #include "hull.h"
 
-_seq<intT> giftWrapSerial(point2d* P, intT n, intT* I=NULL) {
-  static const bool verbose = false;
-  auto angle = [&](point2d& a, point2d& b, point2d& c) {
-		 point2d ab = b-a;
-		 point2d bc = c-b;
-		 return acos(ab.dot(bc) / (ab.length()*bc.length()));//this is SUPER expensive, todo
-	       };
+namespace giftInternal {
+  inline floatT angle(point2d& a, point2d& b, point2d& c) {
+    point2d ab = b-a;
+    point2d bc = c-b;
+    return acos(ab.dot(bc) / (ab.length()*bc.length()));//this is SUPER expensive, todo
+  };
+}
 
-  if (!I) {
-    I = newA(intT, n);
-  }
+intT giftWrapSerial(point2d* P, intT n, intT* I) {
+  static const bool verbose = false;
+
+  if (!I) abort();
+
   intT m=0;
 
   auto findLeft = [&](intT i) {return P[i].x();};
@@ -44,7 +46,7 @@ _seq<intT> giftWrapSerial(point2d* P, intT n, intT* I=NULL) {
   I[m++] = si;
 
   auto sp = point2d(s.x(), s.y()-1);
-  auto findFirst = [&](intT j) {return angle(sp, s, P[j]);};
+  auto findFirst = [&](intT j) {return giftInternal::angle(sp, s, P[j]);};
   intT myI = sequence::minIndexSerial<floatT>(0, n, findFirst);
   I[m++] = myI;
   if (verbose) {
@@ -54,7 +56,7 @@ _seq<intT> giftWrapSerial(point2d* P, intT n, intT* I=NULL) {
   while (1) {
     auto a = P[I[m-2]];
     auto b = P[I[m-1]];
-    auto findNext = [&](intT j) {return angle(a, b, P[j]);};
+    auto findNext = [&](intT j) {return giftInternal::angle(a, b, P[j]);};
     myI = sequence::minIndex<floatT>(0, n, findNext);
     if (myI == I[0]) {
       break;
@@ -62,20 +64,13 @@ _seq<intT> giftWrapSerial(point2d* P, intT n, intT* I=NULL) {
     }
     I[m++] = myI;
   }
-  return _seq<intT>(I, m);
+  return m;
 }
 
-_seq<intT> giftWrapParallel(point2d* P, intT n, intT* I=NULL) {
+intT giftWrapParallel(point2d* P, intT n, intT* I) {
   static const bool verbose = false;
-  auto angle = [&](point2d& a, point2d& b, point2d& c) {
-		 point2d ab = b-a;
-		 point2d bc = c-b;
-		 return acos(ab.dot(bc) / (ab.length()*bc.length()));
-	       };
 
-  if (!I) {
-    I = newA(intT, n);
-  }
+  if (!I) abort();
 
   intT m=0;
 
@@ -85,7 +80,7 @@ _seq<intT> giftWrapParallel(point2d* P, intT n, intT* I=NULL) {
   I[m++] = si;
 
   auto sp = point2d(s.x(), s.y()-1);
-  auto findFirst = [&](intT j) {return angle(sp, s, P[j]);};
+  auto findFirst = [&](intT j) {return giftInternal::angle(sp, s, P[j]);};
   intT myI = sequence::minIndex<floatT>(0, n, findFirst);
   I[m++] = myI;
 
@@ -95,7 +90,7 @@ _seq<intT> giftWrapParallel(point2d* P, intT n, intT* I=NULL) {
   while (1) {
     auto a = P[I[m-2]];
     auto b = P[I[m-1]];
-    auto findNext = [&](intT j) {return angle(a, b, P[j]);};
+    auto findNext = [&](intT j) {return giftInternal::angle(a, b, P[j]);};
     myI = sequence::minIndex<floatT>(0, n, findNext);
     if (myI == I[0]) {
       break;
@@ -103,7 +98,7 @@ _seq<intT> giftWrapParallel(point2d* P, intT n, intT* I=NULL) {
     }
     I[m++] = myI;
   }
-  return _seq<intT>(I, m);
+  return m;
 }
 
 #endif
