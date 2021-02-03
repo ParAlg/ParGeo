@@ -27,26 +27,30 @@
 #include "geometry.h"
 #include "hull.h"
 
-_seq<intT> grahamScanSerial(point2d* P, intT n, intT* I=NULL) {
-  static const bool verbose = false;
-  auto angle = [&](point2d& a, point2d& b, point2d& c) {
-    point2d ab = b-a;
-    point2d bc = c-b;
-    return acos(ab.dot(bc) / (ab.length()*bc.length()));
-  };
+namespace grahamInternal {
   static const intT left = 0;
   static const intT right = 1;
   static const intT straight = 2;
-  auto turn = [&](point2d& a, point2d& b, point2d& c) {
+
+  /* inline floatT angle(point2d& a, point2d& b, point2d& c) { */
+  /*   point2d ab = b-a; */
+  /*   point2d bc = c-b; */
+  /*   return acos(ab.dot(bc) / (ab.length()*bc.length())); */
+  /* } */
+
+  inline intT turn(point2d& a, point2d& b, point2d& c) {
     auto cross = (b.x()-a.x())*(c.y()-a.y()) - (b.y()-a.y())*(c.x()-a.x());
     if (cross > 0) return left;
     else if (cross < 0) return right;
     else return straight;
-  };
-
-  if (!I) {
-    I = newA(intT, n);
   }
+}
+
+_seq<intT> grahamScanSerial(point2d* P, intT n, intT* I=NULL) {
+  static const bool verbose = false;
+
+  if (!I) I = newA(intT, n);
+
   intT m=0;
 #ifndef SILENT
   timing t; t.start();
@@ -54,36 +58,39 @@ _seq<intT> grahamScanSerial(point2d* P, intT n, intT* I=NULL) {
   auto findLeft = [&](intT i) {return P[i].x();};
   intT si = sequence::minIndexSerial<floatT>(0, n, findLeft);
   point2d s = P[si];
+
   //point2d sbelow = s;
   //sbelow[1] = s.y()-1;
 #ifndef SILENT
   cout << "init-time = " << t.next() << endl;
 #endif
+
   auto sp = point2d(s.x(), s.y()-1);
   auto angleLess = [&](point2d a, point2d b) {
-    //return angle(sbelow, s, a) < angle(sbelow, s, b);
-    intT myTurn = turn(s, a, b);
-    if (myTurn == right) return true;
-    else if (myTurn == left) return false;
+    //return grahamInternal::angle(sbelow, s, a) < grahamInternal::angle(sbelow, s, b);
+    intT myTurn = grahamInternal::turn(s, a, b);
+    if (myTurn == grahamInternal::right) return true;
+    else if (myTurn == grahamInternal::left) return false;
     else return a.x() < b.x();
   };
+
   swap(P[0], P[si]);
-  sampleSort(&P[1], n-1, angleLess);
-  //sort(&P[1], &P[n-1], angleLess);
+  quickSortSerial(&P[1], n-1, angleLess);
 
   I[m++] = 0;
   I[m++] = 1;
 #ifndef SILENT
   cout << "sort-time = " << t.next() << endl;
 #endif
+
   auto push = [&](intT i) {I[m++] = i;};
   auto pop = [&]() {m--;};
   auto isEmpty = [&]() {return m==0;};
 
   for (intT i=2; i<n; ++i) {
-    if (turn(P[I[m-2]], P[I[m-1]], P[i])!=right) {
+    if (grahamInternal::turn(P[I[m-2]], P[I[m-1]], P[i])!=grahamInternal::right) {
       pop();
-      while (turn(P[I[m-2]], P[I[m-1]], P[i])!=right) pop();
+      while (grahamInternal::turn(P[I[m-2]], P[I[m-1]], P[i])!=grahamInternal::right) pop();
     }
     push(i);
   }
@@ -91,6 +98,44 @@ _seq<intT> grahamScanSerial(point2d* P, intT n, intT* I=NULL) {
   cout << "scan-time = " << t.stop() << endl;
 #endif
   return _seq<intT>(I, m);
+}
+
+intT grahamScanExternalSerial(point2d* P, intT* Idx, intT n, intT* I) {
+  if (!I || !Idx) abort();
+
+  intT m=0;
+  auto findLeft = [&](intT i) {return P[Idx[i]].x();};
+  intT si = sequence::minIndexSerial<floatT>(0, n, findLeft);
+  point2d s = P[Idx[si]];
+
+  auto sp = point2d(s.x(), s.y()-1);
+  auto angleLess = [&](intT i, intT j) {
+    point2d a = P[i];
+    point2d b = P[j];
+    intT myTurn = grahamInternal::turn(s, a, b);
+    if (myTurn == grahamInternal::right) return true;
+    else if (myTurn == grahamInternal::left) return false;
+    else return a.x() < b.x();
+  };
+
+  swap(Idx[0], Idx[si]);
+  quickSortSerial(&Idx[1], n-1, angleLess);
+
+  I[m++] = Idx[0];
+  I[m++] = Idx[1];
+
+  auto push = [&](intT i) {I[m++] = i;};
+  auto pop = [&]() {m--;};
+  auto isEmpty = [&]() {return m==0;};
+
+  for (intT i=2; i<n; ++i) {
+    if (grahamInternal::turn(P[I[m-2]], P[I[m-1]], P[Idx[i]])!=grahamInternal::right) {
+      pop();
+      while (grahamInternal::turn(P[I[m-2]], P[I[m-1]], P[Idx[i]])!=grahamInternal::right) pop();
+    }
+    push(Idx[i]);
+  }
+  return m;
 }
 
 #endif

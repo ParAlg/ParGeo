@@ -28,7 +28,18 @@ using namespace std;
 
 _seq<intT> hull(point2d* P, intT n) {
   timing t; t.start();
-  auto CH = grahamScanSerial(P, n);
+
+  _seq<intT> CH;
+  if (true) {
+    CH = grahamScanSerial(P, n);
+  } else {
+    intT *Idx = newA(intT, n);
+    for(intT i=0; i<n; ++i) Idx[i] = i;
+    intT *I = newA(intT, n);
+    CH.n = grahamScanExternalSerial(P, Idx, n, I);
+    CH.A = I;
+    free(Idx);
+  }
 
 #ifndef SILENT
   cout << "hull-time = " << t.stop() << endl;
