@@ -29,64 +29,69 @@
 #include "hull.h"
 using namespace std;
 
-struct pointNode;
+namespace randInternal {
 
-struct facet {
-  // Data fields
-  facet* next;
-  facet* prev;
-  intT p1;
-  intT p2;//(p1->p2) is clockwise
-  vector<pointNode*>* seeList;//points that can see facet
+  struct pointNode;
 
-  // Constructors
-  facet(intT p11, intT p22): p1(p11), p2(p22) {
-    seeList = new vector<pointNode*>();}//todo allocation make more efficient (might call in parallel)
+  struct facet {
+    // Data fields
+    facet* next;
+    facet* prev;
+    intT p1;
+    intT p2;//(p1->p2) is clockwise
+    vector<pointNode*>* seeList;//points that can see facet
 
-  facet(): p1(-1), p2(-1), seeList(NULL), next(NULL), prev(NULL) {}
+    // Constructors
+    facet(intT p11, intT p22): p1(p11), p2(p22) {
+      seeList = new vector<pointNode*>();}//todo allocation make more efficient (might call in parallel)
 
-  // Methods
-  bool visibleFrom(point2d* P, intT p) {return triArea(P[p1], P[p2], P[p]) > numericKnob;}
-  void push_back(pointNode* p) {seeList->push_back(p);}
-  intT size() {return seeList->size();};
-  pointNode* at(intT i) {return seeList->at(i);}
-};
+    facet(): p1(-1), p2(-1), seeList(NULL), next(NULL), prev(NULL) {}
 
-static std::ostream& operator<<(std::ostream& os, const facet f) {
-  os << "(" << f.p1 << ", " << f.p2 << ")";
-  return os;
+    // Methods
+    bool visibleFrom(point2d* P, intT p) {return triArea(P[p1], P[p2], P[p]) > numericKnob;}
+    void push_back(pointNode* p) {seeList->push_back(p);}
+    intT size() {return seeList->size();};
+    pointNode* at(intT i) {return seeList->at(i);}
+  };
+
+  static std::ostream& operator<<(std::ostream& os, const facet f) {
+    os << "(" << f.p1 << ", " << f.p2 << ")";
+    return os;
+  }
+
+  struct pointNode {
+    intT p;
+    facet* seeFacet;//maintain one edge visible, change from time to time
+    //don't have to maintain all facets, can search pretty easily
+    pointNode(intT pp): p(pp), seeFacet(NULL) {};
+    pointNode() {};
+  };
+
+  pair<facet*, facet*> findVisible(point2d* P, facet* head, intT p) {
+    while (head->prev->visibleFrom(P, p)) head = head->prev;
+
+    auto ptr = head;
+    facet* start = NULL;
+    intT n = 0;
+    do {
+      if (n <= 0) {
+	if (ptr->visibleFrom(P, p)) {
+	  n++;
+	  start = ptr;
+	}
+      } else {
+	if (!ptr->visibleFrom(P, p)) {
+	  return make_pair(start, ptr);
+	}
+	n++;
+      }
+      ptr = ptr->next;
+    } while (ptr != head);
+    return make_pair((facet*)NULL, (facet*)NULL);
+  }
 }
 
-struct pointNode {
-  intT p;
-  facet* seeFacet;//maintain one edge visible, change from time to time
-  //don't have to maintain all facets, can search pretty easily
-  pointNode(intT pp): p(pp), seeFacet(NULL) {};
-  pointNode() {};
-};
-
-pair<facet*, facet*> findVisible(point2d* P, facet* head, intT p) {
-  while (head->prev->visibleFrom(P, p)) head = head->prev;
-
-  auto ptr = head;
-  facet* start = NULL;
-  intT n = 0;
-  do {
-    if (n <= 0) {
-      if (ptr->visibleFrom(P, p)) {
-        n++;
-        start = ptr;
-      }
-    } else {
-      if (!ptr->visibleFrom(P, p)) {
-        return make_pair(start, ptr);
-      }
-      n++;
-    }
-    ptr = ptr->next;
-  } while (ptr != head);
-  return make_pair((facet*)NULL, (facet*)NULL);
-}
+using namespace randInternal;
 
 // Internal rand hull, takes in a partial hull H
 // - array facets, if allocated needs to be at least of size 2*n
@@ -126,20 +131,20 @@ facet* randHullInternalSerial(point2d* P, pointNode* PN, intT n, facet* H, facet
 		     return f->at(idx);
 		   };
   auto findPivotSample = [&](facet* H)
-		   {
-		     auto f = H;
-		     while (f->size()<=0 && f->next!=H) f = f->next;
-		     if (f->size() <= 0) return (pointNode*)NULL;
-		     point2d l = P[f->p1];
-		     point2d r = P[f->p2];
-		     auto triangArea = [&](intT idx)
-				       {
-					 return triArea(l, r, P[f->at(idx)->p]);
-				       };
-		     intT reductionSize = min((intT)f->size(), sampleSize);
-		     intT idx = sequence::maxIndex<double>((intT)0, reductionSize, greater<floatT>(), triangArea);
-		     return f->at(idx);
-		   };
+			 {
+			   auto f = H;
+			   while (f->size()<=0 && f->next!=H) f = f->next;
+			   if (f->size() <= 0) return (pointNode*)NULL;
+			   point2d l = P[f->p1];
+			   point2d r = P[f->p2];
+			   auto triangArea = [&](intT idx)
+					     {
+					       return triArea(l, r, P[f->at(idx)->p]);
+					     };
+			   intT reductionSize = min((intT)f->size(), sampleSize);
+			   intT idx = sequence::maxIndex<double>((intT)0, reductionSize, greater<floatT>(), triangArea);
+			   return f->at(idx);
+			 };
 
   intT i = 0;
   intT roundCount = 0;
