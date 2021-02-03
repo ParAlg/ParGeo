@@ -88,10 +88,9 @@ intT serialQuickHullHelper(intT* I, point2d* P, intT n, intT l, intT r) {
   return m1+1+m2;
 }
 
-_seq<intT> quickHullSerial(point2d* P, intT n, intT* I=NULL) {
-  if (!I) {
-    I = newA(intT, n);
-  }
+intT quickHullSerial(point2d* P, intT n, intT* I) {
+  if (!I) abort();
+
   for(intT i=0; i<n; ++i) {I[i] = i;}
 
   intT l = 0;
@@ -113,7 +112,7 @@ _seq<intT> quickHullSerial(point2d* P, intT n, intT* I=NULL) {
   for (intT i=0; i < m2; i++) I[i+m1+2] = I[i+n-n2];
   I[0] = l;
   I[m1+1] = r;
-  return _seq<intT>(I, m1+2+m2);
+  return m1+2+m2;
 }
 
 struct triangArea {
