@@ -23,11 +23,9 @@
 #include <algorithm>
 #include "pbbs/parallel.h"
 #include "pbbs/sequence.h"
-#include "pbbs/sampleSort.h"
 #include "pbbs/gettime.h"
 #include "geometry.h"
 #include "quick.h"
-#include "gift.h"
 #include "graham.h"
 #include "line.h"
 #include "randHull.h"
@@ -35,9 +33,8 @@ using namespace std;
 using namespace sequence;
 
 _seq<intT> hull(point2d* P, intT n) {
-  static const bool sortPoint=false;
-  //0: quickHull, 1: giftWrap, 2: graham, 3: lineSweep, 4: randHull
-  static const intT baseMethod = 1;
+  //0: quickHull, 1: NA, 2: graham, 3: lineSweep, 4: randHull
+  static const intT baseMethod = 4;
   auto procs = getWorkers();
   timing t; t.start();
   timing t1; t1.start();
@@ -46,7 +43,7 @@ _seq<intT> hull(point2d* P, intT n) {
     _seq<intT> CH;
     CH.A = newA(intT, n);
     if (baseMethod == 0) { CH.n = quickHullSerial(P, n, CH.A);}
-    else if (baseMethod == 1) { CH.n = giftWrapSerial(P, n, CH.A);}
+    else if (baseMethod == 1) { abort(); }
     else if (baseMethod == 2) { CH.n = grahamScanSerial(P, n, CH.A);}
     else if (baseMethod == 3) { CH.n = lineSweepSerial(P, n, CH.A);}
     else if (baseMethod == 4) { CH.n = randHullSerial(P, n, CH.A);}
@@ -59,48 +56,48 @@ _seq<intT> hull(point2d* P, intT n) {
     return CH;
   }
 
-  if (sortPoint) {
-    auto xLess = [&](point2d p1, point2d p2) {
-		   return p1.x()<p2.x();};
-    sampleSort(P, n, xLess);
-#ifndef SILENT
-    cout << "sort-time = " << t1.next() << endl;
-#endif
-  }
-
   intT blk = n/procs;
   intT M[procs+1];
 
   intT* I = newA(intT, n);
+  parallel_for(0, n, [&](intT i) {I[i] = i;});
+  intT* IOut = newA(intT, n);
 
   parallel_for(0, procs,
 	       [&](intT i) {
 		 intT o = blk*i;
 		 if (i != procs-1) {
-		   if (baseMethod == 0) M[i] = quickHullSerial(P+o, blk, I+o);
-		   else if (baseMethod == 1) M[i] = giftWrapSerial(P+o, blk, I+o);
-		   else if (baseMethod == 2) M[i] = grahamScanSerial(P+o, blk, I+o);
-		   else if (baseMethod == 3) M[i] = lineSweepSerial(P+o, blk, I+o);
-		   else if (baseMethod == 4) M[i] = randHullSerial(P+o, blk, I+o);
-		   else {
+		   if (baseMethod == 0) M[i] = quickHullSerial(P, blk, I+o, true);
+		   else if (baseMethod == 1) abort();
+		   else if (baseMethod == 2) M[i] = grahamScanExternalSerial(P, I+o, blk, IOut+o);
+		   else if (baseMethod == 3) M[i] = lineSweepExternalSerial(P, I+o, blk, IOut+o);
+		   else if (baseMethod == 4) {
+		     IOut[o+0] = I[o+0];
+		     IOut[o+1] = I[o+1];
+		     M[i] = randHullExternalSerial(P, I+o, blk, IOut+o, 2);
+		   } else {
 		     cout << "Error, wrong method number, abort." << endl; abort();}
-		   //check(P+o, blk, I+o, M[i]);
 		 } else {
 		   intT blkLast = max(blk, n-blk*(procs-1));
-		   if (baseMethod == 0) M[i] = quickHullSerial(P+o, blkLast, I+o);
-		   else if (baseMethod == 1) M[i] = giftWrapSerial(P+o, blkLast, I+o);
-		   else if (baseMethod == 2) M[i] = grahamScanSerial(P+o, blkLast, I+o);
-		   else if (baseMethod == 3) M[i] = lineSweepSerial(P+o, blkLast, I+o);
-		   else if (baseMethod == 4) M[i] = randHullSerial(P+o, blkLast, I+o);
-		   else {
+		   if (baseMethod == 0) M[i] = quickHullSerial(P, blkLast, I+o, true);
+		   else if (baseMethod == 1) abort();
+		   else if (baseMethod == 2) M[i] = grahamScanExternalSerial(P, I+o, blkLast, IOut+o);
+		   else if (baseMethod == 3) M[i] = lineSweepExternalSerial(P, I+o, blkLast, IOut+o);
+		   else if (baseMethod == 4) {
+		     IOut[o+0] = I[o+0];
+		     IOut[o+1] = I[o+1];
+		     M[i] = randHullExternalSerial(P, I+o, blkLast, IOut+o, 2);
+		   } else {
 		     cout << "Error, wrong method number, abort." << endl; abort();}
-		   //check(P+o, blkLast, I+o, M[i]);
 		 }
 	       }, 1);
+  if (baseMethod == 0 || baseMethod == 4) swap(I, IOut);
 #ifndef SILENT
   cout << "subhull-time = " << t1.next() << endl;
 #endif
-  for(intT i=1; i<procs; ++i) {
+
+  //Prefix-sum M
+  for(intT i=1; i<procs+1; ++i) {
     M[i] += M[i-1];}
   for(intT i=procs; i>0; --i) {
     M[i] = M[i-1];}
@@ -108,38 +105,45 @@ _seq<intT> hull(point2d* P, intT n) {
 #ifndef SILENT
   cout << "subhull-size = " << M[procs] << endl;
 #endif
-  point2d* PP = newA(point2d, M[procs]);
 
   parallel_for(0, procs, [&](intT i) {
 			   intT o = blk*i;
 			   for(intT j=M[i]; j<M[i+1]; ++j) {
-			     PP[j] = P[o+I[o+(j-M[i])]];}
+			     I[j] = IOut[o+j-M[i]];
+			   }
 			 }, 1);
 
   intT m2;
   if (M[procs] < 2000) {
-    if (baseMethod == 0) { m2 = quickHullSerial(PP, M[procs], I);}
-    else if (baseMethod == 1) { m2 = giftWrapSerial(PP, M[procs], I);}//todo bug here
-    else if (baseMethod == 2) { m2 = grahamScanSerial(PP, M[procs], I);}
-    else if (baseMethod == 3) { m2 = lineSweepSerial(PP, M[procs], I);}
-    else if (baseMethod == 4) { m2 = randHullSerial(PP, M[procs], I);}
-    else {
+    if (baseMethod == 0 || baseMethod == 4) {//todo
+      m2 = quickHullSerial(P, M[procs], I, true);
+      swap(I, IOut);
+    } else if (baseMethod == 1) { abort(); }
+    else if (baseMethod == 2) {
+      m2 = grahamScanExternalSerial(P, I, M[procs], IOut);
+    } else if (baseMethod == 3) {
+      m2 = lineSweepExternalSerial(P, I, M[procs], IOut);
+    } else if (baseMethod == 4) {
+      //todo bug here, fine with other method
+      IOut[0] = I[0];
+      IOut[1] = I[1];
+      m2 = randHullExternalSerial(P, I, M[procs], IOut, 2);
+      swap(I, IOut);
+    } else {
       cout << "Error, wrong method number, abort." << endl; abort();}
   } else {
-    _seq<intT> CH = quickHullParallel(PP, M[procs]);
-    m2 = CH.n;
-    free(I);
-    I = CH.A;
+    m2 = quickHullParallel(P, M[procs], I, IOut, true);
+    swap(I, IOut);
   }
+
 #ifndef SILENT
   cout << "merge-time = " << t1.next() << endl;
   cout << "total-hull-time = " << t.stop() << endl;
-  //hull is in (PP, I), size is m2
-  check(P, n, I, m2, PP);
+  check(P, n, IOut, m2);
 #else
   cout << t.stop() << endl;
 #endif
 
-  free(PP);
-  return _seq<intT>(I, m2);
+  free(I);
+  return _seq<intT>(IOut, m2);
 }

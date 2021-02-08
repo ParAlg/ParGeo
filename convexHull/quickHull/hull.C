@@ -24,12 +24,13 @@
 
 _seq<intT> hull(point2d* P, intT n) {
   timing t; t.start();
-  auto CH = quickHullParallel(P,n);
+  intT* I = newA(intT, n*2);
+  intT m = quickHullParallel(P, n, I, I+n);
 #ifdef SILENT
   cout << t.stop() << endl;
 #else
   cout << "hull-time = " << t.stop() << endl;
-  check(P, n, CH.A, CH.n);
+  check(P, n, I, m);
 #endif
-  return CH;
+  return _seq<intT>(I, m);
 }

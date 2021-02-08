@@ -33,6 +33,7 @@
 using namespace std;
 using namespace sequence;
 
+// pair<intT,intT> nn = split(I, n, aboveLine(P, l, r), aboveLine(P, r, l));
 template <class ET, class F>
 pair<intT,intT> split(ET* A, intT n, F lf, F rf) {
   intT ll = 0, lm = 0;
@@ -88,17 +89,19 @@ intT serialQuickHullHelper(intT* I, point2d* P, intT n, intT l, intT r) {
   return m1+1+m2;
 }
 
-intT quickHullSerial(point2d* P, intT n, intT* I) {
+intT quickHullSerial(point2d* P, intT n, intT* I, bool filledI=false) {
   if (!I) abort();
 
-  for(intT i=0; i<n; ++i) {I[i] = i;}
+  if (!filledI)
+    for(intT i=0; i<n; ++i) {I[i] = i;}
 
   intT l = 0;
   intT r = 0;
   for (intT i=1; i < n; i++) {
-    if (P[i].x() > P[r].x()) r = i;
-    if (P[i].x() < P[l].x() || ((P[i].x() == P[l].x()) && P[i].y() < P[l].y()))
-      l = i;
+    intT j = I[i];
+    if (P[j].x() > P[r].x()) r = j;
+    if (P[j].x() < P[l].x() || ((P[j].x() == P[l].x()) && P[j].y() < P[l].y()))
+      l = j;
   }
 
   pair<intT,intT> nn = split(I, n, aboveLine(P, l, r), aboveLine(P, r, l));
@@ -146,7 +149,9 @@ intT quickHullHelper(intT* I, intT* Itmp, point2d* P, intT n, intT l, intT r, in
 }
 
 struct makePair {
-  pair<intT,intT> operator () (intT i) { return pair<intT,intT>(i,i);}
+  intT* I;
+  makePair(intT* II): I(II) {};
+  pair<intT,intT> operator () (intT i) { return pair<intT,intT>(I[i],I[i]);}
 };
 
 struct minMaxIndex {
@@ -162,19 +167,19 @@ struct minMaxIndex {
   }
 };
 
-_seq<intT> quickHullParallel(point2d* P, intT n) {
+intT quickHullParallel(point2d* P, intT n, intT* Itmp, intT* I, bool filledI=false) {
   static const intT DEPTH = 10;
+  if (!filledI)
+    parallel_for(0, n, [&](intT i) { Itmp[i] = i;});
 
-  pair<intT,intT> minMax = reduce<pair<intT,intT> >((intT)0,n,minMaxIndex(P), makePair());
+  pair<intT,intT> minMax = reduce<pair<intT,intT> >((intT)0,n,minMaxIndex(P), makePair(Itmp));
   intT l = minMax.first;
   intT r = minMax.second;
   bool* fTop = newA(bool,n);
   bool* fBot = newA(bool,n);
-  intT* I = newA(intT, n);
-  intT* Itmp = newA(intT, n);
+
   parallel_for(0, n, [&](intT i) {
-		       Itmp[i] = i;
-		       double a = triArea(P[l],P[r],P[i]);
+		       double a = triArea(P[l],P[r],P[Itmp[i]]);
 		       fTop[i] = a > 0;
 		       fBot[i] = a < 0;
 		     });
@@ -189,11 +194,11 @@ _seq<intT> quickHullParallel(point2d* P, intT n) {
 
   parallel_for (0, m1, [&](intT i) {Itmp[i+1] = I[i];});
   parallel_for (0, m2, [&](intT i) { Itmp[i+m1+2] = I[i+n1];});
-  free(I);
+
   Itmp[0] = l;
   Itmp[m1+1] = r;
 
-  return _seq<intT>(Itmp, m1+2+m2);
+  return m1+2+m2;
 }
 
 #endif

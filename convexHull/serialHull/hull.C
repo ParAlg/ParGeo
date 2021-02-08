@@ -31,7 +31,7 @@ using namespace std;
 _seq<intT> hull(point2d* P, intT n) {
   timing t; t.start();
   intT* I = newA(intT, n);
-  intT m = quickHullSerial(P, n, I).n;
+  intT m = quickHullSerial(P, n, I);
   cout << "hull-time = " << t.stop() << endl;
 
   check(P, n, I, m);
