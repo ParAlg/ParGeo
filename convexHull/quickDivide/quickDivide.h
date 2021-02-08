@@ -71,65 +71,63 @@ namespace qdInternal {
 }
 
 intT quickDivideHelper(intT* I, intT* Itmp, point2d* P, intT n, intT l, intT r, intT depth) {
-  if (n < 10000 || depth == 0) {
+  if (n < 10000 || depth == 1) {
     if (false) {
       Itmp[0] = l;
       Itmp[1] = r;
       return randHullExternalSerial(P, I, n, Itmp, 2);
     } else if (true) {
-      intT* II = newA(intT, (n+2)*2);// Inefficient, try inplace todo
-      intT* IItmp = II + n+2;
-      for(intT i=0; i<n; ++i) II[i] = I[i];
-      II[n] = l; II[n+1] = r;
+      I[n] = l; I[n+1] = r;
 
       //intT m = grahamScanExternalSerial(P, II, n+2, IItmp);
-      intT m = lineSweepExternalSerial(P, II, n+2, IItmp);
+      intT m = lineSweepExternalSerial(P, I, n+2, Itmp);
 
       intT s = 0;
       for(; s<m; ++s)
-	if (IItmp[s] == l) break;
+	if (Itmp[s] == l) break;
 
       intT mm = 0;
       for(intT i=0; i<m; ++i) {
 	intT ii = (s+i)%m;
-	if (IItmp[ii] != l && IItmp[ii] != r)
-	  I[mm++] = IItmp[ii];
+	if (Itmp[ii] != l && Itmp[ii] != r)
+	  I[mm++] = Itmp[ii];
       }
-      free(II);
 
       return mm;
     } else {
       return serialQuickHullHelper(I, P, n, l, r);
     }
   } else {
+    intT pad = pow(2, depth);
 
     intT idx = maxIndex<double>((intT)0,n,greater<double>(),qdInternal::triangArea(I,P,l,r));
     intT maxP = I[idx];
 
     intT n1 = filter(I, Itmp,    n, qdInternal::aboveLine(P, l, maxP));
-    intT n2 = filter(I, Itmp+n1, n, qdInternal::aboveLine(P, maxP, r));
+    intT n2 = filter(I, Itmp+n1+pad/2, n, qdInternal::aboveLine(P, maxP, r));
 
     intT m1, m2;
     par_do([&](){m1 = quickDivideHelper(Itmp, I ,P, n1, l, maxP, depth-1);},
-	   [&](){m2 = quickDivideHelper(Itmp+n1, I+n1, P, n2, maxP, r, depth-1);});
+	   [&](){m2 = quickDivideHelper(Itmp+n1+pad/2, I+n1+pad/2, P, n2, maxP, r, depth-1);});
 
     parallel_for (0, m1, [&](intT i) {I[i] = Itmp[i];});
     I[m1] = maxP;
-    parallel_for (0, m2, [&](intT i) {I[i+m1+1] = Itmp[i+n1];});
+    parallel_for (0, m2, [&](intT i) {I[i+m1+1] = Itmp[i+n1+pad/2];});
     return m1+1+m2;
   }
 }
 
 _seq<intT> quickDivide(point2d* P, intT n) {
   static const intT DEPTH = 8; // Has to be even? todo
+  intT pad = pow(2, DEPTH);
 
   pair<intT,intT> minMax = reduce<pair<intT,intT> >((intT)0,n,minMaxIndex(P), qdInternal::makePair());
   intT l = minMax.first;
   intT r = minMax.second;
   bool* fTop = newA(bool,n);
   bool* fBot = newA(bool,n);
-  intT* I = newA(intT, n);
-  intT* Itmp = newA(intT, n);
+  intT* I = newA(intT, n+pad);
+  intT* Itmp = newA(intT, n+pad);
   parallel_for(0, n, [&](intT i) {
 		       Itmp[i] = i;
 		       double a = triArea(P[l],P[r],P[i]);
@@ -138,15 +136,15 @@ _seq<intT> quickDivide(point2d* P, intT n) {
 		     });
 
   intT n1 = pack(Itmp, I, fTop, n);
-  intT n2 = pack(Itmp, I+n1, fBot, n);
+  intT n2 = pack(Itmp, I+n1+pad/2, fBot, n);
   free(fTop); free(fBot);
 
   intT m1; intT m2;
-  par_do([&](){m1 = quickDivideHelper(I, Itmp, P, n1, l, r, DEPTH);},
-	 [&](){m2 = quickDivideHelper(I+n1, Itmp+n1, P, n2, r, l, DEPTH);});
+  par_do([&](){m1 = quickDivideHelper(I, Itmp, P, n1, l, r, DEPTH-1);},
+	 [&](){m2 = quickDivideHelper(I+n1+pad/2, Itmp+n1+pad/2, P, n2, r, l, DEPTH-1);});
 
   parallel_for (0, m1, [&](intT i) {Itmp[i+1] = I[i];});
-  parallel_for (0, m2, [&](intT i) { Itmp[i+m1+2] = I[i+n1];});
+  parallel_for (0, m2, [&](intT i) { Itmp[i+m1+2] = I[i+n1+pad/2];});
   free(I);
   Itmp[0] = l;
   Itmp[m1+1] = r;
