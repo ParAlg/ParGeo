@@ -137,7 +137,7 @@ dEdge* hdbscan(point<dim>* P, intT n, floatT eps, intT minPts) {
 		 w = max(w, coreDist[e.second]);
 		 R[i] = outT(e.first, e.second, w);
 	       });
-  cout << "copy-time = " << t0.next() << endl;
+  cout << "filterkruskal-time = " << t0.next() << endl;
 
   auto myDendro = dendrogram::directedDendro<dEdge>(R, n);
   cout << "dendrogram-time = " << t0.stop() << endl;
