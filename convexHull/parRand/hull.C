@@ -112,7 +112,7 @@ _seq<intT> hull(point2d* P, intT n) {
   static bool sampling = false;
   static bool verbose = false;
   static bool brute = false;//visibility check todo remove
-  static bool verify = true;
+  static bool verify = false;
   static bool farPivot = false;//todo add in farpivot optimization
 
   auto facets = newA(facet, 2*n);
@@ -567,12 +567,14 @@ _seq<intT> hull(point2d* P, intT n) {
     totalTime += rt.stop();
 
     processed = s+roundProcessed;
-    if ((batch - roundProcessed) < 0.5 * batch) {
-      batch += 100;
+    intT numConflicts = batch - roundProcessed;
+
+    if (numConflicts < 0.5 * batch) {
+      batch *= 1.2;
     } else {
       batch /= 10;
     }
-    if (batch <= 0) batch = 1;
+    if (batch <= 0) batch = 10;
 
   }//end while
 
