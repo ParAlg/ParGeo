@@ -222,6 +222,7 @@ _seq<intT> hull(point2d* P, intT n) {
 			 ptr = ptr->next;
 		       } while (ptr != H);
 		     });
+
   sampleSort(PN+4, n-4, [&](pointNode p1, pointNode p2) {
 			  return p1.seeFacet < p2.seeFacet;
 			});
@@ -256,16 +257,6 @@ _seq<intT> hull(point2d* P, intT n) {
     ptr = ptr->next;
   } while (ptr != H);
 
-  auto flag = newA(intT, n+1);//packing flag
-  auto pointers2 = newA(pointNode*, n);//extra memory for packing
-
-  intT* reservation = newA(intT, 2*n);
-  parallel_for(0, 2*n, [&](intT i) {reservation[i]=intMax();});
-
-  pointNode*** seeLists = newA(pointNode**, 2*n);
-  parallel_for(0, 2*n, [&](intT i) {seeLists[i]=NULL;});
-
-
   intT processed = assignment[0].first;//skip points that are already in
   auto pointers = newA(pointNode*, n);
   parallel_for(0, processed, [&](intT i) {pointers[i] = NULL;});
@@ -275,6 +266,15 @@ _seq<intT> hull(point2d* P, intT n) {
   randPerm(pointers+processed, n-processed);
   //std::random_shuffle(pointers+processed, pointers+n);
   floatT shuffleTime = tt.stop();
+
+  auto flag = newA(intT, n+1);//packing flag
+  auto pointers2 = newA(pointNode*, n);//extra memory for packing
+
+  intT* reservation = newA(intT, 2*n);
+  parallel_for(0, 2*n, [&](intT i) {reservation[i]=intMax();});
+
+  pointNode*** seeLists = newA(pointNode**, 2*n);
+  parallel_for(0, 2*n, [&](intT i) {seeLists[i]=NULL;});
 
   auto fIdx = [&](facet* f) {return intT(f-facets);};
   auto pIdx = [&](pointNode* p) {return intT(p-PN);};
@@ -291,14 +291,18 @@ _seq<intT> hull(point2d* P, intT n) {
   floatT batch = 4;
 
   intT totalRounds = 0;
+  intT serialRounds = 0;
   floatT totalTime = 0;
   while(processed < n) {
     timing rt; rt.start();
     totalRounds ++;
 
     intT b = min(floatT(batch), floatT(n-processed));
-
     intT s = processed;
+    intT roundProcessed;
+
+    if (b < 2000)
+      goto serialRound;
 
     for(intT i=0; i<numWorker; ++i) hullStarts[i] = NULL;
 
@@ -502,7 +506,6 @@ _seq<intT> hull(point2d* P, intT n) {
 
     //pack unprocessed
 
-    intT roundProcessed;
     if (b < 2000) {
       intT lPt = s;
       intT rPt = s+b-1;
@@ -560,7 +563,98 @@ _seq<intT> hull(point2d* P, intT n) {
     //   } while (ptr != H);
     // }
     totalTime += rt.stop();
+    goto finalize;
 
+  serialRound:
+    serialRounds ++;
+    for(intT i=s; i<s+b; ++i) {
+
+      pointNode *pr = pointers[i];
+
+      if (pr) {
+	if (!pr->seeFacet) {
+	  pointers[i] = NULL;
+	  continue;
+	}
+
+	if(verbose) cout << " pr = " << pr->p << endl;
+
+	pair<facet*, facet*> conflicts;
+	if (brute)
+	  conflicts = findVisible(H, pr->p);
+	else
+	  conflicts = findVisible(pr->seeFacet, pr->p);
+	facet* start = conflicts.first;
+	facet*   end = conflicts.second;
+
+	if (start && end) {
+
+	  facet* new1 = newFacetLeft(pIdx(pr), start->p1, pr->p);
+	  facet* new2 = newFacetRight(pIdx(pr), pr->p, end->p1);
+	  pointers[i] = NULL; //will process now, no further actions needed
+
+	  intT cnt = 0;
+	  auto ptr = start;
+	  do {
+	    cnt += ptr->size();
+	    ptr = ptr->next;
+	  } while (ptr != end);
+
+	  if (cnt > 0) { // Re-assign visible points
+
+	    auto SLM = newA(pointNode*, cnt*2);
+	    auto SLM2 = SLM + cnt;
+	    seeLists[fIdx(new1)] = SLM;
+
+	    // Update points that see facet* ptr
+	    pointNode** SLP = SLM;
+	    ptr = start;
+	    do {
+	      granular_for(0, ptr->size(), 2000,
+			   [&](intT j) {
+			     auto seePt = ptr->at(j);
+			     SLP[j] = seePt;
+			     seePt->seeFacet = NULL;
+			     if (new1->visibleFrom(seePt->p)) {
+			       seePt->seeFacet = new1;
+			     } else if (new2->visibleFrom(seePt->p)) {
+			       seePt->seeFacet = new2;
+			     }
+			   });
+	      SLP += ptr->size();
+	      ptr = ptr->next;
+	    } while (ptr != end);
+
+	    // Update new facets' visible points list
+	    bool* F = newA(bool, cnt);
+	    granular_for(0, cnt, 2000, [&](intT j) {
+					 if (SLM[j]->seeFacet) F[j] = 0;
+					 else F[j] = 1; });
+	    intT nonEmpty = sequence::split(SLM2, F, 0, cnt, [&](intT j){return SLM[j];});
+	    if (nonEmpty > 0) {
+	      granular_for(0, nonEmpty, 2000, [&](intT j) {
+						if (SLM2[j]->seeFacet==new1) F[j] = 0;
+						else F[j] = 1; });
+
+	      intT size1 = sequence::split(SLM, F, 0, nonEmpty, [&](intT j){return SLM2[j];});
+	      if (size1>0) new1->assign(&SLM[0], size1);
+	      if (cnt-size1) new2->assign(&SLM[size1], nonEmpty-size1);
+	    }
+	    free(F);
+
+	  } // End re-assigning visible points
+
+	  //update hull
+	  start->prev->next = new1; new1->prev = start->prev;
+	  new1->next = new2; new2->prev = new1;
+	  new2->next = end; end->prev = new2;
+	  H = new1;
+	}
+      }
+    }//end serial for
+    roundProcessed = b;
+
+  finalize:
     processed = s+roundProcessed;
     intT numConflicts = batch - roundProcessed;
 
@@ -586,6 +680,7 @@ _seq<intT> hull(point2d* P, intT n) {
 
 #ifndef SILENT
   cout << "rounds = " << totalRounds << endl;
+  cout << " serial-rounds = " << serialRounds << endl;
   cout << "hull-time = " << t.next() << endl;
   cout << " shuffle-time = " << shuffleTime << endl;
   cout << " init-time = " << initTime << endl;
