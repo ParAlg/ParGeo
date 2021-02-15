@@ -1,5 +1,8 @@
-// This code is part of the Problem Based Benchmark Suite (PBBS)
-// Copyright (c) 2010 Guy Blelloch and the PBBS team
+// This code is part of the paper "A Simple and Practical Linear-Work
+// Parallel Algorithm for Connectivity" in Proceedings of the ACM
+// Symposium on Parallelism in Algorithms and Architectures (SPAA),
+// 2014.  Copyright (c) 2014 Julian Shun, Laxman Dhulipala and Guy
+// Blelloch
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the
@@ -23,71 +26,76 @@
 #ifndef RAND_PERM_H
 #define RAND_PERM_H
 
-#include <iostream>
 #include "parallel.h"
 #include "utils.h"
+#include "randPerm.h"
+#include <iostream>
 #include "sequence.h"
+#include "speculative_for_2.h"
 using namespace std;
 
+inline unsigned int hashI(unsigned int a)
+{
+  a = (a+0x7ed55d16) + (a<<12);
+  a = (a^0xc761c23c) ^ (a>>19);
+  a = (a+0x165667b1) + (a<<5);
+  a = (a+0xd3a2646c) ^ (a<<9);
+  a = (a+0xfd7046c5) + (a<<3);
+  a = (a^0xb55a4f09) ^ (a>>16);
+  return a;
+}
+
 template <class E>
-void randPerm(E *A, int n) {
-  int *I = newA(int,n);
-  int *H = newA(int,n);
-  int *check = newA(int,n);
-  if (n < 100000) {
-    for (int i=n-1; i > 0; i--) 
-      swap(A[utils::hash(i)%(i+1)],A[i]);
-    return;
+struct randPermStep {
+  typedef pair<E,intT> pairInt;
+
+  pairInt *dataCheck;
+  intT* H;
+
+  randPermStep(intT* _H, pairInt* _dataCheck) :
+    H(_H), dataCheck(_dataCheck) {}
+
+  inline bool reserve(intT i) {
+    reserveLoc(dataCheck[i].second,i);
+    reserveLoc(dataCheck[H[i]].second, i);
+    return 1;
   }
+
+  inline bool commit (intT i) {
+    intT h = H[i];
+    if(dataCheck[h].second == i) {
+      if(dataCheck[i].second == i) {
+	swap(dataCheck[i].first, dataCheck[h].first);
+	dataCheck[h].second = intMax();
+	return 1;
+      }
+      dataCheck[h].second = intMax();
+    }
+    return 0;
+  }
+};
+
+template <class E>
+void randPerm(E *A, intT n, intT r=50) {
+
+  typedef pair<E,intT> pairInt;
+
+  intT *H = newA(intT,n);
+  //intT *check = newA(intT,n);
+  pairInt* dataCheck = newA(pairInt,n);
 
   parallel_for (0, n, [&](intT i) {
-			H[i] = utils::hash(i)%(i+1);
-			I[i] = i;
-			check[i] = i;
+			//H[i] = utils::hash(i)%(i+1);
+			H[i] =i+hashI(i)%(n-i);
+			dataCheck[i] = make_pair(A[i],i);
 		      });
 
-  int end = n;
-  int ratio = 100;
-  int maxR = 1 + n/ratio;
-  int wasted = 0;
-  int round = 0;
-  int *hold = newA(int,maxR);
-  bool *flags = newA(bool,maxR);
-  //int *H = newA(int,maxR);
+  randPermStep<E> rStep(H, dataCheck);
+  speculative_for(rStep, 0, n, (r != -1) ? r : 50, 0);
 
-  while (end > 0) {
-    round++;
-    //if (round > 10 * ratio) abort();
-    int size = 1 + end/ratio;
-    int start = end-size;
+  parallel_for (0, n, [&](intT i) {A[i] = dataCheck[i].first;});
 
-    parallel_for(0, size,
-		 [&](intT i) {
-		   int idx = I[i+start];
-		   int idy = H[idx];
-		   utils::writeMax(&check[idy], idx);
-		 });
-
-    parallel_for(0, size,
-		 [&](intT i) {
-		   int idx = I[i+start];
-		   int idy = H[idx];
-		   flags[i] = 1;
-		   hold[i] = idx;
-		   if (check[idy] == idx ) {
-		     if (check[idx] == idx) {
-		       swap(A[idx],A[idy]);
-		       flags[i] = 0;
-		     }
-		     check[idy] = idy;
-		   }
-		 });
-    int nn = sequence::pack(hold,I+start,flags,size);
-    end = end - size + nn;
-    wasted += nn;
-  }
-  free(H); free(I); free(check); free(hold); free(flags);
-  //cout << "wasted = " << wasted << " rounds = " << round  << endl;
+  free(H); free(dataCheck);
 }
 
 #endif
