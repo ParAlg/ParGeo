@@ -265,16 +265,16 @@ _seq<intT> hull(point2d* P, intT n) {
   pointNode*** seeLists = newA(pointNode**, 2*n);
   parallel_for(0, 2*n, [&](intT i) {seeLists[i]=NULL;});
 
-  floatT initTime = tt.stop();
 
   intT processed = assignment[0].first;//skip points that are already in
   auto pointers = newA(pointNode*, n);
   parallel_for(0, processed, [&](intT i) {pointers[i] = NULL;});
   parallel_for(processed, n, [&](intT i) {pointers[i] = &PN[i];});
-  //timing ttt;ttt.start();
-  //randPerm(pointers+processed, n-processed);
-  std::random_shuffle(pointers+processed, pointers+n);
-  //cout << "shuffle-time = " << tt.stop() << endl;
+  floatT initTime = tt.next();
+
+  randPerm(pointers+processed, n-processed);
+  //std::random_shuffle(pointers+processed, pointers+n);
+  floatT shuffleTime = tt.stop();
 
   auto fIdx = [&](facet* f) {return intT(f-facets);};
   auto pIdx = [&](pointNode* p) {return intT(p-PN);};
@@ -587,6 +587,7 @@ _seq<intT> hull(point2d* P, intT n) {
 #ifndef SILENT
   cout << "rounds = " << totalRounds << endl;
   cout << "hull-time = " << t.next() << endl;
+  cout << " shuffle-time = " << shuffleTime << endl;
   cout << " init-time = " << initTime << endl;
   cout << " reserve-time = " << reserveTime << endl;
   cout << " confirm-time = " << confirmTime << endl;
