@@ -26,6 +26,7 @@
 #include "pbbs/gettime.h"
 #include "pbbs/sequence.h"
 #include "pbbs/sampleSort.h"
+#include "pbbs/randPerm.h"
 #include "geometry.h"
 #include "hull.h"
 using namespace std;
@@ -109,7 +110,6 @@ void printHull(facet* start, facet* end) {
 }
 
 _seq<intT> hull(point2d* P, intT n) {
-  static bool sampling = false;
   static bool verbose = false;
   static bool brute = false;//visibility check todo remove
   static bool verify = false;
@@ -211,6 +211,7 @@ _seq<intT> hull(point2d* P, intT n) {
     printHull(H, H);
   }
 
+  // Sort points so those assigned to the same facet are adjacent
   parallel_for(4, n, [&](intT i) {
 		       auto ptr = H;
 		       do {
@@ -221,19 +222,12 @@ _seq<intT> hull(point2d* P, intT n) {
 			 ptr = ptr->next;
 		       } while (ptr != H);
 		     });
-
-  auto pointers = newA(pointNode*, n);
-  pointers[0] = NULL; pointers[1] = NULL; // Set to NULL when processed
-  pointers[2] = NULL; pointers[3] = NULL;
-  parallel_for(4, n, [&](intT i) {pointers[i] = &PN[i];});
-
-  // Sort points so those assigned to the same facet are adjacent
-  sampleSort(pointers+4, n-4, [&](pointNode* p1, pointNode* p2) {
-			  return p1->seeFacet < p2->seeFacet;
+  sampleSort(PN+4, n-4, [&](pointNode p1, pointNode p2) {
+			  return p1.seeFacet < p2.seeFacet;
 			});
 
   auto SL = newA(pointNode*, n);
-  parallel_for(0, n, [&](intT i) {SL[i] = pointers[i];});
+  parallel_for(0, n, [&](intT i) {SL[i] = &PN[i];});
 
   // Assign segments of pointers to 4 initial facets
   pair<intT, facet*> assignment[5];
@@ -274,6 +268,13 @@ _seq<intT> hull(point2d* P, intT n) {
   floatT initTime = tt.stop();
 
   intT processed = assignment[0].first;//skip points that are already in
+  auto pointers = newA(pointNode*, n);
+  parallel_for(0, processed, [&](intT i) {pointers[i] = NULL;});
+  parallel_for(processed, n, [&](intT i) {pointers[i] = &PN[i];});
+  //timing ttt;ttt.start();
+  //randPerm(pointers+processed, n-processed);
+  std::random_shuffle(pointers+processed, pointers+n);
+  //cout << "shuffle-time = " << tt.stop() << endl;
 
   auto fIdx = [&](facet* f) {return intT(f-facets);};
   auto pIdx = [&](pointNode* p) {return intT(p-PN);};
@@ -503,14 +504,8 @@ _seq<intT> hull(point2d* P, intT n) {
 
     intT roundProcessed;
     if (b < 2000) {
-      if (sampling) {
-	parallel_for(s+b, n, [&](intT i){
-				       if (!pointers[i]->seeFacet)
-					 pointers[i] = NULL;
-				     });
-      }
       intT lPt = s;
-      intT rPt = sampling ? n-1 : s+b-1;
+      intT rPt = s+b-1;
 
       while (lPt < rPt) {
         if (pointers[lPt]) {//right
@@ -527,7 +522,7 @@ _seq<intT> hull(point2d* P, intT n) {
       if (pointers[lPt]==NULL) lPt++;//left
       roundProcessed = lPt - s;
     } else {
-      intT e = sampling ? n : s+b;
+      intT e = s+b;
       parallel_for(s, e, [&](intT i){
 			   if (pointers[i]) {
 			     if (!pointers[i]->seeFacet) {
@@ -550,12 +545,12 @@ _seq<intT> hull(point2d* P, intT n) {
       parallel_for(0, numConf, [&](intT i) {
 				 pointers[e-numConf+i] = pointers2[i];
 			       });
-      roundProcessed = sampling ? n - numConf - s : b - numConf;
+      roundProcessed = b - numConf;
     }
 
     packTime += tt.stop();
 
-    //cout << "new processed = " << roundProcessed << "/" << b << ": " << rt.stop() << endl;
+    // cout << "new processed = " << roundProcessed << "/" << b << ": " << rt.stop() << endl;
     // intT hSize = 0;
     // {
     //   auto ptr = H;
