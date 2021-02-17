@@ -196,11 +196,10 @@ _seq<intT> hull(point2d* P, intT n) {
   swap(PN[iBot], PN[1]); iBot = 1;
   swap(PN[iLeft], PN[2]); iLeft = 2;
   swap(PN[iRight], PN[3]); iRight = 3;
-  // Ordering matters
   auto f0 = newFacetLeft(iTop, PN[iLeft].p, PN[iTop].p);
   auto f1 = newFacetRight(iTop, PN[iTop].p, PN[iRight].p);
-  auto f2 = newFacetLeft(iBot, PN[iRight].p, PN[iBot].p);
-  auto f3 = newFacetRight(iBot, PN[iBot].p, PN[iLeft].p);
+  auto f2 = newFacetRight(iBot, PN[iRight].p, PN[iBot].p);
+  auto f3 = newFacetLeft(iBot, PN[iBot].p, PN[iLeft].p);
   f0->next = f1; f1->prev = f0;
   f1->next = f2; f2->prev = f1;
   f2->next = f3; f3->prev = f2;
@@ -214,7 +213,6 @@ _seq<intT> hull(point2d* P, intT n) {
 
   // Sort points so those assigned to the same facet are adjacent
   parallel_for(4, n, [&](intT i) {
-		       PN[i].seeFacet = NULL;
 		       auto ptr = H;
 		       do {
 			 if (ptr->visibleFrom(PN[i].p)) {
@@ -229,9 +227,8 @@ _seq<intT> hull(point2d* P, intT n) {
 			  return p1.seeFacet < p2.seeFacet;
 			});
 
-  auto SL = newA(pointNode*, n*2);
+  auto SL = newA(pointNode*, n);
   parallel_for(0, n, [&](intT i) {SL[i] = &PN[i];});
-  parallel_for(n, n*2, [&](intT i) {SL[i] = NULL;});
 
   // Assign segments of pointers to 4 initial facets
   pair<intT, facet*> assignment[5];
@@ -262,8 +259,8 @@ _seq<intT> hull(point2d* P, intT n) {
 
   intT processed = assignment[0].first;//skip points that are already in
   auto pointers = newA(pointNode*, n);
-  parallel_for(0, processed, [&](intT i) { pointers[i] = NULL;});
-  parallel_for(processed, n, [&](intT i) { pointers[i] = &PN[i];});
+  parallel_for(0, processed, [&](intT i) {pointers[i] = NULL;});
+  parallel_for(processed, n, [&](intT i) {pointers[i] = &PN[i];});
   floatT initTime = tt.next();
 
   randPerm(pointers+processed, n-processed);
@@ -379,11 +376,13 @@ _seq<intT> hull(point2d* P, intT n) {
     confirmTime += tt.next();
 
     // Processing
+
     parallel_for(s, s+b, [&](intT i) {
 
 			   pointNode *pr = pointers[i];
 
 			   if (pr) {
+
 			     if(verbose) cout << " pr = " << pr->p << endl;
 
 			     facet* tmp = getFacetTmp(pIdx(pr));
@@ -401,7 +400,6 @@ _seq<intT> hull(point2d* P, intT n) {
 				 // after each round
 				 facet* new1 = newFacetLeft(pIdx(pr), start->p1, pr->p);
 				 facet* new2 = newFacetRight(pIdx(pr), pr->p, end->p1);
-
 				 pointers[i] = NULL; //will process now, no further actions needed
 
 				 intT cnt = 0;
@@ -413,65 +411,36 @@ _seq<intT> hull(point2d* P, intT n) {
 
 				 if (cnt > 0) { // Re-assign visible points
 
-				   bool copy = false;
-				   ptr = start;
-				   pointNode** A = NULL;
-				   do {
-				     if (!copy && ptr != start) {
-				       if (ptr->seeList < ptr->prev->seeList){ //wrapped around
-					 copy = true;
-					 A = ptr->prev->seeList + ptr->prev->size();
-				       }}
-
-				     if (copy) {
-				       ptr->seeList = A;
-				       if (ptr->size() > 0) {
-					 granular_for(0, ptr->size(), 2000,
-						      [&](intT j) { A[j] = ptr->at(j);});
-					 A += ptr->size();
-				       }
-				     }
-				     ptr = ptr->next;
-				   } while (ptr != end);
-
-				   pointNode** SLM = start->seeList;
+				   auto SLM = newA(pointNode*, cnt*2);
+				   auto SLM2 = SLM + cnt;
+				   seeLists[fIdx(new1)] = SLM;
 
 				   // Update points that see facet* ptr
+				   pointNode** SLP = SLM;
 				   ptr = start;
 				   do {
 				     granular_for(0, ptr->size(), 2000,
 						  [&](intT j) {
 						    auto seePt = ptr->at(j);
+						    SLP[j] = seePt;
+						    seePt->seeFacet = NULL;
 						    if (new1->visibleFrom(seePt->p)) {
 						      seePt->seeFacet = new1;
 						    } else if (new2->visibleFrom(seePt->p)) {
 						      seePt->seeFacet = new2;
-						    } else {
-						      seePt->seeFacet = NULL;
 						    }
 						  });
+				     SLP += ptr->size();
 				     ptr = ptr->next;
 				   } while (ptr != end);
 
-				   intT sortCnt;
-				   ptr = start;
-				   while(ptr != end) {
-				     sortCnt = ptr->next->seeList - start->seeList;
-				     if (sortCnt < 0)
-				       sortCnt = ptr->seeList + ptr->size() - start->seeList;
-				     ptr = ptr->next;
-				   };
-
 				   // Update new facets' visible points list
-				   //  SLM: where the seeLists of affected facets start
-				   //  sortCnt: length SLM affected
-				   // Now need to split
-				   if (true) {
-				     sampleSort(SLM, sortCnt, [&](pointNode* p1, pointNode* p2) {
+				   if (false) {
+				     // Sorting
+				     sampleSort(SLM, cnt, [&](pointNode* p1, pointNode* p2) {
 							    return p1->seeFacet < p2->seeFacet;});
-
 				     intT asn[3]; asn[0] = -1; asn[1] = -1;
-				     granular_for(0, sortCnt, 2000, [&](intT j) {
+				     granular_for(0, cnt, 2000, [&](intT j) {
 								  if (j == 0 || (SLM[j]->seeFacet != SLM[j-1]->seeFacet)) {
 								    if (SLM[j]->seeFacet==new1)
 								      asn[0] = j;
@@ -479,9 +448,7 @@ _seq<intT> hull(point2d* P, intT n) {
 								      asn[1] = j;
 								  }
 								});
-				     asn[2] = sortCnt;
-
-				     new1->assign(&SLM[0], 0);
+				     asn[2] = cnt;
 				     if (asn[0]>= 0) {
 				       intT new1Size;
 				       if (asn[1]>=0) new1Size = asn[1]-asn[0];
@@ -489,41 +456,24 @@ _seq<intT> hull(point2d* P, intT n) {
 				       if (new1Size>0)
 					 new1->assign(&SLM[asn[0]], new1Size);
 				     }
-
 				     if (asn[1]>=0 && asn[2]-asn[1] > 0)
 				       new2->assign(&SLM[asn[1]], asn[2]-asn[1]);
-				     else
-				       new2->assign(new1->seeList + new1->size(), 0);
-
 				   } else {
-				     // Two pass split, todo bug
-				     bool* F = newA(bool, sortCnt);
-				     auto SLM2 = newA(pointNode*, sortCnt);
-				     granular_for(0, sortCnt, 2000, [&](intT j) {
-								      if (SLM[j]->seeFacet) F[j] = 0;
-								      else F[j] = 1; });
-				     intT nonEmpty = sequence::split(SLM, SLM2, F, sortCnt);
-
+				     // Two pass split
+				     bool* F = newA(bool, cnt);
+				     granular_for(0, cnt, 2000, [&](intT j) {
+							    if (SLM[j]->seeFacet) F[j] = 0;
+							    else F[j] = 1; });
+				     intT nonEmpty = sequence::split(SLM2, F, 0, cnt, [&](intT j){return SLM[j];});
 				     if (nonEmpty > 0) {
 				       granular_for(0, nonEmpty, 2000, [&](intT j) {
 									 if (SLM2[j]->seeFacet==new1) F[j] = 0;
-									 else F[j] = 1;
-								       });
+									 else F[j] = 1; });
 
-				       intT size1 = sequence::split(SLM2, SLM, F, nonEmpty);
-
-				       for(intT j=nonEmpty; j<sortCnt; ++j)
-					 SLM[j]->seeFacet = NULL;
-
+				       intT size1 = sequence::split(SLM, F, 0, nonEmpty, [&](intT j){return SLM2[j];});
 				       if (size1>0) new1->assign(&SLM[0], size1);
-				       else new1->assign(&SLM[0], 0);
-				       if (nonEmpty-size1>0) new2->assign(&SLM[size1], nonEmpty-size1);
-				       else new2->assign(new1->seeList+new1->size(), 0);
-				     } else {
-				       new1->assign(&SLM[0], 0);
-				       new2->assign(&SLM[0], 0);
+				       if (cnt-size1) new2->assign(&SLM[size1], nonEmpty-size1);
 				     }
-				     free(SLM2);
 				     free(F);
 				   }
 				 } // End re-assigning visible points
@@ -651,82 +601,46 @@ _seq<intT> hull(point2d* P, intT n) {
 	  } while (ptr != end);
 
 	  if (cnt > 0) { // Re-assign visible points
-	    bool copy = false;
-	    ptr = start;
-	    pointNode** A = NULL;
-	    do {
-	      if (!copy && ptr != start) {
-		if (ptr->seeList < ptr->prev->seeList){ //wrapped around
-		  copy = true;
-		  A = ptr->prev->seeList + ptr->prev->size();
-		}}
 
-	      if (copy) {
-		ptr->seeList = A;
-		if (ptr->size() > 0) {
-		  granular_for(0, ptr->size(), 2000,
-			       [&](intT j) { A[j] = ptr->at(j);});
-		  A += ptr->size();
-		}
-	      }
-	      ptr = ptr->next;
-	    } while (ptr != end);
-
-	    pointNode** SLM = start->seeList;
+	    auto SLM = newA(pointNode*, cnt*2);
+	    auto SLM2 = SLM + cnt;
+	    seeLists[fIdx(new1)] = SLM;
 
 	    // Update points that see facet* ptr
+	    pointNode** SLP = SLM;
 	    ptr = start;
 	    do {
 	      granular_for(0, ptr->size(), 2000,
 			   [&](intT j) {
 			     auto seePt = ptr->at(j);
+			     SLP[j] = seePt;
+			     seePt->seeFacet = NULL;
 			     if (new1->visibleFrom(seePt->p)) {
 			       seePt->seeFacet = new1;
 			     } else if (new2->visibleFrom(seePt->p)) {
 			       seePt->seeFacet = new2;
-			     } else {
-			       seePt->seeFacet = NULL;
 			     }
 			   });
+	      SLP += ptr->size();
 	      ptr = ptr->next;
 	    } while (ptr != end);
 
-	    intT sortCnt;
-	    ptr = start;
-	    while(ptr != end) {
-	      sortCnt = ptr->next->seeList - start->seeList;
-	      if (sortCnt < 0)
-		sortCnt = ptr->seeList + ptr->size() - start->seeList;
-	      ptr = ptr->next;
-	    };
+	    // Update new facets' visible points list
+	    bool* F = newA(bool, cnt);
+	    granular_for(0, cnt, 2000, [&](intT j) {
+					 if (SLM[j]->seeFacet) F[j] = 0;
+					 else F[j] = 1; });
+	    intT nonEmpty = sequence::split(SLM2, F, 0, cnt, [&](intT j){return SLM[j];});
+	    if (nonEmpty > 0) {
+	      granular_for(0, nonEmpty, 2000, [&](intT j) {
+						if (SLM2[j]->seeFacet==new1) F[j] = 0;
+						else F[j] = 1; });
 
-	    sampleSort(SLM, sortCnt, [&](pointNode* p1, pointNode* p2) {
-				       return p1->seeFacet < p2->seeFacet;});
-
-	    intT asn[3]; asn[0] = -1; asn[1] = -1;
-	    granular_for(0, sortCnt, 2000, [&](intT j) {
-					     if (j == 0 || (SLM[j]->seeFacet != SLM[j-1]->seeFacet)) {
-					       if (SLM[j]->seeFacet==new1)
-						 asn[0] = j;
-					       else if (SLM[j]->seeFacet==new2)
-						 asn[1] = j;
-					     }
-					   });
-	    asn[2] = sortCnt;
-
-	    new1->assign(&SLM[0], 0);
-	    if (asn[0]>= 0) {
-	      intT new1Size;
-	      if (asn[1]>=0) new1Size = asn[1]-asn[0];
-	      else new1Size = asn[2]-asn[0];
-	      if (new1Size>0)
-		new1->assign(&SLM[asn[0]], new1Size);
+	      intT size1 = sequence::split(SLM, F, 0, nonEmpty, [&](intT j){return SLM2[j];});
+	      if (size1>0) new1->assign(&SLM[0], size1);
+	      if (cnt-size1) new2->assign(&SLM[size1], nonEmpty-size1);
 	    }
-
-	    if (asn[1]>=0 && asn[2]-asn[1] > 0)
-	      new2->assign(&SLM[asn[1]], asn[2]-asn[1]);
-	    else
-	      new2->assign(new1->seeList + new1->size(), 0);
+	    free(F);
 
 	  } // End re-assigning visible points
 
