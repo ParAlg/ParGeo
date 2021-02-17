@@ -100,20 +100,8 @@ pair<facet*, facet*> findVisible(facet* head, point2d p) {
   return make_pair((facet*)NULL, (facet*)NULL);
 }
 
-void printHull(facet* start, facet* end) {
-  auto ptr = start;
-  do {
-    cout << *ptr << " ";
-    ptr = ptr->next;
-  } while (ptr != end);
-  cout << endl;
-}
-
 _seq<intT> hull(point2d* P, intT n) {
-  static bool verbose = false;
-  static bool brute = false;//visibility check todo remove
   static bool verify = false;
-  static bool farPivot = false;//todo add in farpivot optimization
 
   auto facets = newA(facet, 2*n);
 
@@ -205,11 +193,6 @@ _seq<intT> hull(point2d* P, intT n) {
   f2->next = f3; f3->prev = f2;
   f3->next = f0; f0->prev = f3;
   facet* H = f0;
-
-  if(verbose) {
-    cout << "initial-hull = ";
-    printHull(H, H);
-  }
 
   // Sort points so those assigned to the same facet are adjacent
   parallel_for(4, n, [&](intT i) {
@@ -316,10 +299,7 @@ _seq<intT> hull(point2d* P, intT n) {
 
 			     //find range of visible facets [left, right)
 			     pair<facet*, facet*> conflicts;
-			     if (brute)
-			       conflicts = findVisible(H, pr->p);
-			     else
-			       conflicts = findVisible(pr->seeFacet, pr->p);
+			     conflicts = findVisible(pr->seeFacet, pr->p);
 			     facet* start = conflicts.first;
 			     facet*   end = conflicts.second;
 
@@ -383,8 +363,6 @@ _seq<intT> hull(point2d* P, intT n) {
 
 			   if (pr) {
 
-			     if(verbose) cout << " pr = " << pr->p << endl;
-
 			     facet* tmp = getFacetTmp(pIdx(pr));
 			     facet* start = tmp->getStart();
 			     facet* end = tmp->getEnd();
@@ -435,50 +413,22 @@ _seq<intT> hull(point2d* P, intT n) {
 				   } while (ptr != end);
 
 				   // Update new facets' visible points list
-				   if (false) {
-				     // Sorting
-				     sampleSort(SLM, cnt, [&](pointNode* p1, pointNode* p2) {
-							    return p1->seeFacet < p2->seeFacet;});
-				     intT asn[3]; asn[0] = -1; asn[1] = -1;
-				     granular_for(0, cnt, 2000, [&](intT j) {
-								  if (j == 0 || (SLM[j]->seeFacet != SLM[j-1]->seeFacet)) {
-								    if (SLM[j]->seeFacet==new1)
-								      asn[0] = j;
-								    else if (SLM[j]->seeFacet==new2)
-								      asn[1] = j;
-								  }
-								});
-				     asn[2] = cnt;
-				     if (asn[0]>= 0) {
-				       intT new1Size;
-				       if (asn[1]>=0) new1Size = asn[1]-asn[0];
-				       else new1Size = asn[2]-asn[0];
-				       if (new1Size>0)
-					 new1->assign(&SLM[asn[0]], new1Size);
-				     }
-				     if (asn[1]>=0 && asn[2]-asn[1] > 0)
-				       new2->assign(&SLM[asn[1]], asn[2]-asn[1]);
-				   } else {
-				     // Two pass split
-				     bool* F = newA(bool, cnt);
-				     granular_for(0, cnt, 2000, [&](intT j) {
-							    if (SLM[j]->seeFacet) F[j] = 0;
-							    else F[j] = 1; });
-				     intT nonEmpty = sequence::split(SLM2, F, 0, cnt, [&](intT j){return SLM[j];});
-				     if (nonEmpty > 0) {
-				       granular_for(0, nonEmpty, 2000, [&](intT j) {
-									 if (SLM2[j]->seeFacet==new1) F[j] = 0;
-									 else F[j] = 1; });
+				   bool* F = newA(bool, cnt);
+				   granular_for(0, cnt, 2000, [&](intT j) {
+								if (SLM[j]->seeFacet) F[j] = 0;
+								else F[j] = 1; });
+				   intT nonEmpty = sequence::split(SLM2, F, 0, cnt, [&](intT j){return SLM[j];});
+				   if (nonEmpty > 0) {
+				     granular_for(0, nonEmpty, 2000, [&](intT j) {
+								       if (SLM2[j]->seeFacet==new1) F[j] = 0;
+								       else F[j] = 1; });
 
-				       intT size1 = sequence::split(SLM, F, 0, nonEmpty, [&](intT j){return SLM2[j];});
-				       if (size1>0) new1->assign(&SLM[0], size1);
-				       if (cnt-size1) new2->assign(&SLM[size1], nonEmpty-size1);
-				     }
-				     free(F);
+				     intT size1 = sequence::split(SLM, F, 0, nonEmpty, [&](intT j){return SLM2[j];});
+				     if (size1>0) new1->assign(&SLM[0], size1);
+				     if (cnt-size1) new2->assign(&SLM[size1], nonEmpty-size1);
 				   }
+				   free(F);
 				 } // End re-assigning visible points
-
-				 if(verbose) cout << "adding = " << *new1 << ", " << *new2 << endl;
 
 				 //update hull
 				 start->prev->next = new1; new1->prev = start->prev;
@@ -486,10 +436,6 @@ _seq<intT> hull(point2d* P, intT n) {
 				 new2->next = end; end->prev = new2;
 				 hullStarts[worker_id()] = new1;
 
-				 if(verbose) {
-				   cout << "hull = ";
-				   printHull(H, H);
-				 }
 			       }
 			     }
 			   }
@@ -553,16 +499,6 @@ _seq<intT> hull(point2d* P, intT n) {
 
     packTime += tt.stop();
 
-    // cout << "new processed = " << roundProcessed << "/" << b << ": " << rt.stop() << endl;
-    // intT hSize = 0;
-    // {
-    //   auto ptr = H;
-    //   do {
-    // 	hSize ++;
-    // 	ptr = ptr->next;
-    //   } while (ptr != H);
-    // }
-    totalTime += rt.stop();
     goto finalize;
 
   serialRound:
@@ -577,13 +513,8 @@ _seq<intT> hull(point2d* P, intT n) {
 	  continue;
 	}
 
-	if(verbose) cout << " pr = " << pr->p << endl;
-
 	pair<facet*, facet*> conflicts;
-	if (brute)
-	  conflicts = findVisible(H, pr->p);
-	else
-	  conflicts = findVisible(pr->seeFacet, pr->p);
+	conflicts = findVisible(pr->seeFacet, pr->p);
 	facet* start = conflicts.first;
 	facet*   end = conflicts.second;
 
@@ -655,11 +586,12 @@ _seq<intT> hull(point2d* P, intT n) {
     roundProcessed = b;
 
   finalize:
+    totalTime += rt.stop();
     processed = s+roundProcessed;
     intT numConflicts = batch - roundProcessed;
 
     if (numConflicts < 0.5 * batch) {
-      batch *= 1.2;
+      batch *= 2;
     } else {
       batch /= 10;
     }
