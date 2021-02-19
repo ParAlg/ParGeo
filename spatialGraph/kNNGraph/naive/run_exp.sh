@@ -10,6 +10,6 @@
 #     GCILK=1 make -j
 # fi
 
-./knngraph -r 1 -k $2 -d /Users/sy/Desktop/MIT/OPTICS/small_datasets/$1.pbbs
+./knngraph -r 1 -k $2 -d -s /Users/sy/Desktop/MIT/OPTICS/small_datasets/$1.pbbs
 
 # USEJEMALLOC=1  
