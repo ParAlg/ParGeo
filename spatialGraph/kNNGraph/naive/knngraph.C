@@ -8,7 +8,9 @@
 #include <cstdint>
 using namespace std;
 
-#define DEBUG
+// #define DEBUG
+#define getNN(i, kold, j) (reinterpret_cast<uintptr_t>(A[i*kold+j]) - base_addr) / point_size // the jth nn of point i
+#define distNN(i, j) P[i].pointDist(*A[i*kold+j]) //dist from point i to its jth nn
 
 void printDirectedGraph(intT* offsets, intT* edges, intT n, intT k){
 #ifdef DEBUG
@@ -72,60 +74,79 @@ tuple<intT*, intT*> directedKnnGraph(point<dim>* P, point<dim>** A, intT n, intT
     return make_tuple(offsets, edges);
 }
 
+
+
 // #define CACHELINE_SIZE 128
 //upper bound on other points in its knn?
+// if equal distance, does knn graph include the edges?
+// if distance equal, search back
 template<int dim>
 tuple<intT*, intT*> undirectedKnnGraph(point<dim>* P, point<dim>** A, intT n, intT k, bool sortit){
     typedef point<dim> pointT;
-    intT *offsets = (intT*) malloc((n)*sizeof(intT));
-    parallel_for (0, n, [&](intT i) {
-        offsets[i] = k;
-    });
-    intT *edges_offsets = (intT*) malloc((2*n*k)*sizeof(intT));
     auto base_addr = reinterpret_cast<uintptr_t>(P);
     auto point_size = sizeof(pointT);
 
+    intT kold = k;
+    k = k-1;
+    intT *offsets = (intT*) malloc((n)*sizeof(intT));
+    parallel_for (0, n, [&](intT i) {offsets[i] = k;});
+    // at location ind = i*k+j-1, -1 if do not need to write the jth nn of point i twice
+    // if not -1, write the jth nn of point i to be nn's edges_offsets[ind] neighbor
+    intT *edges_offsets = (intT*) malloc((2*n*k)*sizeof(intT)); 
+
+
     double *radius = (double *) malloc((n)*sizeof(double));
     parallel_for (0, n, [&](intT i) {
-        radius[i] = P[i].pointDist(*A[i*k]);
+        radius[i] = distNN(i, k); //P[i].pointDist(*A[(i+1)*kold-1]);
     });
 
-    // parallel_for (0, n, [&](intT i) {
-    //     parallel_for (0, k, [&](intT j) {
-   for(intT i = 0; i < n; ++i){
-        for(intT j = 1; j < k; ++j){
-            intT nn = (reinterpret_cast<uintptr_t>(A[i*k+j]) - base_addr) / point_size;
-            double dist = P[i].pointDist(*A[nn*k]);
+    parallel_for (0, n, [&](intT i) {
+        parallel_for (1, kold, [&](intT j) {
+//    for(intT i = 0; i < n; ++i){
+//         for(intT j = 1; j < kold; ++j){
+            intT nn = getNN(i, kold, j);
+            intT edges_offsets_ind = -1; //default: i in nn's knn
+            double dist = distNN(i, j);
             if(dist > radius[nn]){ // i not in nn's knn
-                intT ind = utils::fetchAndAdd(&offsets[nn], 1);
-                edges_offsets[i*k+j] = ind;
-            }else{
-                edges_offsets[i*k+j] = -1;
+                edges_offsets_ind = utils::fetchAndAdd(&offsets[nn], 1);
+            }else if(dist == radius[nn]){ //i may or may not be in nn's knn
+                intT check_idx = k;
+                intT nnn = getNN(nn, kold, check_idx);
+                //can optimize if assume A is sorted by id
+                while(check_idx > 0 && nnn != i && dist == distNN(nn, check_idx)){ 
+                    check_idx --;
+                    nnn = getNN(nn, kold, check_idx);
+                }
+                if(nnn != i){ // i not in nn's knn
+                    edges_offsets_ind = utils::fetchAndAdd(&offsets[nn], 1);
+                }
             }
-    //     });
-    // });
-        }
-    }
+            edges_offsets[i*k+j-1] = edges_offsets_ind;
+        });
+    });
+    //     }
+    // }
 
     intT m = sequence::prefixSum(offsets, 0, n);
     intT *edges = (intT*) malloc(m*sizeof(intT));
 
-    // parallel_for (0, n, [&](intT i) {
-    //     parallel_for (0, k, [&](intT j) {
-   for(intT i = 0; i < n; ++i){
-        for(intT j = 0; j < k; ++j){
-            intT nn = (reinterpret_cast<uintptr_t>(A[i*k+j]) - base_addr) / point_size; //store?
-            edges[offsets[i] + j] = nn;
-            intT ind = edges_offsets[i*k+j];
+    parallel_for (0, n, [&](intT i) {
+        parallel_for (1, kold, [&](intT j) {
+//    for(intT i = 0; i < n; ++i){
+//         for(intT j = 1; j < kold; ++j){
+            intT nn = getNN(i, kold, j);
+            edges[offsets[i] + j-1] = nn;
+            intT ind = edges_offsets[i*k+j-1];
             if(ind != -1){ // i not in nn's knn
-                edges[ind] = i;
+                edges[offsets[nn] + ind] = i;
             }
-    //     });
-    // });
-        }
-    }
+        });
+    });
+    //     }
+    // }
 
     free(edges_offsets);
+    free(radius);
     
     printUndirectedGraph(offsets, edges, n, m);
 
