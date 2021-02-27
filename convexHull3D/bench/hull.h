@@ -1,13 +1,22 @@
 #include "common/geometry.h"
+#include "common/algebra.h"
 #include "parlay/primitives.h"
 
 typedef int intT;
 typedef double floatT;
 
+// CW-oriented 3d facet
 struct facet3d {
-  // Indices into global point<3>*
-  // Clockwise order
-  intT a, b, c;
+  intT a, b, c;// Indices into P
+
+  facet3d(intT aa, intT bb, intT cc, parlay::sequence<point<3>>& P): a(aa), b(bb), c(cc) {
+    if (determinant3by3<floatT>(P[a], P[b], P[c]) > 0)
+      swap(a, c);
+  }
+
+  floatT area(parlay::sequence<point<3>>& P) {
+    return crossProduct3d(P[b]-P[a], P[c]-P[a]).length()/2;
+  }
 };
 
-void hull(parlay::sequence<point<3>> const &S);
+parlay::sequence<facet3d> hull3d(parlay::sequence<point<3>> &S);

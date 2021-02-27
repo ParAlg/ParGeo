@@ -12,10 +12,10 @@ using namespace benchIO;
 
 using coord = double;
 
-void timeHull(parlay::sequence<point<3>> const &P, int rounds, char const *outFile) {
+void timeHull(parlay::sequence<point<3>> &P, int rounds, char const *outFile) {
   timer t; t.start();
   for(int i=0; i<rounds; ++i) {
-    hull(P);
+    hull3d(P);
     cout << "round-time = " << t.get_next() << endl;
   }
   t.stop();
