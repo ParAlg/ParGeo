@@ -23,7 +23,8 @@
 #ifndef KDT_ANN_H
 #define KDT_ANN_H
 
-#include <algorithm>
+#include <limits> // numeric_limits
+#include <algorithm> // nth_element
 #include "parlay/parallel.h"
 #include "parlay/sequence.h"
 
@@ -37,7 +38,7 @@ namespace knnBuf {
     floatT cost;// Non-negative
     T entry;
     elem(floatT t_cost, T t_entry) : cost(t_cost), entry(t_entry) {}
-    elem() : cost(-1) {}
+    elem() : cost(std::numeric_limits<floatT>::max()) {}
     bool operator<(const elem& b) const {
       if (cost < b.cost) return true;
       return false;}
@@ -188,9 +189,6 @@ namespace kdtKnn {
       if (n <= leafSize) {
 	left = NULL; right = NULL;
       } else {
-	if (!space[0].isEmpty() || !space[1].isEmpty()) {
-	  cout << "error, kdNode overwrite, abort" << endl;abort();}
-
 	intT k = findWidest();
 	floatT xM = (pMax[k]+pMin[k])/2;
 
@@ -198,6 +196,9 @@ namespace kdtKnn {
 	intT median = splitItemSerial(xM);
 
 	if (median == 0 || median == n) {median = ceil(n/2.0);}
+
+	if (!space[0].isEmpty() || !space[2*median-1].isEmpty()) {
+	  cout << "error, kdNode overwrite, abort" << endl;abort();}
 
 	// Recursive construction
 	space[0] = nodeT(items.cut(0, median), median, space+1, leafSize);
@@ -216,9 +217,6 @@ namespace kdtKnn {
       if (n <= leafSize) {
 	left = NULL; right = NULL;
       } else {
-	if (!space[0].isEmpty() || !space[1].isEmpty()) {
-	  cout << "error, kdNode overwrite, abort" << endl;abort();}
-
 	intT k = findWidest();
 	floatT xM = (pMax[k]+pMin[k])/2;
 
@@ -233,6 +231,9 @@ namespace kdtKnn {
 	parlay::parallel_for(0, n, [&](intT i) {items[i] = splited[i];}); // Copy back
 
 	if (median == 0 || median == n) {median = (n/2.0);}
+
+	if (!space[0].isEmpty() || !space[2*median-1].isEmpty()) {
+	  cout << "error, kdNode overwrite, abort" << endl;abort();}
 
 	// Recursive construction
 	parlay::par_do([&](){space[0] = nodeT(items.cut(0, median), median, space+1, flags.cut(0, median), leafSize);},

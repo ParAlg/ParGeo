@@ -8,22 +8,13 @@
 using namespace std;
 
 template<int dim>
-void knn(parlay::sequence<point<dim>> &P) {
+parlay::sequence<size_t> knn(parlay::sequence<point<dim>> &P, size_t k) {
 
-  parlay::sequence<size_t> nnIdx = kdtKnn::kdtKnn<dim, point<dim>>(P, 3);
-  parlay::sequence<size_t> nnIdx2 = kdtKnn::bruteforceKnn<dim, point<dim>>(P, 3);
-  for(size_t i=0; i<10; ++i) {
-    cout << P[i] << endl;
-    for(size_t j=0; j<3; ++j)
-      cout << nnIdx[i*3+j] << " ";
-    cout << endl;
-    for(size_t j=0; j<3; ++j)
-      cout << nnIdx2[i*3+j] << " ";
-    cout << endl;
-  }
-  cout << "..." << endl;
+  parlay::sequence<size_t> nnIdx = kdtKnn::kdtKnn<dim, point<dim>>(P, k);
+  //parlay::sequence<size_t> nnIdx2 = kdtKnn::bruteforceKnn<dim, point<dim>>(P, k);
 
+  return nnIdx;
 }
 
-template void knn<2>(parlay::sequence<point<2>> &);
-template void knn<3>(parlay::sequence<point<3>> &);
+template parlay::sequence<size_t> knn<2>(parlay::sequence<point<2>> &, size_t);
+template parlay::sequence<size_t> knn<3>(parlay::sequence<point<3>> &, size_t);

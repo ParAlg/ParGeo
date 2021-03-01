@@ -13,19 +13,21 @@ using namespace benchIO;
 using coord = double;
 
 template<int dim>
-void timeKnn(parlay::sequence<point<dim>> &P, int rounds, char const *outFile) {
+void timeKnn(parlay::sequence<point<dim>> &P, size_t k, int rounds, char const *outFile) {
   timer t; t.start();
+  parlay::sequence<size_t> I;
   for(int i=0; i<rounds; ++i) {
-    knn<dim>(P);
+    I = knn<dim>(P, k);
     cout << "round-time = " << t.get_next() << endl;
   }
   t.stop();
-  //if (outFile != NULL) writeIntSeqToFile(I, outFile);
+  if (outFile != NULL) writeIntSeqToFile(I, outFile);
 }
 
 int main(int argc, char* argv[]) {
   commandLine P(argc,argv,"[-o <outFile>] [-r <rounds>] <inFile>");
   char* iFile = P.getArgument(0);
+  size_t k = P.getOptionIntValue("-k",1);
   char* oFile = P.getOptionValue("-o");
   int rounds = P.getOptionIntValue("-r",1);
 
@@ -33,9 +35,9 @@ int main(int argc, char* argv[]) {
 
   if (dim == 2) {
     parlay::sequence<point<2>> Points = readPointsFromFile<point<2>>(iFile);
-    timeKnn<2>(Points, rounds, oFile);
+    timeKnn<2>(Points, k, rounds, oFile);
   } else if (dim == 3) {
     parlay::sequence<point<3>> Points = readPointsFromFile<point<3>>(iFile);
-    timeKnn<3>(Points, rounds, oFile);
+    timeKnn<3>(Points, k, rounds, oFile);
   }
 }
