@@ -145,6 +145,11 @@ public:
     floatT xx=0;
     for (int i=0; i<_dim; ++i) xx += x[i]*x[i];
     return sqrt(xx);}
+
+  floatT lenSqr() {
+    floatT xx=0;
+    for (int i=0; i<_dim; ++i) xx += x[i]*x[i];
+    return xx;}
 };
 
 template <int dim>
