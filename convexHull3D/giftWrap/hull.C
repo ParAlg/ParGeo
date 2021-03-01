@@ -114,10 +114,10 @@ parlay::sequence<facet3d> hull3d(parlay::sequence<point<3>> &P) {
 
 #ifdef WRITE
   myfile.open("hull.txt", std::ofstream::trunc);
-#endif
   myfile << P[p1] << endl;
   myfile << P[p2] << endl;
   myfile << P[p3] << endl;
+#endif
 
   queue<facet3d*> Q;
   Q.push(&H[0]);
