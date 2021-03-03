@@ -9,8 +9,8 @@ struct emptyT {};
 
 struct hashIntPair {
   inline size_t operator () (const pair<int, int>& t) const {
-    size_t l = min(t.first, t.second);
-    size_t r = max(t.first, t.second);
+    size_t l = t.first;
+    size_t r = t.second;
     size_t key = (l << 32) + r;
     return parlay::hash64_2(key);
   }
