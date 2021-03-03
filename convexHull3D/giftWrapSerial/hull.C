@@ -26,7 +26,7 @@
 #include "parlay/parallel.h"
 #include "parlay/primitives.h"
 #include "parlay/sequence.h"
-#include "parlay/hash_table.h"
+#include "pairHash.h"
 #include "common/geometry.h"
 #include <queue>
 #include "hull.h"
@@ -37,6 +37,14 @@
 
 using namespace std;
 
+/* Signed volume of an oriented tetrahedron (example below is positive).
+    d
+    o
+   /|\
+  / | o b
+ o--o/
+ a   c
+ */
 floatT signedVolume(point<3> a, point<3> b, point<3> c, point<3> d) {
   return (a-d).dot(crossProduct3d(b-a, c-a))/6;
 }
@@ -99,21 +107,15 @@ parlay::sequence<facet3d> hull3d(parlay::sequence<point<3>> &P) {//todo change t
   Q.push(make_pair(p3, p2));
   Q.push(make_pair(p1, p3));
 
-  auto table = parlay::sequence<short>(n*n, 0);
-  auto markProcessed = [&](intT p1, intT p2) {
-		       table[n*p1+p2] = 1;
-		     };
-  auto processed = [&](intT p1, intT p2) {
-		       return table[n*p1+p2];
-		     };
-  markProcessed(p1, p2);
-  markProcessed(p2, p3);
-  markProcessed(p3, p1);
+  auto T = pairHash(4*n);
+  T.mark(p1, p2);
+  T.mark(p2, p3);
+  T.mark(p3, p1);
 
   while (Q.size() > 0) {
     pair<intT, intT> e = Q.front();
     Q.pop();
-    if (processed(e.first, e.second))
+    if (T.processed(e.first, e.second))
       continue;
     intT q = pivotOnEdge(e.first, e.second, P);
 #ifdef WRITE
@@ -123,9 +125,9 @@ parlay::sequence<facet3d> hull3d(parlay::sequence<point<3>> &P) {//todo change t
     Q.push(make_pair(H.back().b, H.back().a));
     Q.push(make_pair(H.back().c, H.back().b));
     Q.push(make_pair(H.back().a, H.back().c));
-    markProcessed(H.back().a, H.back().b);
-    markProcessed(H.back().b, H.back().c);
-    markProcessed(H.back().c, H.back().a);
+    T.mark(H.back().a, H.back().b);
+    T.mark(H.back().b, H.back().c);
+    T.mark(H.back().c, H.back().a);
   }
 
 #ifdef WRITE

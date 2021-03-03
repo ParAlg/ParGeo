@@ -28,9 +28,9 @@
 #include "parlay/parallel.h"
 #include "parlay/primitives.h"
 #include "parlay/sequence.h"
-#include "parlay/hash_table.h"
 #include "common/geometry.h"
 #include "hull.h"
+#include "pairHash.h"
 #ifdef WRITE
 #include <iostream>
 #include <fstream>
@@ -91,7 +91,7 @@ parlay::sequence<facet3d> hull3d(parlay::sequence<point<3>> &P) {
 
 #ifdef WRITE
   ofstream myfile;
-  myfile.open("point.txt", std::ofstream::trunc);
+  myfile.open("point.txt", ofstream::trunc);
   for(auto p: P)
     myfile << p << endl;
   myfile.close();
@@ -113,7 +113,7 @@ parlay::sequence<facet3d> hull3d(parlay::sequence<point<3>> &P) {
   H.emplace_back(p1, p2, p3, P);
 
 #ifdef WRITE
-  myfile.open("hull.txt", std::ofstream::trunc);
+  myfile.open("hull.txt", ofstream::trunc);
   myfile << P[p1] << endl;
   myfile << P[p2] << endl;
   myfile << P[p3] << endl;
@@ -122,17 +122,12 @@ parlay::sequence<facet3d> hull3d(parlay::sequence<point<3>> &P) {
   queue<facet3d*> Q;
   Q.push(&H[0]);
 
-  auto table = parlay::sequence<short>(n*n, 0);
-  auto markProcessed = [&](intT p1, intT p2) {
-			 table[n*p1+p2] = 1;
-		     };
-  auto processed = [&](intT p1, intT p2) {
-		       return table[n*p1+p2];
-		     };
+  auto T = pairHash(4*n);
+
   // p1, p2, p3 are not oriented
-  markProcessed(p2, p1);
-  markProcessed(p3, p2);
-  markProcessed(p1, p3);
+  T.mark(p2, p1);
+  T.mark(p3, p2);
+  T.mark(p1, p3);
 
   while (Q.size() > 0) {
     facet3d *f = Q.front();
@@ -147,7 +142,7 @@ parlay::sequence<facet3d> hull3d(parlay::sequence<point<3>> &P) {
 	e2 = f->c; e1 = f->a; e3 = f->b;
       }
 
-      if (processed(e1, e2))
+      if (T.processed(e1, e2))
 	continue;
       intT q = pivotOnFacet(e1, e2, e3, P);
 #ifdef WRITE
@@ -155,9 +150,9 @@ parlay::sequence<facet3d> hull3d(parlay::sequence<point<3>> &P) {
 #endif
       H.emplace_back(e1, q, e2, P);
       Q.push(&H[H.size()-1]);
-      markProcessed(H.back().a, H.back().b);
-      markProcessed(H.back().b, H.back().c);
-      markProcessed(H.back().c, H.back().a);
+      T.mark(H.back().a, H.back().b);
+      T.mark(H.back().b, H.back().c);
+      T.mark(H.back().c, H.back().a);
     }
   }
 
