@@ -52,7 +52,7 @@ floatT signedVolume(point<3> a, point<3> b, point<3> c, point<3> d) {
 intT pivotOnEdge(intT q0, intT q1, parlay::sequence<point<3>> const &P) {
   intT p = 0;
   for (intT i=1; i<P.size(); ++i) {
-    if (signedVolume(P[q0], P[q1], P[p], P[i]) > 0)
+    if (signedVolume(P[q0], P[q1], P[p], P[i]) > 1e-7) //numeric knob
       p = i;
   }
   return p;
@@ -61,7 +61,7 @@ intT pivotOnEdge(intT q0, intT q1, parlay::sequence<point<3>> const &P) {
 intT pivotOnEdge0(point<3> q0, point<3> q1, parlay::sequence<point<3>> const &P) {
   intT p = 0;
   for (intT i=1; i<P.size(); ++i) {
-    if (signedVolume(q0, q1, P[p], P[i]) > 0)
+    if (signedVolume(q0, q1, P[p], P[i]) > 1e-7) //numeric knob
       p = i;
   }
   return p;
