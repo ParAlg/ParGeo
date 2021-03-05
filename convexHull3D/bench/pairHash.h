@@ -1,5 +1,4 @@
-#ifndef PAIR_HASH_H
-#define PAIR_HASH_H
+#pragma once
 
 #include "common/sparse_table.h"
 
@@ -32,5 +31,3 @@ struct pairHash {
     return edgeTable.contains(pair(p1,p2));
   };
 };
-
-#endif

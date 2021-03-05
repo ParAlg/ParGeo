@@ -32,7 +32,7 @@ for I,file in enumerate(files):
   else:
     ax.scatter3D(point1[:,0].T, point1[:,1].T, point1[:,2].T, color=colors[I]);
 
-  if len(labels) > 0:
+  if len(labels) > 0 and not colors[I] == 'black':
     for p,label in enumerate(labels):
       ax.text(point1[p,0], point1[p,1], point1[p,2], label, size=7, zorder=1, color=colors[I])
 

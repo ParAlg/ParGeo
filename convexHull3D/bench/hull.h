@@ -1,32 +1,19 @@
-#ifndef HULL_H
-#define HULL_H
+#pragma once
 
-#include "common/geometry.h"
+#include "geometry/point.h"
+#include "geometry/algebra.h"
 #include "common/algebra.h"
 #include "parlay/primitives.h"
 
-typedef int intT;
-typedef double floatT;
-
 // CW-oriented 3d facet
+template <class pt>
 struct facet3d {
-  intT a, b, c;// Indices into P
+  size_t a, b, c;// Indices into P
 
-  facet3d(intT aa, intT bb, intT cc, parlay::sequence<point<3>>& P): a(aa), b(bb), c(cc) {
-    if (determinant3by3<floatT>(P[a], P[b], P[c]) > 0)
+  facet3d(size_t _a, size_t _b, size_t _c, parlay::slice<pt*, pt*> P): a(_a), b(_b), c(_c) {
+    if (pargeo::determinant3by3(P[a], P[b], P[c]) > 0)
       swap(a, c);
-  }
-
-  facet3d(intT aa, intT bb, intT cc, parlay::slice<point<3>*, point<3>*>& P): a(aa), b(bb), c(cc) {
-    if (determinant3by3<floatT>(P[a], P[b], P[c]) > 0)
-      swap(a, c);
-  }
-
-  floatT area(parlay::sequence<point<3>>& P) {
-    return crossProduct3d(P[b]-P[a], P[c]-P[a]).length()/2;
   }
 };
 
-parlay::sequence<facet3d> hull3d(parlay::sequence<point<3>> &S);
-
-#endif
+parlay::sequence<facet3d<pargeo::point<3>>> hull3d(parlay::sequence<pargeo::point<3>> &P);
