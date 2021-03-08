@@ -10,7 +10,9 @@
 namespace pargeo {
   using namespace std;
 
-  template <int _dim, class _tData, class _tFloat> class _point {
+  struct _empty {};
+
+  template <int _dim, class _tData, class _tFloat, class _tAtt> class _point {
 
     static constexpr _tData empty = numeric_limits<_tData>::max();
 
@@ -20,6 +22,7 @@ namespace pargeo {
     typedef _tFloat floatT;
 
     _tData x[_dim];
+    _tAtt attribute;
 
     _point() { for (int i=0; i<_dim; ++i) x[i]=empty; }
 
@@ -89,13 +92,13 @@ namespace pargeo {
   };
 
   template<int dim>
-  using point = _point<dim, double, double>;
+  using point = _point<dim, double, double, _empty>;
 
   template<int dim>
-  using fpoint = _point<dim, float, float>;
+  using fpoint = _point<dim, float, float, _empty>;
 
   template<int dim>
-  using lpoint = _point<dim, long, double>;
+  using lpoint = _point<dim, long, double, _empty>;
 
   template<class _A, class _B>
   _B pointCast(_B p) {
