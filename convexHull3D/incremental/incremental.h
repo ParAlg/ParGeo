@@ -196,9 +196,9 @@ struct _context {
 
     /* Create initial advancing edge (b,a)
           o start->c
-	 / \ ---> start
-	o---o
-   start->b  start->a
+         / \ ---> start
+        o---o
+  start->b  start->a
      */
     S.emplace(start->b, start->a, start, nullptr);
 
@@ -208,11 +208,11 @@ struct _context {
 	fDo(e);
 	mark(e.ff);
 	/* Push in ccw order, pop in cw order; start from (e.ff.a, e.ff.b)
- 	              e.ff.b
- 	               o
-  	              / \ ---> e.ff
-                     o---o
-          e.b==e.ff.a    e.a==e.ff.c
+                 e.ff.b
+                   o
+                  / \ ---> e.ff
+                 o---o
+      e.b==e.ff.a    e.a==e.ff.c
 	*/
 	if (e.ff->a == e.b) {
 	  S.emplace(e.ff->a, e.ff->b, e.ff->attribute.abFacet, e.ff);
@@ -378,22 +378,22 @@ _context<linkedFacet3d<pt>, vertex3d<linkedFacet3d<pt>>> makeInitialHull(slice<p
 
   // Partition points based on the facets assigned to
   auto I = sequence<size_t>(P.size());
-  auto I2 = sequence<size_t>(P.size());
+  auto I2 = new sequence<size_t>(P.size());
   parallel_for(0, P.size(), [&](size_t i){I[i] = i;});
-  auto splits = split_nine(make_slice(I), make_slice(I2), flag);
+  auto splits = split_nine(make_slice(I), make_slice(I2->begin(), I2->end()), flag);
   size_t n = scan_inplace(make_slice(splits), addm<size_t>());
   splits.push_back(n);
   cout << "split-time-2 = " << t.get_next() << endl;
 
   // Assign points to the respecive facets
-  f0->attribute.seeList = I2.cut(splits[0], splits[1]-splits[0]);
-  f1->attribute.seeList = I2.cut(splits[1], splits[2]-splits[1]);
-  f2->attribute.seeList = I2.cut(splits[2], splits[3]-splits[2]);
-  f3->attribute.seeList = I2.cut(splits[3], splits[4]-splits[3]);
-  f4->attribute.seeList = I2.cut(splits[4], splits[5]-splits[4]);
-  f5->attribute.seeList = I2.cut(splits[5], splits[6]-splits[5]);
-  f6->attribute.seeList = I2.cut(splits[6], splits[7]-splits[6]);
-  f7->attribute.seeList = I2.cut(splits[7], splits[8]-splits[7]);
+  f0->attribute.seeList = I2->cut(splits[0], splits[1]-splits[0]);
+  f1->attribute.seeList = I2->cut(splits[1], splits[2]-splits[1]);
+  f2->attribute.seeList = I2->cut(splits[2], splits[3]-splits[2]);
+  f3->attribute.seeList = I2->cut(splits[3], splits[4]-splits[3]);
+  f4->attribute.seeList = I2->cut(splits[4], splits[5]-splits[4]);
+  f5->attribute.seeList = I2->cut(splits[5], splits[6]-splits[5]);
+  f6->attribute.seeList = I2->cut(splits[6], splits[7]-splits[6]);
+  f7->attribute.seeList = I2->cut(splits[7], splits[8]-splits[7]);
 
   return _context<linkedFacet3d, vertex3d>(f0, Q);
 }
