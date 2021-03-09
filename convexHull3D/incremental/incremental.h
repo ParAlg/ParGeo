@@ -26,12 +26,13 @@
 
 #include <assert.h>
 #include <stack>
+#include <tuple>
 #ifdef WRITE
 #include <iostream>
 #include <fstream>
 #endif
 #include "parlay/sequence.h"
-#include "common/geometry.h"
+#include "geometry/point.h"
 #include "common/algebra.h"
 #include "common/get_time.h"
 #include "hull.h"
@@ -250,10 +251,11 @@ struct _context {
 
   /* Compute a frontier of edges in the clockwise order
    */
-  sequence<_edge<facetT, vertexT>>* computeFrontier(size_t apex) {
+  tuple<sequence<_edge<facetT, vertexT>>*, sequence<facetT*>*> computeFrontier(size_t apex) {
     facetT* fVisible = Q->at(apex).attribute.seeFacet;
 
     auto frontier = new sequence<_edge<facetT, vertexT>>();
+    auto facets = new sequence<facetT*>();
 
     auto fVisit = [&](_edge<facetT, vertexT> e) {
 		    // Visit the facet as long as the parent facet is visible to the apex
@@ -263,21 +265,26 @@ struct _context {
   		  };
 
     auto fDo = [&](_edge<facetT, vertexT> e) {
-		 if (e.fb == nullptr) return; // Do nothing for starting facet
+		 // Include the facet for deletion if visible
+		 bool seeff = visible(e.ff, apex, Q);
+		 if (seeff || e.fb == nullptr)
+		   facets->push_back(e.ff);
+
+		 if (e.fb == nullptr) return; // Stop for the starting facet
 
 		 // Include an edge joining a visible and an invisible facet as frontier
-  		 if (visible(e.fb, apex, Q) && !visible(e.ff, apex, Q)) {
+		 bool seefb = visible(e.fb, apex, Q);
+		 if (seefb && !seeff)
   		   frontier->emplace_back(e.a, e.b, e.ff, e.fb);
-  		 }
   	       };
     auto fStop = [&](){ return false;};
     dfs(H, fVisit, fDo, fStop);
-    return frontier;
+    return make_tuple(frontier, facets);
   }
 
   void printHull() {
     auto fVisit = [&](_edge<facetT, vertexT> e) { return true;};
-    auto fDo = [&](_edge<facetT, vertexT> e) { cout << "(" << e.ff->a << "," << e.ff->b << "," << e.ff->c << ") ";};
+    auto fDo = [&](_edge<facetT, vertexT> e) { cout << *e.ff << " ";};
     auto fStop = [&]() { return false;};
 
     cout << "Hull DFS = ";
@@ -378,9 +385,11 @@ _context<linkedFacet3d<pt>, vertex3d<linkedFacet3d<pt>>> makeInitialHull(slice<p
 
   // Partition points based on the facets assigned to
   auto I = sequence<size_t>(P.size());
-  auto I2 = new sequence<size_t>(P.size());
+  auto I2 = new sequence<size_t>(P.size()); //todo free
   parallel_for(0, P.size(), [&](size_t i){I[i] = i;});
-  auto splits = split_nine(make_slice(I), make_slice(I2->begin(), I2->end()), flag);
+  auto splits = split_k(9, make_slice(I), make_slice(I2->begin(), I2->end()), flag);
+  // for(auto i: splits) cout << i << " ";
+  // cout << endl;
   size_t n = scan_inplace(make_slice(splits), addm<size_t>());
   splits.push_back(n);
   cout << "split-time-2 = " << t.get_next() << endl;
@@ -429,10 +438,20 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
       size_t vi = context.randomApex();
 
       auto frontier = context.computeFrontier(vi);
+      auto frontierEdges = get<0>(frontier);
+      auto facetsBeneath = get<1>(frontier);
+
+      //todo generic split
+      //todo slice empty constructor
 
       cout << "frontier = ";
-      for(auto e: *frontier)
+      for(auto e: *frontierEdges)
 	cout << e.a << "," << e.b << " ";
+      cout << endl;
+
+      cout << "to delete = ";
+      for(auto f: *facetsBeneath)
+	cout << *f << " ";
       cout << endl;
 
       break;
