@@ -37,9 +37,9 @@
 #include "common/algebra.h"
 #include "common/get_time.h"
 #include "hull.h"
-#include "split.h"
 
 using namespace parlay;
+using namespace parlay::internal;
 
 ////////////////////////////
 // Primitives
