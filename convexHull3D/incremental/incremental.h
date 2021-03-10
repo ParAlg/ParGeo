@@ -382,15 +382,15 @@ e.b==e.ff.a    e.a==e.ff.c
 		   cout << "Erroneous hull size = " << hullSize(e.ff) << endl;
 		   abort();
 		 }
-		 //if (!checker) cout << *e.ff << ":" << e.ff->attribute.seeList.size() << " ";
-		 if (!checker) {
-		   cout << *e.ff;
-		   if (e.ff->attribute.seeList.size() > 0) {
-		     cout << ":";
-		     for (auto x: e.ff->attribute.seeList) cout << x << " ";
-		   } else
-		     cout << " ";
-		 }
+		 if (!checker) cout << *e.ff << ":" << e.ff->attribute.seeList.size() << " ";
+		 // if (!checker) {
+		 //   cout << *e.ff;
+		 //   if (e.ff->attribute.seeList.size() > 0) {
+		 //     cout << ":";
+		 //     for (auto x: e.ff->attribute.seeList) cout << x << " ";
+		 //   } else
+		 //     cout << " ";
+		 // }
 	       };
     auto fStop = [&]() { return false;};
 
@@ -501,8 +501,10 @@ _context<linkedFacet3d<pt>, vertex3d<linkedFacet3d<pt>>> makeInitialHull(slice<p
 				flag[i] = 5; Q->at(i).attribute.seeFacet = f5;
 			      } else if (visible(P[f6->a], P[f6->b], P[f6->c], P[i])) {
 				flag[i] = 6; Q->at(i).attribute.seeFacet = f6;
-			      } else {
+			      } else if (visible(P[f7->a], P[f7->b], P[f7->c], P[i])) {
 				flag[i] = 7; Q->at(i).attribute.seeFacet = f7;
+			      } else {
+				flag[i] = 8; Q->at(i).attribute.seeFacet = nullptr;
 			      }
 			    });
   cout << "split-time-1 = " << t.get_next() << endl;
@@ -512,6 +514,7 @@ _context<linkedFacet3d<pt>, vertex3d<linkedFacet3d<pt>>> makeInitialHull(slice<p
   auto I2 = new sequence<size_t>(P.size()); //todo free
   parallel_for(0, P.size(), [&](size_t i){I[i] = i;});
   auto splits = split_k(9, make_slice(I), make_slice(I2->begin(), I2->end()), flag);
+
   size_t n = scan_inplace(make_slice(splits), addm<size_t>());
   splits.push_back(n);
   cout << "split-time-2 = " << t.get_next() << endl;
@@ -622,6 +625,7 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
       auto flag = sequence<int>(fn);
       parallel_for(0, fn, [&](size_t i) {
 			    flag[i] = 3;
+			    context.Q->at(fdel->attribute.seeList[i]).attribute.seeFacet = nullptr;
 			    for (int j=0; j<3; ++j) {
 			      if (visible(newFacets[j], fdel->attribute.seeList[i], P)) {
 				flag[i] = j;
@@ -668,6 +672,7 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
       auto flag = sequence<int>(fn);
       parallel_for(0, fn, [&](size_t i) {
 			    flag[i] = nnf;
+			    context.Q->at(tmpBuffer[i]).attribute.seeFacet = nullptr;
 			    for (int j=0; j<nnf; ++j) {
 			      if (visible(newFacets[j], tmpBuffer[i], P)) {
 				flag[i] = j;
@@ -695,6 +700,7 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
 
   }
   cout << "incremental-time = " << t.get_next() << endl;
+  //cout << "hull size = " << context.hullSize() << endl;
 
 #ifdef WRITE
   context.writeHull();

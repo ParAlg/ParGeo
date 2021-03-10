@@ -44,13 +44,15 @@ sequence<size_t> split_k(size_t k, slice<InIterator, InIterator> In,
              [&](size_t i, size_t s, size_t e) {
 	       size_t c[k];
 	       c[0] = Sums[0]->at(i);
-	       c[1] = m[0] + Sums[1]->at(i);
-	       for (size_t x=2; x<k; ++x) {
-		 c[x] = s;
-		 for (size_t y=0; y<x; ++y) {
-		   c[x] += m[y];
-		   c[x] -= Sums[y]->at(i);}
+	       size_t ms = m[0];
+	       size_t sums = Sums[0]->at(i);
+	       for (size_t x=1; x<k-1; ++x) {
+		 c[x] = ms + Sums[x]->at(i);
+		 ms += m[x];
+		 sums += Sums[x]->at(i);
 	       }
+	       c[k-1] = ms + s - sums;
+
                for (size_t j = s; j < e; j++) {
 		 for (size_t x=0; x<k; x++) {
 		   if (Fl[j] == x) Out[c[x]++] = In[j];
