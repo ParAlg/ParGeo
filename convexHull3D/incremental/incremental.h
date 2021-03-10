@@ -314,6 +314,35 @@ e.b==e.ff.a    e.a==e.ff.c
     return apex;
   }
 
+  /* Choose the furthest outside vertex visible to some facet
+   */
+  size_t furthestApex() {
+    //todo parallelize
+    auto find = [&](slice<size_t*, size_t*> list, facetT* f) {
+		  auto m = signedVolume(Q->at(f->a), Q->at(f->b), Q->at(f->c), Q->at(0));
+		  size_t i = 0;
+		  for (auto x: list) {
+		    auto m2 = signedVolume(Q->at(f->a), Q->at(f->b), Q->at(f->c), Q->at(x));
+		    if (m2 > m) {
+		      m = m2; i = x;
+		    }
+		  }
+		  return i;
+		};
+
+    if (H->attribute.seeList.size() > 0) return find(H->attribute.seeList, H);
+    size_t apex = -1; // not unsigned
+    auto fVisit = [&](_edge<facetT, vertexT> e) {return true;};
+    auto fDo = [&](_edge<facetT, vertexT> e) {
+		 if (e.ff->attribute.seeList.size() > 0)
+		   apex = find(e.ff->attribute.seeList, e.ff);};
+    auto fStop = [&]() {
+		   if (apex != -1) return true;
+		   else return false;};
+    dfsFacet(H, fVisit, fDo, fStop);
+    return apex;
+  }
+
   /* Compute a frontier of edges in the clockwise order
    */
   tuple<sequence<_edge<facetT, vertexT>>*, sequence<facetT*>*> computeFrontier(size_t apex) {
@@ -426,8 +455,6 @@ _context<linkedFacet3d<pt>, vertex3d<linkedFacet3d<pt>>> makeInitialHull(slice<p
   using linkedFacet3d = linkedFacet3d<pt>;
   using vertex3d = vertex3d<linkedFacet3d>;
 
-  timer t; t.start();
-
   // Find 8 extrema assuming no duplicate
   auto xx = minmax_element(P, [&](pt i, pt j) {return i[0]<j[0];});
   size_t xMin = xx.first - &P[0];
@@ -443,8 +470,6 @@ _context<linkedFacet3d<pt>, vertex3d<linkedFacet3d<pt>>> makeInitialHull(slice<p
   size_t zMin = zz.first - &P[0];
   size_t zMax = zz.second - &P[0];
   assert(zMin != zMax);
-
-  cout << "find-extrema-time = " << t.get_next() << endl;
 
 #ifdef WRITE
   ofstream myfile;
@@ -482,7 +507,6 @@ _context<linkedFacet3d<pt>, vertex3d<linkedFacet3d<pt>>> makeInitialHull(slice<p
 			      for(int j=0; j<P[i].dim; ++j)
 				Q->at(i)[j] = P[i][j];
 			    });
-  cout << "data-structure-init-time = " << t.get_next() << endl;
 
   // Assign each point to one of the visible facets
   auto flag = sequence<int>(P.size());
@@ -507,7 +531,6 @@ _context<linkedFacet3d<pt>, vertex3d<linkedFacet3d<pt>>> makeInitialHull(slice<p
 				flag[i] = 8; Q->at(i).attribute.seeFacet = nullptr;
 			      }
 			    });
-  cout << "split-time-1 = " << t.get_next() << endl;
 
   // Partition points based on the facets assigned to
   auto I = sequence<size_t>(P.size());
@@ -517,7 +540,6 @@ _context<linkedFacet3d<pt>, vertex3d<linkedFacet3d<pt>>> makeInitialHull(slice<p
 
   size_t n = scan_inplace(make_slice(splits), addm<size_t>());
   splits.push_back(n);
-  cout << "split-time-2 = " << t.get_next() << endl;
 
   // Assign points to the respecive facets
   f0->attribute.seeList = I2->cut(splits[0], splits[1]);
@@ -553,15 +575,18 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
   }
 #endif
 
-  _context<linkedFacet3d, vertex3d> context = makeInitialHull(P);
-  cout << "init-finish" << endl;
-
   timer t; t.start();
+
+  _context<linkedFacet3d, vertex3d> context = makeInitialHull(P);
+
+  cout << "init-time = " << t.get_next() << endl;
+
   while (true) {
 
     // Serial
 
-    size_t apex = context.randomApex();
+    //size_t apex = context.randomApex();
+    size_t apex = context.furthestApex();
     if (apex == -1) break;
 
 #ifdef VERBOSE
@@ -576,8 +601,6 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
     auto frontier = context.computeFrontier(apex);
     auto frontierEdges = get<0>(frontier);
     auto facetsBeneath = get<1>(frontier);
-
-    //todo slice empty constructor
 
 #ifdef VERBOSE
     cout << "frontier = ";
