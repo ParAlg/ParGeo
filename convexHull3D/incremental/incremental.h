@@ -592,9 +592,8 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
     size_t apex = context.furthestApex();
     if (apex == -1) break;
 
-    round ++;
-
 #ifdef VERBOSE
+    round ++;
     // cout << ">>>>>>>>>> round" << endl;
     // context.printHull();
     // cout << "apex = " << apex << endl;
