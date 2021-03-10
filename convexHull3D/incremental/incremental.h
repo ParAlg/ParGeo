@@ -210,11 +210,7 @@ struct _context {
     Q = _Q;
   }
 
-  /* Clockwise, depth-first hull traversal (no facet repeat)
-     - (facetT*) start: starting facet
-     - (func _edge -> bool) fVisit : whether to visit the target facet of an advancing edge
-     - (func _edge -> void) fDo : what do to with the facet in the advancing edge
-     - (func void -> bool)  fStop : whether to stop
+  /* Depth-first hull traversal (no facet repeat)
   */
   template <class F, class G, class H>
   void dfsFacet(facetT* start, F& fVisit, G& fDo, H& fStop) {
@@ -244,8 +240,11 @@ struct _context {
     }
   }
 
-  /* Clockwise, depth-first hull traversal
-     No edge repeat, visit each oriented edge once
+  /* Clockwise, depth-first hull traversal, visits each oriented edge once
+     - (facetT*) start: starting facet
+     - (func _edge -> bool) fVisit : whether to visit the target facet of an advancing edge
+     - (func _edge -> void) fDo : what do to with the facet in the advancing edge
+     - (func void -> bool)  fStop : whether to stop
   */
   template <class F, class G, class H>
   void dfsEdge(facetT* start, F& fVisit, G& fDo, H& fStop) {
@@ -552,7 +551,9 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
 #endif
 
   _context<linkedFacet3d, vertex3d> context = makeInitialHull(P);
+  cout << "init-finish" << endl;
 
+  timer t; t.start();
   while (true) {
 
     // Serial
@@ -693,6 +694,7 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
       delete facetsBeneath->at(j);
 
   }
+  cout << "incremental-time = " << t.get_next() << endl;
 
 #ifdef WRITE
   context.writeHull();
