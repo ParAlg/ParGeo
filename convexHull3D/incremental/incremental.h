@@ -50,7 +50,7 @@ using namespace parlay;
      o
     /|\
    / | o b
-   o--o/
+  o--o/
    a   c
 */
 template <class pt>
@@ -80,7 +80,7 @@ static std::ostream& operator<<(std::ostream& os, const linkedFacet3d<pt> v) {
   return os;
 }
 
-// a, b, c are indices of vertices, can be in any order
+// a, b, c are indices of vertices, can be input in any order
 template<class pt>
 linkedFacet3d<pt>* makeFacet(size_t a, size_t b, size_t c,
 			     parlay::slice<pt*, pt*> P) {
@@ -161,7 +161,6 @@ struct vertexAtt {
   facetT *seeFacet;
   vertexAtt() {}
 };
-
 
 template<class facetT>
 static std::ostream& operator<<(std::ostream& os, const vertex3d<facetT> v) {
@@ -331,7 +330,7 @@ e.b==e.ff.a    e.a==e.ff.c
 		};
 
     if (H->attribute.seeList.size() > 0) return find(H->attribute.seeList, H);
-    size_t apex = -1; // not unsigned
+    size_t apex = -1; // note this is unsigned
     auto fVisit = [&](_edge<facetT, vertexT> e) {return true;};
     auto fDo = [&](_edge<facetT, vertexT> e) {
 		 if (e.ff->attribute.seeList.size() > 0)
@@ -344,10 +343,10 @@ e.b==e.ff.a    e.a==e.ff.c
   }
 
   /* Compute a frontier of edges in the clockwise order
+      and facets to delete
    */
   tuple<sequence<_edge<facetT, vertexT>>*, sequence<facetT*>*> computeFrontier(size_t apex) {
     facetT* fVisible = Q->at(apex).attribute.seeFacet;
-    //cout << "> compute frontier from " << apex << ", sees " << *(Q->at(apex).attribute.seeFacet) << endl;
 
     auto frontier = new sequence<_edge<facetT, vertexT>>();
     auto facets = new sequence<facetT*>();
@@ -369,7 +368,6 @@ e.b==e.ff.a    e.a==e.ff.c
 
     auto fDo = [&](_edge<facetT, vertexT> e) {
 		 // Include the facet for deletion if visible
-		 //cout << "visit edge " << e.a << "," << e.b << ": " << *e.ff << endl;
 		 bool seeff = visible(e.ff, apex, Q);
 		 if ((seeff || e.fb == nullptr) && !facetVisited(e.ff))
 		   facets->push_back(e.ff);
@@ -379,7 +377,6 @@ e.b==e.ff.a    e.a==e.ff.c
 		 // Include an edge joining a visible and an invisible facet as frontier
 		 bool seefb = visible(e.fb, apex, Q);
 		 if (seefb && !seeff) {
-		   //cout << "edge -> " << e.a << "," << e.b << endl;
   		   frontier->emplace_back(e.a, e.b, e.ff, e.fb);
 		 }
   	       };
@@ -471,17 +468,17 @@ _context<linkedFacet3d<pt>, vertex3d<linkedFacet3d<pt>>> makeInitialHull(slice<p
   size_t zMax = zz.second - &P[0];
   assert(zMin != zMax);
 
-#ifdef WRITE
-  ofstream myfile;
-  myfile.open("hull.txt", std::ofstream::trunc);
-  myfile << P[xMin] << xMin << endl;
-  myfile << P[xMax] << xMax << endl;
-  myfile << P[yMin] << yMin << endl;
-  myfile << P[yMax] << yMax << endl;
-  myfile << P[zMin] << zMin << endl;
-  myfile << P[zMax] << zMax << endl;
-  myfile.close();
-#endif
+// #ifdef WRITE
+//   ofstream myfile;
+//   myfile.open("hull.txt", std::ofstream::trunc);
+//   myfile << P[xMin] << xMin << endl;
+//   myfile << P[xMax] << xMax << endl;
+//   myfile << P[yMin] << yMin << endl;
+//   myfile << P[yMax] << yMax << endl;
+//   myfile << P[zMin] << zMin << endl;
+//   myfile << P[zMax] << zMax << endl;
+//   myfile.close();
+// #endif
 
   // Make initial facets
   auto f0 = makeFacet(xMin, yMin, zMin, P);
@@ -581,6 +578,12 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
 
   cout << "init-time = " << t.get_next() << endl;
 
+#ifdef VERBOSE
+  size_t round = 0;
+  size_t simpleSplit = 0;
+  size_t allocSplit = 0;
+#endif
+
   while (true) {
 
     // Serial
@@ -589,10 +592,12 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
     size_t apex = context.furthestApex();
     if (apex == -1) break;
 
+    round ++;
+
 #ifdef VERBOSE
-    cout << ">>>>>>>>>> round" << endl;
-    context.printHull();
-    cout << "apex = " << apex << endl;
+    // cout << ">>>>>>>>>> round" << endl;
+    // context.printHull();
+    // cout << "apex = " << apex << endl;
 #endif
 #ifdef WRITE
     context.writeHull();
@@ -603,29 +608,30 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
     auto facetsBeneath = get<1>(frontier);
 
 #ifdef VERBOSE
-    cout << "frontier = ";
-    for(auto e: *frontierEdges)
-      cout << e.a << "," << e.b << " ";
-    cout << endl;
+    // cout << "frontier = ";
+    // for(auto e: *frontierEdges)
+    //   cout << e.a << "," << e.b << " ";
+    // cout << endl;
 
-    cout << "to delete = ";
-    for(auto f: *facetsBeneath)
-      cout << *f << " ";
-    cout << endl;
+    // cout << "to delete = ";
+    // for(auto f: *facetsBeneath)
+    //   cout << *f << " ";
+    // cout << endl;
 #endif
 
     // Create new facets
     linkedFacet3d* newFacets[frontierEdges->size()];
+
     for (size_t i=0; i<frontierEdges->size(); ++i) {
       _edge e = frontierEdges->at(i);
       newFacets[i] = makeFacet(e.a, e.b, apex, P);
     }
 
 #ifdef VERBOSE
-    cout << "to create = ";
-    for (size_t i=0; i<frontierEdges->size(); ++i)
-      cout << *(newFacets[i]) << " ";
-    cout << endl;
+    // cout << "to create = ";
+    // for (size_t i=0; i<frontierEdges->size(); ++i)
+    //   cout << *(newFacets[i]) << " ";
+    // cout << endl;
 #endif
 
     // Connect new facets
@@ -642,6 +648,10 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
     // Redistribute the outside points
     if (facetsBeneath->size() == 1) {
       // Only one facet affected, simply distribute among three facets
+
+#ifdef VERBOSE
+      simpleSplit ++;
+#endif
 
       linkedFacet3d* fdel = facetsBeneath->at(0);
       size_t fn = fdel->attribute.seeList.size();
@@ -673,6 +683,10 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
 
     } else {
       // Multiple facets affected, new memory needed
+
+#ifdef VERBOSE
+      allocSplit ++;
+#endif
 
       int nf = facetsBeneath->size();
       int nnf = frontierEdges->size();
@@ -722,8 +736,14 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
       delete facetsBeneath->at(j);
 
   }
-  cout << "incremental-time = " << t.get_next() << endl;
-  //cout << "hull size = " << context.hullSize() << endl;
+  cout << "increment-time = " << t.get_next() << endl;
+
+#ifdef VERBOSE
+  cout << "hull-size = " << context.hullSize() << endl;
+  cout << "#rounds = " << round << endl;
+  cout << "simple-splits = " << simpleSplit << endl;
+  cout << "alloc-splits = " << allocSplit << endl;
+#endif
 
 #ifdef WRITE
   context.writeHull();
