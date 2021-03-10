@@ -13,7 +13,8 @@ using namespace parlay::internal;
 template <typename InIterator, typename OutIterator, typename Char_Seq>
 sequence<size_t> split_k(size_t k, slice<InIterator, InIterator> In,
 			 slice<OutIterator, OutIterator> Out,
-			 Char_Seq const &Fl, flags fl = no_flag) {
+			 Char_Seq const &Fl,
+			 flags fl = no_flag) {
   size_t n = In.size();
   if (In == Out)
     throw std::invalid_argument("In and Out cannot be the same in split_four");
