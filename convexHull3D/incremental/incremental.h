@@ -141,6 +141,14 @@ bool visible(facetT* f, size_t p, slice<vertexT*, vertexT* > Q) {
     return false;
 }
 
+template<class facetT, class vertexT>
+bool visible(facetT* f, size_t p, vertexT* Q) {
+  if (signedVolume(Q[f->a], Q[f->b], Q[f->c], Q[p]) > 1e-7) // numeric knob
+    return true;
+  else
+    return false;
+}
+
 template <class pt>
 bool visible(pt a, pt b, pt c, pt d) {
   return signedVolume(a, b, c, d) > 1e-7; // numeric knob
@@ -444,6 +452,118 @@ e.b==e.ff.a    e.a==e.ff.c
 };
 
 ////////////////////////////
+// Conflict graph
+////////////////////////////
+
+// There are different implementations of a conflict graph,
+// but all of them need to reallize a common set of
+// functionalities
+template <class facetT, class pointT>
+class _conflictGraph {
+
+public:
+  _context<facetT, pointT> context;
+  _conflictGraph(_context<facetT, pointT> _c): context(_c) {};
+
+  /* Takes in list of affected facets and new facets
+     Update conflict graph by redistributing the points of existing
+      ones to the new ones
+   */
+  virtual void redistribute(slice<facetT**, facetT**>,
+			    slice<facetT**, facetT**>) = 0;
+};
+
+template <class facetT, class pointT>
+class conflictList : public _conflictGraph<facetT, pointT> {
+  using linkedFacet3d = facetT;
+  using baseT = _conflictGraph<facetT, pointT>;
+
+public:
+  conflictList(_context<facetT, pointT> _c): baseT(_c) {};
+
+  void redistribute(slice<facetT**, facetT**> facetsBeneath,
+		    slice<facetT**, facetT**> newFacets) {
+    // Redistribute the outside points
+    if (facetsBeneath.size() == 1) {
+      // Only one facet affected, simply distribute among three facets
+
+      linkedFacet3d* fdel = facetsBeneath[0];
+      size_t fn = fdel->attribute.seeList.size();
+      auto flag = sequence<int>(fn);
+      parallel_for(0, fn, [&](size_t i) {
+			    flag[i] = 3;
+			    baseT::context.Q->at(fdel->attribute.seeList[i]).attribute.seeFacet = nullptr;
+			    for (int j=0; j<3; ++j) {
+			      if (visible(newFacets[j], fdel->attribute.seeList[i], baseT::context.Q->data())) {
+				flag[i] = j;
+				baseT::context.Q->at(fdel->attribute.seeList[i]).attribute.seeFacet = newFacets[j];
+				break;
+			      }
+			    }
+			  });
+
+      // Partition points based on the facets assigned to
+      auto tmpBuffer = sequence<size_t>(fn);
+      auto splits = split_k(4, fdel->attribute.seeList, make_slice(tmpBuffer), flag);
+
+      size_t fn2 = scan_inplace(make_slice(splits), addm<size_t>());
+      splits.push_back(fn2);
+
+      parallel_for(0, fn, [&](size_t i) {fdel->attribute.seeList[i] = tmpBuffer[i];});
+
+      for (int j=0; j<3; ++j)
+	newFacets[j]->attribute.seeList =
+	  fdel->attribute.seeList.cut(splits[j], splits[j+1]);
+
+    } else {
+      // Multiple facets affected, new memory needed
+
+      int nf = facetsBeneath.size();
+      int nnf = newFacets.size();
+
+      size_t fn = 0;
+      for(int j=0; j<nf; ++j) {
+	fn += facetsBeneath[j]->attribute.seeList.size();
+      }
+
+      auto tmpBuffer = sequence<size_t>(fn);
+      fn = 0;
+      for(int j=0; j<nf; ++j) {
+	parallel_for(0, facetsBeneath[j]->attribute.seeList.size(),
+		     [&](size_t x){
+		       tmpBuffer[fn+x] = facetsBeneath[j]->attribute.seeList[x];
+		     });
+	fn += facetsBeneath[j]->attribute.seeList.size();
+      }
+
+      auto flag = sequence<int>(fn);
+      parallel_for(0, fn, [&](size_t i) {
+			    flag[i] = nnf;
+			    baseT::context.Q->at(tmpBuffer[i]).attribute.seeFacet = nullptr;
+			    for (int j=0; j<nnf; ++j) {
+			      if (visible(newFacets[j], tmpBuffer[i], baseT::context.Q->data())) {
+				flag[i] = j;
+				baseT::context.Q->at(tmpBuffer[i]).attribute.seeFacet = newFacets[j];
+				break;
+			      }
+			    }
+			  });
+
+      // Partition points based on the facets assigned to
+      auto tmpBuffer2 = new sequence<size_t>(fn);//todo free
+      auto splits = split_k(nnf+1, make_slice(tmpBuffer), tmpBuffer2->cut(0, tmpBuffer2->size()), flag);
+
+      size_t fn2 = scan_inplace(make_slice(splits), addm<size_t>());
+      splits.push_back(fn2);
+
+      for (int j=0; j<nnf; ++j)
+	newFacets[j]->attribute.seeList =
+	  tmpBuffer2->cut(splits[j], splits[j+1]);
+    }
+  }
+};
+
+////////////////////////////
 // Incremental algorithm subroutines
 ////////////////////////////
 
@@ -575,13 +695,12 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
   timer t; t.start();
 
   _context<linkedFacet3d, vertex3d> context = makeInitialHull(P);
+  auto conflict = conflictList<linkedFacet3d, vertex3d>(context); // todo make generic
 
   cout << "init-time = " << t.get_next() << endl;
 
 #ifdef VERBOSE
   size_t round = 0;
-  size_t simpleSplit = 0;
-  size_t allocSplit = 0;
 #endif
 
   while (true) {
@@ -605,6 +724,7 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
     auto frontier = context.computeFrontier(apex);
     auto frontierEdges = get<0>(frontier);
     auto facetsBeneath = get<1>(frontier);
+    // todo free them
 
 #ifdef VERBOSE
     // cout << "frontier = ";
@@ -619,7 +739,8 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
 #endif
 
     // Create new facets
-    linkedFacet3d* newFacets[frontierEdges->size()];
+    // linkedFacet3d* newFacets[frontierEdges->size()];
+    auto newFacets = sequence<linkedFacet3d*>(frontierEdges->size());
 
     for (size_t i=0; i<frontierEdges->size(); ++i) {
       _edge e = frontierEdges->at(i);
@@ -644,91 +765,7 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
 
     context.H = newFacets[0];
 
-    // Redistribute the outside points
-    if (facetsBeneath->size() == 1) {
-      // Only one facet affected, simply distribute among three facets
-
-#ifdef VERBOSE
-      simpleSplit ++;
-#endif
-
-      linkedFacet3d* fdel = facetsBeneath->at(0);
-      size_t fn = fdel->attribute.seeList.size();
-      auto flag = sequence<int>(fn);
-      parallel_for(0, fn, [&](size_t i) {
-			    flag[i] = 3;
-			    context.Q->at(fdel->attribute.seeList[i]).attribute.seeFacet = nullptr;
-			    for (int j=0; j<3; ++j) {
-			      if (visible(newFacets[j], fdel->attribute.seeList[i], P)) {
-				flag[i] = j;
-				context.Q->at(fdel->attribute.seeList[i]).attribute.seeFacet = newFacets[j];
-				break;
-			      }
-			    }
-			  });
-
-      // Partition points based on the facets assigned to
-      auto tmpBuffer = sequence<size_t>(fn);
-      auto splits = split_k(4, fdel->attribute.seeList, make_slice(tmpBuffer), flag);
-
-      size_t fn2 = scan_inplace(make_slice(splits), addm<size_t>());
-      splits.push_back(fn2);
-
-      parallel_for(0, fn, [&](size_t i) {fdel->attribute.seeList[i] = tmpBuffer[i];});
-
-      for (int j=0; j<3; ++j)
-	newFacets[j]->attribute.seeList =
-	  fdel->attribute.seeList.cut(splits[j], splits[j+1]);
-
-    } else {
-      // Multiple facets affected, new memory needed
-
-#ifdef VERBOSE
-      allocSplit ++;
-#endif
-
-      int nf = facetsBeneath->size();
-      int nnf = frontierEdges->size();
-
-      size_t fn = 0;
-      for(int j=0; j<nf; ++j) {
-	fn += facetsBeneath->at(j)->attribute.seeList.size();
-      }
-
-      auto tmpBuffer = sequence<size_t>(fn);
-      fn = 0;
-      for(int j=0; j<nf; ++j) {
-	parallel_for(0, facetsBeneath->at(j)->attribute.seeList.size(),
-		     [&](size_t x){
-		       tmpBuffer[fn+x] = facetsBeneath->at(j)->attribute.seeList[x];
-		     });
-	fn += facetsBeneath->at(j)->attribute.seeList.size();
-      }
-
-      auto flag = sequence<int>(fn);
-      parallel_for(0, fn, [&](size_t i) {
-			    flag[i] = nnf;
-			    context.Q->at(tmpBuffer[i]).attribute.seeFacet = nullptr;
-			    for (int j=0; j<nnf; ++j) {
-			      if (visible(newFacets[j], tmpBuffer[i], P)) {
-				flag[i] = j;
-				context.Q->at(tmpBuffer[i]).attribute.seeFacet = newFacets[j];
-				break;
-			      }
-			    }
-			  });
-
-      // Partition points based on the facets assigned to
-      auto tmpBuffer2 = new sequence<size_t>(fn);//todo free
-      auto splits = split_k(nnf+1, make_slice(tmpBuffer), tmpBuffer2->cut(0, tmpBuffer2->size()), flag);
-
-      size_t fn2 = scan_inplace(make_slice(splits), addm<size_t>());
-      splits.push_back(fn2);
-
-      for (int j=0; j<nnf; ++j)
-	newFacets[j]->attribute.seeList =
-	  tmpBuffer2->cut(splits[j], splits[j+1]);
-    }
+    conflict.redistribute(facetsBeneath->cut(0, facetsBeneath->size()), make_slice(newFacets));
 
     // Delete existing facets
     for(int j=0; j<facetsBeneath->size(); ++j)
