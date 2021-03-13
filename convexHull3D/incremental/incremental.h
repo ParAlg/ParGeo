@@ -394,33 +394,32 @@ public:
     return apex;
   }
 
-  /* Choose the furthest outside vertex visible to some facet
+  /* Choose the furthest outside vertex visible to some facets
+     look specifices the maxmimum number (adjacent) facets to try
    */
-  size_t furthestApex() {
+  size_t furthestApex(size_t look=1) {
+    double m = 1e-7; // Numeric knob
+    size_t apex = -1; // Note this is unsigned
+
     //todo parallelize
     auto find = [&](slice<size_t*, size_t*> list, facetT* f) {
 		  vertexT* Qdata = baseT::Q->data();
-		  auto m = signedVolume(Qdata[f->a], Qdata[f->b], Qdata[f->c], Qdata[0]);
-		  size_t i = 0;
 		  for (auto x: list) {
 		    auto m2 = signedVolume(Qdata[f->a], Qdata[f->b], Qdata[f->c], Qdata[x]);
 		    if (m2 > m) {
-		      m = m2; i = x;
+		      m = m2; apex = x;
 		    }
 		  }
-		  return i;
 		};
 
-    if (baseT::context->H->attribute.seeList.size() > 0)
-      return find(baseT::context->H->attribute.seeList, baseT::context->H);
-
-    size_t apex = -1; // note this is unsigned
     auto fVisit = [&](_edge<facetT, vertexT> e) {return true;};
     auto fDo = [&](_edge<facetT, vertexT> e) {
 		 if (e.ff->attribute.seeList.size() > 0)
-		   apex = find(e.ff->attribute.seeList, e.ff);};
+		   look--;
+		   find(e.ff->attribute.seeList, e.ff);
+	       };
     auto fStop = [&]() {
-		   if (apex != -1) return true;
+		   if (look <= 0) return true;
 		   else return false;};
     baseT::context->dfsFacet(baseT::context->H, fVisit, fDo, fStop);
     return apex;
