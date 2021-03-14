@@ -675,26 +675,28 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
   auto cg = makeInitialHull(P);
   _hull<linkedFacet3d, vertex3d> *context = cg->context;
 
-  cout << "init-time = " << t.get_next() << endl;
+  cout << "init-time = " << t.stop() << endl;
 
-#ifdef VERBOSE
   size_t round = 0;
-#endif
+  double apexTime = 0;
+  double frontierTime = 0;
+  double createTime = 0;
+  double splitTime = 0;
 
   while (true) {
+    t.start();
 
     // Serial
 
     //size_t apex = cg->randomApex();
     size_t apex = cg->furthestApex();
+
+    apexTime += t.get_next();
+
     if (apex == -1) break;
 
-#ifdef VERBOSE
     round ++;
-    // cout << ">>>>>>>>>> round" << endl;
-    // context.printHull();
-    // cout << "apex = " << apex << endl;
-#endif
+
 #ifdef WRITE
     writeHull(context, cg->Q);
 #endif
@@ -702,19 +704,8 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
     auto frontier = cg->computeFrontier(apex);
     auto frontierEdges = get<0>(frontier);
     auto facetsBeneath = get<1>(frontier);
-    // todo free them
 
-#ifdef VERBOSE
-    // cout << "frontier = ";
-    // for(auto e: *frontierEdges)
-    //   cout << e.a << "," << e.b << " ";
-    // cout << endl;
-
-    // cout << "to delete = ";
-    // for(auto f: *facetsBeneath)
-    //   cout << *f << " ";
-    // cout << endl;
-#endif
+    frontierTime += t.get_next();
 
     // Create new facets
     auto newFacets = sequence<linkedFacet3d*>(frontierEdges->size());
@@ -723,13 +714,6 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
       _edge e = frontierEdges->at(i);
       newFacets[i] = makeFacet(e.a, e.b, apex, P);
     }
-
-#ifdef VERBOSE
-    // cout << "to create = ";
-    // for (size_t i=0; i<frontierEdges->size(); ++i)
-    //   cout << *(newFacets[i]) << " ";
-    // cout << endl;
-#endif
 
     // Connect new facets
     for (size_t i=0; i<frontierEdges->size(); ++i) {
@@ -742,18 +726,28 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
 
     context->H = newFacets[0];
 
+    createTime += t.get_next();
+
     cg->redistribute(facetsBeneath->cut(0, facetsBeneath->size()), make_slice(newFacets));
+
+    splitTime += t.stop();
 
     // Delete existing facets
     for(int j=0; j<facetsBeneath->size(); ++j)
       delete facetsBeneath->at(j);
 
+    delete frontierEdges;
+    delete facetsBeneath;
+
   }
-  cout << "increment-time = " << t.get_next() << endl;
+  cout << "apex-time = " << apexTime << endl;
+  cout << "frontier-time = " << frontierTime << endl;
+  cout << "create-time = " << createTime << endl;
+  cout << "split-time = " << splitTime << endl;
+  cout << "#-rounds = " << round << endl;
 
 #ifdef VERBOSE
   cout << "hull-size = " << context->hullSize() << endl;
-  cout << "#rounds = " << round << endl;
 #endif
 
 #ifdef WRITE
