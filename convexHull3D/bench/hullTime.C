@@ -34,6 +34,6 @@ int main(int argc, char* argv[]) {
     abort();
   }
 
-  parlay::sequence<pargeo::point<3>> Points = readPointsFromFile<pargeo::point<3>>(iFile);
-  timeHull<pargeo::point<3>>(Points, rounds, oFile);
+  parlay::sequence<pargeo::fpoint<3>> Points = readPointsFromFile<pargeo::fpoint<3>>(iFile);
+  timeHull<pargeo::fpoint<3>>(Points, rounds, oFile);
 }

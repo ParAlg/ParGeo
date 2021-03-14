@@ -20,4 +20,4 @@ struct _facet3d {
 template <class pt>
 using facet3d = _facet3d<pt, pargeo::_empty>;
 
-parlay::sequence<facet3d<pargeo::point<3>>> hull3d(parlay::sequence<pargeo::point<3>> &P);
+parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &P);

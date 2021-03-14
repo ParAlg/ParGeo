@@ -30,8 +30,9 @@ namespace pargeo {
 
     _point(_point* p) { for (int i=0; i<_dim; ++i) x[i]=p->x[i]; }
 
-    _point(parlay::slice<_tData*,_tData*> p) {
-      for(int i=0; i<_dim; ++i) x[i] = p[i];}
+    template<class _tIn>
+    _point(parlay::slice<_tIn*,_tIn*> p) {
+      for(int i=0; i<_dim; ++i) x[i] = (_tData)p[i];}
 
     void setEmpty() {x[0]=empty;}
 

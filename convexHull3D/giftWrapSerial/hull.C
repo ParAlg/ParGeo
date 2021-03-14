@@ -55,7 +55,7 @@ template <class pt>
 size_t pivotOnEdge(size_t q0, size_t q1, parlay::slice<pt*, pt*> P) {
   size_t p = 0;
   for (size_t i=1; i<P.size(); ++i) {
-    if (signedVolume(P[q0], P[q1], P[p], P[i]) > 1e-7) //numeric knob
+    if (signedVolume(P[q0], P[q1], P[p], P[i]) > 1e-6) //numeric knob
       p = i;
   }
   return p;
@@ -65,14 +65,14 @@ template <class pt>
 size_t pivotOnEdge0(pt q0, pt q1, parlay::slice<pt*, pt*> P) {
   size_t p = 0;
   for (size_t i=1; i<P.size(); ++i) {
-    if (signedVolume(q0, q1, P[p], P[i]) > 1e-7) //numeric knob
+    if (signedVolume(q0, q1, P[p], P[i]) > 1e-6) //numeric knob
       p = i;
   }
   return p;
 }
 
-parlay::sequence<facet3d<pargeo::point<3>>> hull3d(parlay::sequence<pargeo::point<3>> &P) {
-  using pt = pargeo::point<3>;
+parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &P) {
+  using pt = pargeo::fpoint<3>;
   using facet3d = facet3d<pt>;
 
   size_t n = P.size();
@@ -144,4 +144,4 @@ parlay::sequence<facet3d<pargeo::point<3>>> hull3d(parlay::sequence<pargeo::poin
   return H;
 }
 
-parlay::sequence<facet3d<pargeo::point<3>>> hull3d(parlay::sequence<pargeo::point<3>> &);
+parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &);

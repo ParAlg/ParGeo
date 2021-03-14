@@ -85,8 +85,8 @@ size_t pivotOnFacet(size_t p1, size_t q1, size_t q2, parlay::slice<pt*, pt*> P) 
   return q-P.begin();
 }
 
-parlay::sequence<facet3d<pargeo::point<3>>> hull3d(parlay::sequence<pargeo::point<3>> &P) {
-  using pt = pargeo::point<3>;
+parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &P) {
+  using pt = pargeo::fpoint<3>;
   using facet3d = facet3d<pt>;
 
   size_t n = P.size();
@@ -165,4 +165,4 @@ parlay::sequence<facet3d<pargeo::point<3>>> hull3d(parlay::sequence<pargeo::poin
   return H;
 }
 
-parlay::sequence<facet3d<pargeo::point<3>>> hull3d(parlay::sequence<pargeo::point<3>> &);
+parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &);

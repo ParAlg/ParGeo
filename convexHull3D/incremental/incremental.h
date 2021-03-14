@@ -40,6 +40,8 @@
 
 using namespace parlay;
 using namespace parlay::internal;
+using pointT = pargeo::fpoint<3>;
+static const typename pointT::floatT numericKnob = 1e-5;
 
 ////////////////////////////
 // Primitives
@@ -127,7 +129,7 @@ void linkFacet(fc* f, fc* ab, fc* bc, fc* ca) {
 
 template<class facetT, class vertexT>
 bool visible(facetT* f, size_t p, sequence<vertexT>* P) {
-  if (signedVolume(P->at(f->a), P->at(f->b), P->at(f->c), P->at(p)) > 1e-7) // numeric knob
+  if (signedVolume(P->at(f->a), P->at(f->b), P->at(f->c), P->at(p)) > numericKnob)
     return true;
   else
     return false;
@@ -135,7 +137,7 @@ bool visible(facetT* f, size_t p, sequence<vertexT>* P) {
 
 template<class facetT, class vertexT>
 bool visible(facetT* f, size_t p, vertexT* Q) {
-  if (signedVolume(Q[f->a], Q[f->b], Q[f->c], Q[p]) > 1e-7) // numeric knob
+  if (signedVolume(Q[f->a], Q[f->b], Q[f->c], Q[p]) > numericKnob)
     return true;
   else
     return false;
@@ -143,7 +145,7 @@ bool visible(facetT* f, size_t p, vertexT* Q) {
 
 template <class pt>
 bool visible(pt a, pt b, pt c, pt d) {
-  return signedVolume(a, b, c, d) > 1e-7; // numeric knob
+  return signedVolume(a, b, c, d) > numericKnob;
 }
 
 ////////////////////////////
@@ -153,8 +155,11 @@ bool visible(pt a, pt b, pt c, pt d) {
 template<class facetT>
 struct vertexAtt;
 
+// template<class facetT>
+// using vertex3d = pargeo::_point<3, double, double, vertexAtt<facetT>>;
+
 template<class facetT>
-using vertex3d = pargeo::_point<3, double, double, vertexAtt<facetT>>;
+using vertex3d = pargeo::_point<3, pointT::floatT, pointT::floatT, vertexAtt<facetT>>;
 
 template<class facetT>
 struct vertexAtt {
@@ -318,7 +323,12 @@ e.b==e.ff.a    e.a==e.ff.c
 		   cout << "Erroneous hull size = " << hullSize(e.ff) << endl;
 		   abort();
 		 }
-		 if (!checker) cout << *e.ff << " ";
+		 //if (!checker) cout << *e.ff << " ";
+		 if (!checker) {
+		   cout << *e.ff << ": ";
+		   for(auto x : e.ff->attribute.seeList)
+		     cout << x << " ";
+		 }
 	       };
     auto fStop = [&]() { return false;};
 
@@ -398,7 +408,7 @@ public:
      look specifices the maxmimum number (adjacent) facets to try
    */
   size_t furthestApex(size_t look=1) {
-    double m = 1e-7; // Numeric knob
+    typename vertexT::floatT m = numericKnob;
     size_t apex = -1; // Note this is unsigned
 
     //todo parallelize
@@ -471,6 +481,11 @@ public:
 
   void redistribute(slice<facetT**, facetT**> facetsBeneath,
 		    slice<facetT**, facetT**> newFacets) {
+    auto canSee = [&](facetT* f, size_t p, vertexT* points) {
+		    return visible(f, p, points) &&
+		      f->a != p && f->b != p && f->c != p;
+		  };
+
     // Redistribute the outside points
     if (facetsBeneath.size() == 1) {
       // Only one facet affected, simply distribute among three facets
@@ -482,7 +497,7 @@ public:
 			    flag[i] = 3;
 			    baseT::Q->at(fdel->attribute.seeList[i]).attribute.seeFacet = nullptr;
 			    for (int j=0; j<3; ++j) {
-			      if (visible(newFacets[j], fdel->attribute.seeList[i], baseT::Q->data())) {
+			      if (canSee(newFacets[j], fdel->attribute.seeList[i], baseT::Q->data())) {
 				flag[i] = j;
 				baseT::Q->at(fdel->attribute.seeList[i]).attribute.seeFacet = newFacets[j];
 				break;
@@ -529,7 +544,7 @@ public:
 			    flag[i] = nnf;
 			    baseT::Q->at(tmpBuffer[i]).attribute.seeFacet = nullptr;
 			    for (int j=0; j<nnf; ++j) {
-			      if (visible(newFacets[j], tmpBuffer[i], baseT::Q->data())) {
+			      if (canSee(newFacets[j], tmpBuffer[i], baseT::Q->data())) {
 				flag[i] = j;
 				baseT::Q->at(tmpBuffer[i]).attribute.seeFacet = newFacets[j];
 				break;
@@ -691,6 +706,11 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
     //size_t apex = cg->randomApex();
     size_t apex = cg->furthestApex();
 
+#ifdef VERBOSE
+    cout << ">>>>>>>>>" << endl;
+    context->printHull();
+    cout << "apex chosen = " << apex << endl;
+#endif
     apexTime += t.get_next();
 
     if (apex == -1) break;
@@ -705,6 +725,16 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
     auto frontierEdges = get<0>(frontier);
     auto facetsBeneath = get<1>(frontier);
 
+#ifdef VERBOSE
+    cout << "frontier = ";
+    for(auto e: *frontierEdges)
+      cout << e.a << "," << e.b << " ";
+    cout << endl;
+    cout << "to delete = ";
+    for(auto f: *facetsBeneath)
+      cout << *f << " ";
+    cout << endl;
+#endif
     frontierTime += t.get_next();
 
     // Create new facets
@@ -714,6 +744,13 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
       _edge e = frontierEdges->at(i);
       newFacets[i] = makeFacet(e.a, e.b, apex, P);
     }
+
+#ifdef VERBOSE
+    cout << "to create = ";
+    for (size_t i=0; i<frontierEdges->size(); ++i)
+      cout << *(newFacets[i]) << " ";
+    cout << endl;
+#endif
 
     // Connect new facets
     for (size_t i=0; i<frontierEdges->size(); ++i) {
