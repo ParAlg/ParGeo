@@ -379,9 +379,10 @@ public:
 
     auto fVisit = [&](_edge<facetT, vertexT> e) {return true;};
     auto fDo = [&](_edge<facetT, vertexT> e) {
-		 if (e.ff->seeList.size() > 0)
+		 if (e.ff->seeList.size() > 0) {
 		   look--;
 		   find(e.ff->seeList, e.ff);
+		 }
 	       };
     auto fStop = [&]() {
 		   if (look <= 0) return true;
