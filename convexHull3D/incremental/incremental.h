@@ -361,37 +361,19 @@ void writeHull(_hull<facetT, vertexT> *context, sequence<vertexT> *Q) {
 // Conflict graph
 ////////////////////////////
 
-// There are different implementations of a conflict graph,
-// but all of them need to reallize a common set of
-// functionalities
 template <class facetT, class vertexT>
-class _conflictGraph {
+class conflictList {
 
 public:
   _hull<facetT, vertexT> *context;
   sequence<vertexT> *Q;
-  _conflictGraph(_hull<facetT, vertexT> *_c, sequence<vertexT> *_Q): context(_c), Q(_Q) {
-  };
 
-  /* Takes in list of affected facets and new facets
-     Update conflict graph by redistributing the points of existing
-      ones to the new ones
-   */
-  virtual void redistribute(slice<facetT**, facetT**>,
-			    slice<facetT**, facetT**>) = 0;
-};
-
-template <class facetT, class vertexT>
-class conflictList : public _conflictGraph<facetT, vertexT> {
-  using baseT = _conflictGraph<facetT, vertexT>;
-
-public:
-  conflictList(_hull<facetT, vertexT> *_c, sequence<vertexT> *_Q): baseT(_c, _Q) {};
+  conflictList(_hull<facetT, vertexT> *_c, sequence<vertexT> *_Q): context(_c), Q(_Q) {};
 
   /* Choose a random outside vertex visible to some facet
    */
   size_t randomApex() {
-    if (baseT::context->H->attribute.seeList.size() > 0) return baseT::context->H->attribute.seeList[0];
+    if (context->H->attribute.seeList.size() > 0) return context->H->attribute.seeList[0];
     size_t apex = -1; // not unsigned
     auto fVisit = [&](_edge<facetT, vertexT> e) {return true;};
     auto fDo = [&](_edge<facetT, vertexT> e) {
@@ -400,7 +382,7 @@ public:
     auto fStop = [&]() {
 		   if (apex != -1) return true;
 		   else return false;};
-    baseT::context->dfsFacet(baseT::context->H, fVisit, fDo, fStop);
+    context->dfsFacet(context->H, fVisit, fDo, fStop);
     return apex;
   }
 
@@ -413,7 +395,7 @@ public:
 
     //todo parallelize
     auto find = [&](slice<size_t*, size_t*> list, facetT* f) {
-		  vertexT* Qdata = baseT::Q->data();
+		  vertexT* Qdata = Q->data();
 		  for (auto x: list) {
 		    auto m2 = signedVolume(Qdata[f->a], Qdata[f->b], Qdata[f->c], Qdata[x]);
 		    if (m2 > m) {
@@ -431,7 +413,7 @@ public:
     auto fStop = [&]() {
 		   if (look <= 0) return true;
 		   else return false;};
-    baseT::context->dfsFacet(baseT::context->H, fVisit, fDo, fStop);
+    context->dfsFacet(context->H, fVisit, fDo, fStop);
     return apex;
   }
 
@@ -439,7 +421,7 @@ public:
       and facets to delete
    */
   tuple<sequence<_edge<facetT, vertexT>>*, sequence<facetT*>*> computeFrontier(size_t apex) {
-    facetT* fVisible = baseT::Q->at(apex).attribute.seeFacet;
+    facetT* fVisible = Q->at(apex).attribute.seeFacet;
 
     auto frontier = new sequence<_edge<facetT, vertexT>>();
     auto facets = new sequence<facetT*>();
@@ -453,7 +435,7 @@ public:
     auto fVisit = [&](_edge<facetT, vertexT> e) {
 		    // Visit the facet as long as the parent facet is visible to the apex
 		    // e.fb == nullptr for the starting facet (whose parent is nullptr, see dfsEdge(...))
-		    if (e.fb == nullptr || visible(e.fb, apex, baseT::Q))
+		    if (e.fb == nullptr || visible(e.fb, apex, Q))
 		      return true;
 		    else
 		      return false;
@@ -461,21 +443,21 @@ public:
 
     auto fDo = [&](_edge<facetT, vertexT> e) {
 		 // Include the facet for deletion if visible
-		 bool seeff = visible(e.ff, apex, baseT::Q);
+		 bool seeff = visible(e.ff, apex, Q);
 		 if ((seeff || e.fb == nullptr) && !facetVisited(e.ff))
 		   facets->push_back(e.ff);
 
 		 if (e.fb == nullptr) return; // Stop for the starting facet
 
 		 // Include an edge joining a visible and an invisible facet as frontier
-		 bool seefb = visible(e.fb, apex, baseT::Q);
+		 bool seefb = visible(e.fb, apex, Q);
 		 if (seefb && !seeff) {
   		   frontier->emplace_back(e.a, e.b, e.ff, e.fb);
 		 }
   	       };
     auto fStop = [&](){ return false;};
 
-    baseT::context->dfsEdge(baseT::Q->at(apex).attribute.seeFacet, fVisit, fDo, fStop);
+    context->dfsEdge(Q->at(apex).attribute.seeFacet, fVisit, fDo, fStop);
     return make_tuple(frontier, facets);
   }
 
@@ -495,11 +477,11 @@ public:
       auto flag = sequence<int>(fn);
       parallel_for(0, fn, [&](size_t i) {
 			    flag[i] = 3;
-			    baseT::Q->at(fdel->attribute.seeList[i]).attribute.seeFacet = nullptr;
+			    Q->at(fdel->attribute.seeList[i]).attribute.seeFacet = nullptr;
 			    for (int j=0; j<3; ++j) {
-			      if (canSee(newFacets[j], fdel->attribute.seeList[i], baseT::Q->data())) {
+			      if (canSee(newFacets[j], fdel->attribute.seeList[i], Q->data())) {
 				flag[i] = j;
-				baseT::Q->at(fdel->attribute.seeList[i]).attribute.seeFacet = newFacets[j];
+				Q->at(fdel->attribute.seeList[i]).attribute.seeFacet = newFacets[j];
 				break;
 			      }
 			    }
@@ -542,11 +524,11 @@ public:
       auto flag = sequence<int>(fn);
       parallel_for(0, fn, [&](size_t i) {
 			    flag[i] = nnf;
-			    baseT::Q->at(tmpBuffer[i]).attribute.seeFacet = nullptr;
+			    Q->at(tmpBuffer[i]).attribute.seeFacet = nullptr;
 			    for (int j=0; j<nnf; ++j) {
-			      if (canSee(newFacets[j], tmpBuffer[i], baseT::Q->data())) {
+			      if (canSee(newFacets[j], tmpBuffer[i], Q->data())) {
 				flag[i] = j;
-				baseT::Q->at(tmpBuffer[i]).attribute.seeFacet = newFacets[j];
+				Q->at(tmpBuffer[i]).attribute.seeFacet = newFacets[j];
 				break;
 			      }
 			    }
