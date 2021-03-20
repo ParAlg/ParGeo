@@ -24,14 +24,20 @@
 
 //#define WRITE // Write to file, visualize using python3 plot.py
 //#define VERBOSE
+#define SEQ_SPLIT
 
-#include <assert.h>
-#include <stack>
-#include <tuple>
+#ifdef SEQ_SPLIT
+#include <vector>
+#endif
+
 #ifdef WRITE
 #include <iostream>
 #include <fstream>
 #endif
+
+#include <assert.h>
+#include <stack>
+#include <tuple>
 #include "parlay/sequence.h"
 #include "geometry/point.h"
 #include "common/algebra.h"
@@ -95,9 +101,36 @@ struct linkedFacet3d {
   linkedFacet3d<pt> *abFacet;
   linkedFacet3d<pt> *bcFacet;
   linkedFacet3d<pt> *caFacet;
-  slice<vertex3d*, vertex3d*> seeList;
 
-  linkedFacet3d() {} // todo
+#ifdef SEQ_SPLIT
+
+  vector<vertex3d> *seeList;
+  vertex3d& at(size_t i) { return seeList->at(i); }
+  size_t size() { return seeList->size(); }
+  void push_back(vertex3d v) { seeList->push_back(v); }
+
+#else
+
+  slice<vertex3d*, vertex3d*> seeList;
+  vertex3d& at(size_t i) { return seeList[i]; }
+  size_t size() { return seeList.size(); }
+
+#endif
+
+  linkedFacet3d(vertex3d _a, vertex3d _b, vertex3d _c): a(_a), b(_b), c(_c) {
+    if (pargeo::determinant3by3(a, b, c) > 0)
+      swap(b, c);
+
+#ifdef SEQ_SPLIT
+    seeList = new vector<vertex3d>();
+#endif
+  }
+
+  ~linkedFacet3d() {
+#ifdef SEQ_SPLIT
+    delete seeList;
+#endif
+  }
 };
 
 template<class pt>
@@ -108,12 +141,7 @@ static std::ostream& operator<<(std::ostream& os, const linkedFacet3d<pt> v) {
 
 // a, b, c can be input in any order
 linkedFacet3d<vertex3d>* makeFacet(vertex3d a, vertex3d b, vertex3d c) {
-  auto f = new linkedFacet3d<vertex3d>();
-  f->a = a;
-  f->b = b;
-  f->c = c;
-  if (pargeo::determinant3by3(f->a, f->b, f->c) > 0)
-    swap(f->b, f->c);
+  auto f = new linkedFacet3d<vertex3d>(a, b, c);
   return f;
 }
 
@@ -250,7 +278,6 @@ struct _hull {
 start->b  start->a
     */
     S.emplace(start->b, start->a, start, nullptr);
-
     while (S.size() > 0) {
       _edge e = S.top(); S.pop();
       if (!visited(e) && fVisit(e)) {
@@ -340,19 +367,18 @@ class conflictList {
 
 public:
   _hull<facetT, vertexT> *context;
-  sequence<vertexT> *Q;
 
-  conflictList(_hull<facetT, vertexT> *_c, sequence<vertexT> *_Q): context(_c), Q(_Q) {};
+  conflictList(_hull<facetT, vertexT> *_c): context(_c) {};
 
   /* Choose a random outside vertex visible to some facet
    */
   vertexT randomApex() {
-    if (context->H->seeList.size() > 0) return context->H->seeList[0];
+    if (context->H->size() > 0) return context->H->at(0);
     vertexT apex = vertexT();
     auto fVisit = [&](_edge<facetT, vertexT> e) {return true;};
     auto fDo = [&](_edge<facetT, vertexT> e) {
-		 if (e.ff->seeList.size() > 0)
-		   apex = e.ff->seeList[0];};
+		 if (e.ff->size() > 0)
+		   apex = e.ff->at(0);};
     auto fStop = [&]() {
 		   if (!apex.isEmpty()) return true;
 		   else return false;};
@@ -368,20 +394,20 @@ public:
     vertexT apex = vertexT();
 
     //todo parallelize
-    auto find = [&](slice<vertexT*, vertexT*> list, facetT* f) {
-		  for (auto x: list) {
-		    auto m2 = signedVolume(f->a, f->b, f->c, x);
+    auto find = [&](facetT* f) {
+		  for (size_t i=0; i<f->size(); ++i) {
+		    auto m2 = signedVolume(f->a, f->b, f->c, f->at(i));
 		    if (m2 > m) {
-		      m = m2; apex = x;
+		      m = m2; apex = f->at(i);
 		    }
 		  }
 		};
 
     auto fVisit = [&](_edge<facetT, vertexT> e) {return true;};
     auto fDo = [&](_edge<facetT, vertexT> e) {
-		 if (e.ff->seeList.size() > 0) {
+		 if (e.ff->size() > 0) {
 		   look--;
-		   find(e.ff->seeList, e.ff);
+		   find(e.ff);
 		 }
 	       };
     auto fStop = [&]() {
@@ -447,20 +473,33 @@ public:
       // Only one facet affected, simply distribute among three facets
 
       facetT* fdel = facetsBeneath[0];
-      size_t fn = fdel->seeList.size();
+      size_t fn = fdel->size();
+
+#ifdef SEQ_SPLIT
+      for (size_t i=0; i<fn; ++i) {
+	fdel->at(i).attribute.seeFacet = nullptr;
+	for (int j=0; j<3; ++j) {
+	  if (canSee(newFacets[j], fdel->at(i))) {
+	    fdel->at(i).attribute.seeFacet = newFacets[j];
+	    newFacets[j]->push_back(fdel->at(i));
+	    break;
+	  }
+	}
+      }
+#else
       auto flag = sequence<int>(fn);
+      t.start();
       parallel_for(0, fn, [&](size_t i) {
 			    flag[i] = 3;
-			    fdel->seeList[i].attribute.seeFacet = nullptr;
+			    fdel->at(i).attribute.seeFacet = nullptr;
 			    for (int j=0; j<3; ++j) {
-			      if (canSee(newFacets[j], fdel->seeList[i])) {
+			      if (canSee(newFacets[j], fdel->at(i))) {
 				flag[i] = j;
-				fdel->seeList[i].attribute.seeFacet = newFacets[j];
+				fdel->at(i).attribute.seeFacet = newFacets[j];
 				break;
 			      }
 			    }
 			  });
-
       // Partition points based on the facets assigned to
       auto tmpBuffer = sequence<vertexT>(fn);
       auto splits = split_k(4, fdel->seeList, make_slice(tmpBuffer), flag);
@@ -468,11 +507,12 @@ public:
       size_t fn2 = scan_inplace(make_slice(splits), addm<size_t>());
       splits.push_back(fn2);
 
-      parallel_for(0, fn, [&](size_t i) {fdel->seeList[i] = tmpBuffer[i];});
+      parallel_for(0, fn, [&](size_t i) {fdel->at(i) = tmpBuffer[i];});
 
       for (int j=0; j<3; ++j)
 	newFacets[j]->seeList =
 	  fdel->seeList.cut(splits[j], splits[j+1]);
+#endif
 
     } else {
       // Multiple facets affected, new memory needed
@@ -482,19 +522,32 @@ public:
 
       size_t fn = 0;
       for(int j=0; j<nf; ++j) {
-	fn += facetsBeneath[j]->seeList.size();
+	fn += facetsBeneath[j]->size();
       }
 
+#ifdef SEQ_SPLIT
+      for(int i=0; i<nf; ++i) { // Old facet loop
+	for(size_t j=0; j<facetsBeneath[i]->size(); ++j) { // Point loop
+	  facetsBeneath[i]->at(j).attribute.seeFacet = nullptr;
+	  for (int k=0; k<nnf; ++k) { // New facet loop
+	    if (canSee(newFacets[k], facetsBeneath[i]->at(j))) {
+	      facetsBeneath[i]->at(j).attribute.seeFacet = newFacets[k];
+	      newFacets[k]->push_back(facetsBeneath[i]->at(j));
+	      break;
+	    }
+	  }
+	}
+      }
+#else
       auto tmpBuffer = sequence<vertexT>(fn);
       fn = 0;
       for(int j=0; j<nf; ++j) {
-	parallel_for(0, facetsBeneath[j]->seeList.size(),
-		     [&](size_t x){
-		       tmpBuffer[fn+x] = facetsBeneath[j]->seeList[x];
-		     });
-	fn += facetsBeneath[j]->seeList.size();
+	parallel_for(0, facetsBeneath[j]->size(),
+		     [&](size_t x){tmpBuffer[fn+x] = facetsBeneath[j]->at(x);});
+	fn += facetsBeneath[j]->size();
       }
 
+      t.start();
       auto flag = sequence<int>(fn);
       parallel_for(0, fn, [&](size_t i) {
 			    flag[i] = nnf;
@@ -512,12 +565,15 @@ public:
       auto tmpBuffer2 = new sequence<vertex3d>(fn);//todo free
       auto splits = split_k(nnf+1, make_slice(tmpBuffer), tmpBuffer2->cut(0, tmpBuffer2->size()), flag);
 
+
       size_t fn2 = scan_inplace(make_slice(splits), addm<size_t>());
       splits.push_back(fn2);
 
       for (int j=0; j<nnf; ++j)
 	newFacets[j]->seeList =
 	  tmpBuffer2->cut(splits[j], splits[j+1]);
+#endif
+
     }
   }
 };
@@ -572,6 +628,38 @@ conflictList<linkedFacet3d<vertex3d>, vertex3d> *makeInitialHull(slice<pt*, pt*>
   linkFacet(f6, f4, f7, f2);
   linkFacet(f7, f3, f6, f5);
 
+#ifdef SEQ_SPLIT
+  parallel_for(0, P.size(), [&](size_t i) {
+			      if (visible(f0, Q[i])) {
+				Q[i].attribute.seeFacet = f0;
+				f0->push_back(Q[i]);
+			      } else if (visible(f1, Q[i])) {
+				Q[i].attribute.seeFacet = f1;
+				f1->push_back(Q[i]);
+			      } else if (visible(f2, Q[i])) {
+				Q[i].attribute.seeFacet = f2;
+				f2->push_back(Q[i]);
+			      } else if (visible(f3, Q[i])) {
+				Q[i].attribute.seeFacet = f3;
+				f3->push_back(Q[i]);
+			      } else if (visible(f4, Q[i])) {
+				Q[i].attribute.seeFacet = f4;
+				f4->push_back(Q[i]);
+			      } else if (visible(f5, Q[i])) {
+				Q[i].attribute.seeFacet = f5;
+				f5->push_back(Q[i]);
+			      } else if (visible(f6, Q[i])) {
+				Q[i].attribute.seeFacet = f6;
+				f6->push_back(Q[i]);
+			      } else if (visible(f7, Q[i])) {
+				Q[i].attribute.seeFacet = f7;
+				f7->push_back(Q[i]);
+			      } else {
+				Q[i].attribute.seeFacet = nullptr;
+			      }
+			    });
+#else
+
   // Assign each point to one of the visible facets
   auto flag = sequence<int>(P.size());
   parallel_for(0, P.size(), [&](size_t i) {
@@ -614,10 +702,11 @@ conflictList<linkedFacet3d<vertex3d>, vertex3d> *makeInitialHull(slice<pt*, pt*>
   f5->seeList = Q2->cut(splits[5], splits[6]);
   f6->seeList = Q2->cut(splits[6], splits[7]);
   f7->seeList = Q2->cut(splits[7], splits[8]);
+#endif
 
   auto context = new _hull<linkedFacet3d, vertex3d>(f0);
 
-  return new conflictList(context, Q2);
+  return new conflictList(context);
 }
 
 ////////////////////////////
