@@ -26,15 +26,13 @@
 //#define VERBOSE
 #define SEQ_SPLIT
 
-#ifdef SEQ_SPLIT
-#include <vector>
-#endif
-
 #ifdef WRITE
 #include <iostream>
 #include <fstream>
 #endif
 
+#include <atomic>
+#include <vector>
 #include <assert.h>
 #include <stack>
 #include <tuple>
@@ -102,6 +100,9 @@ struct linkedFacet3d {
   linkedFacet3d<pt> *bcFacet;
   linkedFacet3d<pt> *caFacet;
 
+  // Stores the minimum memory address of the seeFacet of the reserving vertices
+  std::atomic<size_t> reservation; // todo (not always used but has little impact on speed)
+
 #ifdef SEQ_SPLIT
 
   vector<vertex3d> *seeList;
@@ -124,6 +125,8 @@ struct linkedFacet3d {
 #ifdef SEQ_SPLIT
     seeList = new vector<vertex3d>();
 #endif
+
+    reservation = -1; // (unsigned)
   }
 
   ~linkedFacet3d() {
@@ -393,7 +396,6 @@ public:
     typename vertexT::floatT m = numericKnob;
     vertexT apex = vertexT();
 
-    //todo parallelize
     auto find = [&](facetT* f) {
 		  for (size_t i=0; i<f->size(); ++i) {
 		    auto m2 = signedVolume(f->a, f->b, f->c, f->at(i));
@@ -415,6 +417,33 @@ public:
 		   else return false;};
     context->dfsFacet(context->H, fVisit, fDo, fStop);
     return apex;
+  }
+
+  // If n not supplied, find furthest apexes of all facets
+  vector<vertexT> furthestApexes(size_t n=-1) {
+    size_t found = 0;
+    vector<vertexT> apexes;
+
+    auto find = [&](facetT* f) {
+		  typename vertexT::floatT m = numericKnob;
+		  auto apex = vertexT();
+
+		  for (size_t i=0; i<f->size(); ++i) {
+		    auto m2 = signedVolume(f->a, f->b, f->c, f->at(i));
+		    if (m2 > m) {
+		      m = m2; apex = f->at(i);
+		    }
+		  }
+		  if (!apex.isEmpty()) apexes.push_back(apex);
+		};
+
+    auto fVisit = [&](_edge<facetT, vertexT> e) {return true;};
+    auto fDo = [&](_edge<facetT, vertexT> e) {
+		 if (e.ff->size() > 0) find(e.ff);
+	       };
+    auto fStop = [&]() {return apexes.size() >= n;};
+    context->dfsFacet(context->H, fVisit, fDo, fStop);
+    return apexes;
   }
 
   /* Compute a frontier of edges in the clockwise order
@@ -461,6 +490,94 @@ public:
     return make_tuple(frontier, facets);
   }
 
+  /* Compute a frontier of edges in the clockwise order
+      and facets to delete
+
+     Meanwhile reserve the facet using min(apex.attribute.seeFacet*)
+   */
+  tuple<sequence<_edge<facetT, vertexT>>*, sequence<facetT*>*> computeFrontierAndReserve(vertexT apex) {
+    facetT* fVisible = apex.attribute.seeFacet;
+
+    auto frontier = new sequence<_edge<facetT, vertexT>>();
+    auto facets = new sequence<facetT*>();
+    auto facetVisited = [&](facetT* f) {
+			  for (size_t i=0; i<facets->size(); ++i) {
+			    if (f == facets->at(i)) return true;
+			  }
+			  return false;
+			};
+
+    auto fVisit = [&](_edge<facetT, vertexT> e) {
+		    // Visit the facet as long as the parent facet is visible to the apex
+		    // e.fb == nullptr for the starting facet (whose parent is nullptr, see dfsEdge(...))
+		    if (e.fb == nullptr || visible(e.fb, apex))
+		      return true;
+		    else
+		      return false;
+		  };
+
+    auto fDo = [&](_edge<facetT, vertexT> e) {
+		 // Include the facet for deletion if visible
+		 // Also reserve the facet
+		 bool seeff = visible(e.ff, apex);
+		 if ((seeff || e.fb == nullptr) && !facetVisited(e.ff)) {
+		   facets->push_back(e.ff);
+		   parlay::write_min(&(e.ff->reservation), size_t(apex.attribute.seeFacet), std::less<size_t>());
+		 }
+
+		 if (e.fb == nullptr) return; // Stop for the starting facet
+
+		 // Include an edge joining a visible and an invisible facet as frontier
+		 // Also reserve invisible facet adjacent to a visible one
+		 bool seefb = visible(e.fb, apex);
+		 if (seefb && !seeff) {
+		   frontier->emplace_back(e.a, e.b, e.ff, e.fb);
+		   parlay::write_min(&(e.ff->reservation), size_t(apex.attribute.seeFacet), std::less<size_t>());
+		 }
+	       };
+    auto fStop = [&](){ return false;};
+
+    context->dfsEdge(apex.attribute.seeFacet, fVisit, fDo, fStop);
+    return make_tuple(frontier, facets);
+  }
+
+  bool confirmReservation(vertexT apex, slice<facetT**, facetT**> toDelete) {
+    bool ok = true;
+    for (auto f: toDelete) {
+      if (f->reservation != size_t(apex.attribute.seeFacet) ||
+	  f->abFacet->reservation != size_t(apex.attribute.seeFacet) ||
+	  f->bcFacet->reservation != size_t(apex.attribute.seeFacet) ||
+	  f->caFacet->reservation != size_t(apex.attribute.seeFacet) ) {
+	ok = false;
+      }
+    }
+    return ok;
+  }
+
+  void resetReservation(vertexT apex, slice<facetT**, facetT**> toDelete) {
+    for (auto f: toDelete) {
+      f->reservation = -1;
+      f->abFacet->reservation = -1;
+      f->bcFacet->reservation = -1;
+      f->caFacet->reservation = -1;
+    }
+  }
+
+  bool checkReset() { // todo remove
+    bool ok = true;
+
+    auto fVisit = [&](_edge<facetT, vertexT> e) { return true; };
+
+    auto fDo = [&](_edge<facetT, vertexT> e) {
+		 if (e.ff->reservation != -1) ok = false;
+	       };
+
+    auto fStop = [&](){ return false; };
+
+    context->dfsFacet(context->H, fVisit, fDo, fStop);
+    return ok;
+  }
+
   void redistribute(slice<facetT**, facetT**> facetsBeneath,
 		    slice<facetT**, facetT**> newFacets) {
     auto canSee = [&](facetT* f, vertexT p) {
@@ -488,7 +605,6 @@ public:
       }
 #else
       auto flag = sequence<int>(fn);
-      t.start();
       parallel_for(0, fn, [&](size_t i) {
 			    flag[i] = 3;
 			    fdel->at(i).attribute.seeFacet = nullptr;
@@ -547,7 +663,6 @@ public:
 	fn += facetsBeneath[j]->size();
       }
 
-      t.start();
       auto flag = sequence<int>(fn);
       parallel_for(0, fn, [&](size_t i) {
 			    flag[i] = nnf;
@@ -629,35 +744,35 @@ conflictList<linkedFacet3d<vertex3d>, vertex3d> *makeInitialHull(slice<pt*, pt*>
   linkFacet(f7, f3, f6, f5);
 
 #ifdef SEQ_SPLIT
-  parallel_for(0, P.size(), [&](size_t i) {
-			      if (visible(f0, Q[i])) {
-				Q[i].attribute.seeFacet = f0;
-				f0->push_back(Q[i]);
-			      } else if (visible(f1, Q[i])) {
-				Q[i].attribute.seeFacet = f1;
-				f1->push_back(Q[i]);
-			      } else if (visible(f2, Q[i])) {
-				Q[i].attribute.seeFacet = f2;
-				f2->push_back(Q[i]);
-			      } else if (visible(f3, Q[i])) {
-				Q[i].attribute.seeFacet = f3;
-				f3->push_back(Q[i]);
-			      } else if (visible(f4, Q[i])) {
-				Q[i].attribute.seeFacet = f4;
-				f4->push_back(Q[i]);
-			      } else if (visible(f5, Q[i])) {
-				Q[i].attribute.seeFacet = f5;
-				f5->push_back(Q[i]);
-			      } else if (visible(f6, Q[i])) {
-				Q[i].attribute.seeFacet = f6;
-				f6->push_back(Q[i]);
-			      } else if (visible(f7, Q[i])) {
-				Q[i].attribute.seeFacet = f7;
-				f7->push_back(Q[i]);
-			      } else {
-				Q[i].attribute.seeFacet = nullptr;
-			      }
-			    });
+  for(size_t i=0; i<P.size(); i++) {
+    if (visible(f0, Q[i])) {
+      Q[i].attribute.seeFacet = f0;
+      f0->push_back(Q[i]);
+    } else if (visible(f1, Q[i])) {
+      Q[i].attribute.seeFacet = f1;
+      f1->push_back(Q[i]);
+    } else if (visible(f2, Q[i])) {
+      Q[i].attribute.seeFacet = f2;
+      f2->push_back(Q[i]);
+    } else if (visible(f3, Q[i])) {
+      Q[i].attribute.seeFacet = f3;
+      f3->push_back(Q[i]);
+    } else if (visible(f4, Q[i])) {
+      Q[i].attribute.seeFacet = f4;
+      f4->push_back(Q[i]);
+    } else if (visible(f5, Q[i])) {
+      Q[i].attribute.seeFacet = f5;
+      f5->push_back(Q[i]);
+    } else if (visible(f6, Q[i])) {
+      Q[i].attribute.seeFacet = f6;
+      f6->push_back(Q[i]);
+    } else if (visible(f7, Q[i])) {
+      Q[i].attribute.seeFacet = f7;
+      f7->push_back(Q[i]);
+    } else {
+      Q[i].attribute.seeFacet = nullptr;
+    }
+  }
 #else
 
   // Assign each point to one of the visible facets
@@ -714,7 +829,7 @@ conflictList<linkedFacet3d<vertex3d>, vertex3d> *makeInitialHull(slice<pt*, pt*>
 ////////////////////////////
 
 template<class pt>
-sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
+sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
   using facet3d = facet3d<pt>;
   using linkedFacet3d = linkedFacet3d<vertex3d>;
 
@@ -825,6 +940,167 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
   cout << "frontier-time = " << frontierTime << endl;
   cout << "create-time = " << createTime << endl;
   cout << "split-time = " << splitTime << endl;
+  cout << "#-rounds = " << round << endl;
+
+#ifdef VERBOSE
+  cout << "hull-size = " << context->hullSize() << endl;
+#endif
+
+#ifdef WRITE
+  context->writeHull();
+#endif
+  //free stuff
+
+  // todo
+  auto dummy = sequence<facet3d>(); dummy.reserve(1);
+  return dummy;
+}
+
+
+template<class pt>
+sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
+  using facet3d = facet3d<pt>;
+  using linkedFacet3d = linkedFacet3d<vertex3d>;
+
+#ifdef WRITE
+  {
+    ofstream myfile;
+    myfile.open("hull.txt", std::ofstream::trunc); myfile.close();
+    myfile.open("point.txt", std::ofstream::trunc);
+    for(size_t p=0; p<P.size(); ++p)
+      myfile << P[p] << p << endl;
+    myfile.close();
+  }
+#endif
+
+  timer t; t.start();
+
+  auto cg = makeInitialHull(P);
+  _hull<linkedFacet3d, vertex3d> *context = cg->context;
+
+  cout << "init-time = " << t.stop() << endl;
+
+  size_t round = 0;
+  double apexTime = 0;
+  double frontierTime = 0;
+  double splitTime = 0;
+
+  while (true) {
+    t.start();
+
+    // Serial
+
+    //vertex3d apex = cg->randomApex();
+
+    //todo if multi-point does not work well, it makes more sense
+    // to parallelize this step
+    vector<vertex3d> apexes = cg->furthestApexes(8); // todo tune
+
+    apexTime += t.get_next();
+
+    if (apexes.size() <= 0) break;
+    round ++;
+
+#ifdef VERBOSE
+    cout << ">>>>>>>>>" << endl;
+    cout << "apexes = ";
+    for (auto x: apexes) cout << x << " "; cout << endl;
+#endif
+
+#ifdef WRITE
+    context->writeHull();
+#endif
+
+    size_t numApex = apexes.size();
+    sequence<_edge<linkedFacet3d, vertex3d>>* FE[numApex];
+    sequence<linkedFacet3d*>* FB[numApex];
+
+    // todo threshold to run serial algorithm
+
+    // Compute frontier and reserve facets
+    parallel_for(0, numApex, [&](size_t a) {
+			       auto frontier = cg->computeFrontierAndReserve(apexes[a]);
+
+			       sequence<_edge<linkedFacet3d, vertex3d>>* frontierEdges = get<0>(frontier);
+			       sequence<linkedFacet3d*>* facetsBeneath = get<1>(frontier);
+			       FE[a] = frontierEdges;
+			       FB[a] = facetsBeneath;
+			     });
+
+    frontierTime += t.get_next();
+
+    // Check reservation for success, then reset reservation
+    bool success[numApex];
+    // size_t c = 0;
+    parallel_for(0, numApex, [&](size_t a) {
+			       if (!cg->confirmReservation( apexes[a], FB[a]->cut(0, FB[a]->size()) )) {
+				 success[a] = false;
+			       } else {
+				 c++;
+				 success[a] = true;
+			       }
+			     });
+    parallel_for(0, numApex, [&](size_t a) {
+			       cg->resetReservation(apexes[a], FB[a]->cut(0, FB[a]->size()));
+			     });
+
+    // cout << "hull size = " << context->hullSize() << endl;
+    // cout << "num apex = " << numApex << endl;
+    // cout << "success = " << c << endl;
+    // if (c == 0) abort();
+
+    // todo filter out successful points and use parfor1
+
+    // Process the successful points
+    parallel_for(0, numApex, [&](size_t a) {
+			       if (success[a]) {
+
+				 // Create new facets
+				 auto newFacets = sequence<linkedFacet3d*>(FE[a]->size());
+
+				 for (size_t i=0; i<FE[a]->size(); ++i) {
+				   _edge e = FE[a]->at(i);
+				   newFacets[i] = makeFacet(e.a, e.b, apexes[a]);
+				 }
+
+				 // Connect new facets
+				 for (size_t i=0; i<FE[a]->size(); ++i) {
+				   linkFacet(newFacets[i],
+					     newFacets[(i+1)%FE[a]->size()],
+					     FE[a]->at(i).ff,
+					     newFacets[(i-1+FE[a]->size())%FE[a]->size()]
+					     );
+				 }
+
+				 context->H = newFacets[0]; // todo data race
+
+				 cg->redistribute(FB[a]->cut(0, FB[a]->size()), make_slice(newFacets));
+			       }// END if success
+			     });
+
+    //todo remove
+    // if (!cg->checkReset()) {// checking this is expensive O(nh)
+    //   cout << "not reset " << endl; abort();
+    // }
+
+    splitTime += t.stop();
+
+    // Clean up
+    parallel_for(0, numApex, [&](size_t a) {
+			       if (success[a]) {
+				 // Delete existing facets
+				 for(int j=0; j<FB[a]->size(); ++j)
+				   delete FB[a]->at(j);
+			       }
+
+			       delete FE[a];
+			       delete FB[a];
+			     });
+
+  }
+  cout << "apex-time = " << apexTime << endl;
+  cout << "frontier-time = " << frontierTime << endl;
+  cout << "create-split-time = " << splitTime << endl;
   cout << "#-rounds = " << round << endl;
 
 #ifdef VERBOSE
