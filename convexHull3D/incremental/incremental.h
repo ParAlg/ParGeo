@@ -103,6 +103,14 @@ struct linkedFacet3d {
   // Stores the minimum memory address of the seeFacet of the reserving vertices
   std::atomic<size_t> reservation; // todo (not always used but has little impact on speed)
 
+  void reserve(pt& p) {
+    parlay::write_min(&reservation, (size_t)p.attribute.seeFacet, std::less<size_t>());
+  }
+
+  bool reserved(pt& p) {
+    return reservation == (size_t)p.attribute.seeFacet;
+  }
+
 #ifdef SEQ_SPLIT
 
   vector<vertex3d> *seeList;
@@ -522,7 +530,7 @@ public:
 		 bool seeff = visible(e.ff, apex);
 		 if ((seeff || e.fb == nullptr) && !facetVisited(e.ff)) {
 		   facets->push_back(e.ff);
-		   parlay::write_min(&(e.ff->reservation), size_t(apex.attribute.seeFacet), std::less<size_t>());
+		   e.ff->reserve(apex);
 		 }
 
 		 if (e.fb == nullptr) return; // Stop for the starting facet
@@ -532,7 +540,7 @@ public:
 		 bool seefb = visible(e.fb, apex);
 		 if (seefb && !seeff) {
 		   frontier->emplace_back(e.a, e.b, e.ff, e.fb);
-		   parlay::write_min(&(e.ff->reservation), size_t(apex.attribute.seeFacet), std::less<size_t>());
+		   e.ff->reserve(apex);
 		 }
 	       };
     auto fStop = [&](){ return false;};
@@ -544,10 +552,10 @@ public:
   bool confirmReservation(vertexT apex, slice<facetT**, facetT**> toDelete) {
     bool ok = true;
     for (auto f: toDelete) {
-      if (f->reservation != size_t(apex.attribute.seeFacet) ||
-	  f->abFacet->reservation != size_t(apex.attribute.seeFacet) ||
-	  f->bcFacet->reservation != size_t(apex.attribute.seeFacet) ||
-	  f->caFacet->reservation != size_t(apex.attribute.seeFacet) ) {
+      if (!f->reserved(apex) ||
+	  !f->abFacet->reserved(apex) ||
+	  !f->bcFacet->reserved(apex) ||
+	  !f->caFacet->reserved(apex) ) {
 	ok = false;
       }
     }
@@ -1036,7 +1044,7 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
 			       if (!cg->confirmReservation( apexes[a], FB[a]->cut(0, FB[a]->size()) )) {
 				 success[a] = false;
 			       } else {
-				 c++;
+				 //c++;
 				 success[a] = true;
 			       }
 			     });
