@@ -28,7 +28,7 @@ namespace pargeo {
 
     _point(_tData* p) { for (int i=0; i<_dim; ++i) x[i]=p[i]; }
 
-    _point(_point* p) { for (int i=0; i<_dim; ++i) x[i]=p->x[i]; }
+    _point(_point* p): attribute(p->attribute) { for (int i=0; i<_dim; ++i) x[i]=p->x[i]; }
 
     template<class _tIn>
     _point(parlay::slice<_tIn*,_tIn*> p) {

@@ -118,12 +118,46 @@ struct linkedFacet3d {
   size_t size() { return seeList->size(); }
   void push_back(vertex3d v) { seeList->push_back(v); }
 
+  vertex3d furthest() {
+    typename vertex3d::floatT m = numericKnob;
+    auto apex = vertex3d();
+
+    for (size_t i=0; i<size(); ++i) {
+      auto m2 = signedVolume(a, b, c, at(i));
+      if (m2 > m) {
+	m = m2;
+	apex = at(i);
+      }
+    }
+    return apex;
+  }
 #else
 
   slice<vertex3d*, vertex3d*> seeList;
   vertex3d& at(size_t i) { return seeList[i]; }
   size_t size() { return seeList.size(); }
 
+  vertex3d furthest() {
+    typename vertex3d::floatT m = numericKnob;
+    auto apex = vertex3d();
+
+    if (size() < 1000) {
+      for (size_t i=0; i<size(); ++i) {
+	auto m2 = signedVolume(a, b, c, at(i));
+	if (m2 > m) {
+	  m = m2;
+	  apex = at(i);
+	}
+      }
+    } else {
+      apex = parlay::max_element(seeList,
+				 [&](vertex3d aa, vertex3d bb) {
+				   return signedVolume(a, b, c, aa) < signedVolume(a, b, c, bb);
+				 });
+    }
+
+    return apex;
+  }
 #endif
 
   linkedFacet3d(vertex3d _a, vertex3d _b, vertex3d _c): a(_a), b(_b), c(_c) {
@@ -400,29 +434,14 @@ public:
   /* Choose the furthest outside vertex visible to some facets
      look specifices the maxmimum number (adjacent) facets to try
    */
-  vertexT furthestApex(size_t look=1) {
-    typename vertexT::floatT m = numericKnob;
+  vertexT furthestApex() {
     vertexT apex = vertexT();
-
-    auto find = [&](facetT* f) {
-		  for (size_t i=0; i<f->size(); ++i) {
-		    auto m2 = signedVolume(f->a, f->b, f->c, f->at(i));
-		    if (m2 > m) {
-		      m = m2; apex = f->at(i);
-		    }
-		  }
-		};
 
     auto fVisit = [&](_edge<facetT, vertexT> e) {return true;};
     auto fDo = [&](_edge<facetT, vertexT> e) {
-		 if (e.ff->size() > 0) {
-		   look--;
-		   find(e.ff);
-		 }
+		 if (e.ff->size() > 0) apex = e.ff->furthest();
 	       };
-    auto fStop = [&]() {
-		   if (look <= 0) return true;
-		   else return false;};
+    auto fStop = [&]() { return !apex.isEmpty(); };
     context->dfsFacet(context->H, fVisit, fDo, fStop);
     return apex;
   }
@@ -432,22 +451,12 @@ public:
     size_t found = 0;
     vector<vertexT> apexes;
 
-    auto find = [&](facetT* f) {
-		  typename vertexT::floatT m = numericKnob;
-		  auto apex = vertexT();
-
-		  for (size_t i=0; i<f->size(); ++i) {
-		    auto m2 = signedVolume(f->a, f->b, f->c, f->at(i));
-		    if (m2 > m) {
-		      m = m2; apex = f->at(i);
-		    }
-		  }
-		  if (!apex.isEmpty()) apexes.push_back(apex);
-		};
-
     auto fVisit = [&](_edge<facetT, vertexT> e) {return true;};
     auto fDo = [&](_edge<facetT, vertexT> e) {
-		 if (e.ff->size() > 0) find(e.ff);
+		 if (e.ff->size() > 0) {
+		   auto apex = e.ff->furthest();
+		   if (!apex.isEmpty()) apexes.push_back(apex);
+		 }
 	       };
     auto fStop = [&]() {return apexes.size() >= n;};
     context->dfsFacet(context->H, fVisit, fDo, fStop);
@@ -1002,7 +1011,7 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
 
     //todo if multi-point does not work well, it makes more sense
     // to parallelize this step
-    vector<vertex3d> apexes = cg->furthestApexes(8); // todo tune
+    vector<vertex3d> apexes = cg->furthestApexes(1); // todo tune
 
     apexTime += t.get_next();
 
