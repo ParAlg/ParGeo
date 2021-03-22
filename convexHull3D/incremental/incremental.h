@@ -24,6 +24,8 @@
 
 //#define WRITE // Write to file, visualize using python3 plot.py
 //#define VERBOSE
+#define PSEUDO_ORIGIN
+//#define SERIAL
 
 #ifdef WRITE
 #include <iostream>
@@ -48,31 +50,6 @@ using pointT = pargeo::fpoint<3>;
 static const typename pointT::floatT numericKnob = 1e-5;
 
 ////////////////////////////
-// Primitives
-////////////////////////////
-
-/* Signed volume of an oriented tetrahedron (example below is positive).
-     d
-     o
-    /|\
-   / | o b
-  o--o/
-   a   c
-*/
-template <class pt>
-inline typename pt::floatT signedVolume(pt a, pt b, pt c, pt d) {
-  return (a-d).dot(crossProduct3d(b-a, c-a))/6;
-}
-
-template<class facetT, class vertexT>
-bool visible(facetT* f, vertexT p) {
-  if (signedVolume(f->a, f->b, f->c, p) > numericKnob)
-    return true;
-  else
-    return false;
-}
-
-////////////////////////////
 // Facet and vertex with attributes
 ////////////////////////////
 
@@ -93,9 +70,52 @@ static std::ostream& operator<<(std::ostream& os, const vertex3d v) {
   return os;
 }
 
+#ifdef PSEUDO_ORIGIN
+// A pseudo-origin in the center of the initial hull
+vertex3d origin;
+#endif
+
+/* Signed volume of an oriented tetrahedron (example below is positive).
+     d
+     o
+    /|\
+   / | o b
+  o--o/
+   a   c
+
+    x
+     origin
+*/
+#ifdef PSEUDO_ORIGIN
+template <class pt>
+inline typename pt::floatT signedVolume(pt _a, pt _b, pt _c, pt _d) {
+  pt a = _a - origin;
+  pt b = _b - origin;
+  pt c = _c - origin;
+  pt d = _d - origin;
+  return (a-d).dot(crossProduct3d(b-a, c-a))/6;
+}
+#else
+template <class pt>
+inline typename pt::floatT signedVolume(pt a, pt b, pt c, pt d) {
+  return (a-d).dot(crossProduct3d(b-a, c-a))/6;
+}
+#endif
+
+template<class facetT, class vertexT>
+bool visible(facetT* f, vertexT p) {
+  if (signedVolume(f->a, f->b, f->c, p) > numericKnob)
+    return true;
+  else
+    return false;
+}
+
 struct linkedFacet3d {
-  //typedef vector<vertex3d> seqT;
+#ifdef SERIAL
+  typedef vector<vertex3d> seqT;
+#else
   typedef sequence<vertex3d> seqT;
+#endif
 
   vertex3d a, b, c;
   linkedFacet3d *abFacet;
@@ -125,26 +145,38 @@ struct linkedFacet3d {
     typename vertex3d::floatT m = numericKnob;
     auto apex = vertex3d();
 
-    // for (size_t i=0; i<size(); ++i) {
-    //   auto m2 = signedVolume(a, b, c, at(i));
-    //   if (m2 > m) {
-    // 	m = m2;
-    // 	apex = at(i);
-    //   }
-    // }
-
+#ifdef SERIAL
+    for (size_t i=0; i<size(); ++i) {
+      auto m2 = signedVolume(a, b, c, at(i));
+      if (m2 > m) {
+	m = m2;
+	apex = at(i);
+      }
+    }
+#else
     apex = parlay::max_element(seeList->cut(0, seeList->size()),
 			       [&](vertex3d aa, vertex3d bb) {
 				 return signedVolume(a, b, c, aa) < signedVolume(a, b, c, bb);
 			       });
-
+#endif
     return apex;
   }
 
   linkedFacet3d(vertex3d _a, vertex3d _b, vertex3d _c): a(_a), b(_b), c(_c) {
-    if (pargeo::determinant3by3(a, b, c) > 0)
+#ifdef PSEUDO_ORIGIN
+    if (pargeo::determinant3by3(a - origin, b - origin, c - origin) > numericKnob)
       swap(b, c);
+#else
+    if (pargeo::determinant3by3(a, b, c) > numericKnob)
+      swap(b, c);
+#endif
 
+    seeList = new seqT();
+
+    reservation = -1; // (unsigned)
+  }
+
+  linkedFacet3d(const linkedFacet3d& _f): a(_f.a), b(_f.b), c(_f.c) {
     seeList = new seqT();
 
     reservation = -1; // (unsigned)
@@ -692,6 +724,13 @@ conflictList<linkedFacet3d, vertex3d> *makeInitialHull(slice<pt*, pt*> P) {
 				Q[i][j] = P[i][j];
 			    });
 
+#ifdef PSEUDO_ORIGIN
+  // Compute pseudo-origin
+  origin[0] = (Q[xMin][0] + Q[xMax][0])/2;
+  origin[1] = (Q[yMin][1] + Q[yMax][1])/2;
+  origin[2] = (Q[zMin][2] + Q[zMax][2])/2;
+#endif
+
   // Make initial facets
   auto f0 = makeFacet(Q[xMin], Q[yMin], Q[zMin]);
   auto f1 = makeFacet(Q[xMax], Q[yMin], Q[zMin]);
@@ -846,9 +885,20 @@ sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
 
 #ifdef VERBOSE
     cout << "frontier = ";
-    for(auto e: *frontierEdges)
+    for(auto e: *frontierEdges) {
       cout << e.a << "," << e.b << " ";
+    }
     cout << endl;
+
+    for(size_t i=0; i<frontierEdges->size(); ++i) {
+      auto pv = frontierEdges->at((i+frontierEdges->size()-1)%frontierEdges->size());
+      auto cv = frontierEdges->at(i);
+      if (pv.b != cv.a && pv.a != cv.a && pv.b != cv.b && pv.a != cv.b) {
+	cout << "frontier inconsistensy" << endl;
+	abort();
+      }
+    }
+
     cout << "to delete = ";
     for(auto f: *facetsBeneath)
       cout << *f << " ";
@@ -915,6 +965,9 @@ sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
   auto dummy = sequence<facet3d>(); dummy.reserve(1);
   return dummy;
 }
+
+
+#ifndef SERIAL
 
 template<class pt>
 sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
@@ -1124,3 +1177,5 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
   auto dummy = sequence<facet3d>(); dummy.reserve(1);
   return dummy;
 }
+
+#endif // ifndef SERIAL
