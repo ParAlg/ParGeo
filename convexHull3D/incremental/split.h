@@ -1,7 +1,18 @@
+#pragma once
 
-template <typename T, typename Char_Seq>
-sequence<sequence<T>*> split_k(size_t k, sequence<T>* In,
-		      Char_Seq const &Fl,
+#include <iostream>
+
+#include "parlay/delayed_sequence.h"
+#include "parlay/monoid.h"
+#include "parlay/sequence.h"
+#include "parlay/utilities.h"
+
+using namespace parlay;
+using namespace parlay::internal;
+
+template <typename mySeq, typename boolSeq>
+sequence<mySeq*> split_k(size_t k, mySeq* In,
+		      boolSeq const &Fl,
 		      flags fl = no_flag) {
   size_t n = In->size();
   size_t l = num_blocks(n, _block_size);
@@ -24,11 +35,11 @@ sequence<sequence<T>*> split_k(size_t k, sequence<T>* In,
              },
              fl);
 
-  auto chunks = sequence<sequence<T>*>(k);
+  auto chunks = sequence<mySeq*>(k);
   size_t m[k];
   for (size_t x=0; x<k; ++x) {
     m[x] = scan_inplace(Sums[x]->cut(0, Sums[x]->size()), addm<size_t>());
-    chunks[x] = new sequence<T>(m[x]);
+    chunks[x] = new mySeq(m[x]);
   }
 
   sliced_for(n, _block_size,
@@ -46,6 +57,7 @@ sequence<sequence<T>*> split_k(size_t k, sequence<T>* In,
                }
              },
              fl);
-  for (size_t x=0; x<k-1; x++) delete Sums[x];
+  for (size_t x=0; x<k; x++) delete Sums[x];
+
   return chunks;
 }

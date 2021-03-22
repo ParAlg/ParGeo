@@ -25,7 +25,7 @@
 //#define WRITE // Write to file, visualize using python3 plot.py
 //#define VERBOSE
 #define PSEUDO_ORIGIN
-//#define SERIAL
+#define SERIAL
 
 #ifdef WRITE
 #include <iostream>
@@ -64,7 +64,7 @@ struct vertexAtt {
   vertexAtt() {}
 };
 
-static std::ostream& operator<<(std::ostream& os, const vertex3d v) {
+static std::ostream& operator<<(std::ostream& os, const vertex3d& v) {
   for (int i=0; i<v.dim; ++i)
     os << v.x[i] << " ";
   return os;
@@ -139,6 +139,8 @@ struct linkedFacet3d {
 
   size_t size() { return seeList->size(); }
 
+  void clear() { seeList->clear(); }
+
   void push_back(vertex3d v) { seeList->push_back(v); }
 
   vertex3d furthest() {
@@ -176,18 +178,12 @@ struct linkedFacet3d {
     reservation = -1; // (unsigned)
   }
 
-  linkedFacet3d(const linkedFacet3d& _f): a(_f.a), b(_f.b), c(_f.c) {
-    seeList = new seqT();
-
-    reservation = -1; // (unsigned)
-  }
-
   ~linkedFacet3d() {
     delete seeList;
   }
 };
 
-static std::ostream& operator<<(std::ostream& os, const linkedFacet3d v) {
+static std::ostream& operator<<(std::ostream& os, const linkedFacet3d& v) {
   os << "(" << v.a << "," << v.b << "," << v.c << ")";
   return os;
 }
@@ -725,10 +721,11 @@ conflictList<linkedFacet3d, vertex3d> *makeInitialHull(slice<pt*, pt*> P) {
 			    });
 
 #ifdef PSEUDO_ORIGIN
-  // Compute pseudo-origin
-  origin[0] = (Q[xMin][0] + Q[xMax][0])/2;
-  origin[1] = (Q[yMin][1] + Q[yMax][1])/2;
-  origin[2] = (Q[zMin][2] + Q[zMax][2])/2;
+  // Compute pseudo-origin, average the initial points
+  origin = Q[xMin] + Q[xMax] + Q[yMin] + Q[yMax] + Q[zMin] + Q[zMax];
+  origin[0] = origin[0] / 6;
+  origin[1] = origin[1] / 6;
+  origin[2] = origin[2] / 6;
 #endif
 
   // Make initial facets
@@ -850,6 +847,7 @@ sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
 
   cout << "init-time = " << t.stop() << endl;
 
+  size_t errors = 0;
   size_t round = 0;
   double apexTime = 0;
   double frontierTime = 0;
@@ -859,6 +857,7 @@ sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
   while (true) {
     t.start();
 
+  loopStart:
     // Serial
 
     //vertex3d apex = cg->randomApex();
@@ -883,21 +882,23 @@ sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
     auto frontierEdges = get<0>(frontier);
     auto facetsBeneath = get<1>(frontier);
 
+    // Check for frontier error, usually caused by numerical errors in rare cases
+    for(size_t i=0; i<frontierEdges->size(); ++i) {
+      auto pv = frontierEdges->at((i+frontierEdges->size()-1)%frontierEdges->size());
+      auto cv = frontierEdges->at(i);
+      if (pv.b != cv.a && pv.a != cv.a && pv.b != cv.b && pv.a != cv.b) {
+	apex.attribute.seeFacet->clear();
+	errors ++;
+	goto loopStart;
+      }
+    }
+
 #ifdef VERBOSE
     cout << "frontier = ";
     for(auto e: *frontierEdges) {
       cout << e.a << "," << e.b << " ";
     }
     cout << endl;
-
-    for(size_t i=0; i<frontierEdges->size(); ++i) {
-      auto pv = frontierEdges->at((i+frontierEdges->size()-1)%frontierEdges->size());
-      auto cv = frontierEdges->at(i);
-      if (pv.b != cv.a && pv.a != cv.a && pv.b != cv.b && pv.a != cv.b) {
-	cout << "frontier inconsistensy" << endl;
-	abort();
-      }
-    }
 
     cout << "to delete = ";
     for(auto f: *facetsBeneath)
@@ -951,6 +952,7 @@ sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
   cout << "create-time = " << createTime << endl;
   cout << "split-time = " << splitTime << endl;
   cout << "#-rounds = " << round << endl;
+  cout << "#-errors = " << errors << endl;
 
 #ifdef VERBOSE
   cout << "hull-size = " << context->hullSize() << endl;
