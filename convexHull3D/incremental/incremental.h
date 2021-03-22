@@ -406,10 +406,41 @@ public:
     return apex;
   }
 
-  /* Choose the furthest outside vertex visible to some facets
-     look specifices the maxmimum number (adjacent) facets to try
+  // If n not supplied, find furthest apexes of all facets
+  sequence<vertex3d> randomApexes(size_t n=-1) {
+    sequence<vertex3d> apexes;
+
+    auto fVisit = [&](_edge<facetT, vertexT> e) {return true;};
+    auto fDo = [&](_edge<facetT, vertexT> e) {
+		 if (e.ff->size() > 0) {
+		   auto apex = e.ff->at(0);
+		   if (!apex.isEmpty()) apexes.push_back(apex);
+		 }
+	       };
+    auto fStop = [&]() {return apexes.size() >= n;};
+    context->dfsFacet(context->H, fVisit, fDo, fStop);
+    return apexes;
+  }
+
+  facetT* facetWalk() {
+    facetT* f = context->H;
+    size_t fSize = f->size();
+
+    auto fVisit = [&](_edge<facetT, vertexT> e) {return true;};
+    auto fDo = [&](_edge<facetT, vertexT> e) {
+		 if (e.ff->size() > fSize) {
+		   fSize = e.ff->size();
+		   f = e.ff;
+		 }
+	       };
+    auto fStop = [&]() { return false; };
+    context->dfsFacet(f, fVisit, fDo, fStop);
+    return f;
+  }
+
+  /* Choose the furthest outside vertex visible to a facet f
    */
-  vertexT furthestApex() {
+  vertexT furthestApex(facetT *f=nullptr) {
     vertexT apex = vertexT();
 
     auto fVisit = [&](_edge<facetT, vertexT> e) {return true;};
@@ -417,14 +448,13 @@ public:
 		 if (e.ff->size() > 0) apex = e.ff->furthest();
 	       };
     auto fStop = [&]() { return !apex.isEmpty(); };
-    context->dfsFacet(context->H, fVisit, fDo, fStop);
+    context->dfsFacet(f ? f : context->H, fVisit, fDo, fStop);
     return apex;
   }
 
   // If n not supplied, find furthest apexes of all facets
-  vector<vertex3d> furthestApexes(size_t n=-1) {
-    size_t found = 0;
-    vector<vertex3d> apexes;
+  sequence<vertex3d> furthestApexes(size_t n=-1) {
+    sequence<vertex3d> apexes;
 
     auto fVisit = [&](_edge<facetT, vertexT> e) {return true;};
     auto fDo = [&](_edge<facetT, vertexT> e) {
@@ -886,7 +916,6 @@ sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
   return dummy;
 }
 
-
 template<class pt>
 sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
   using facet3d = facet3d<pt>;
@@ -910,131 +939,181 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
   cout << "init-time = " << t.stop() << endl;
 
   size_t round = 0;
+  size_t serRound = 0;
+  timer tr;
+  double serTime = 0;
+  double parTime = 0;
+
   double apexTime = 0;
   double frontierTime = 0;
   double splitTime = 0;
 
+  long hullSize = 8;
+
   while (true) {
-    t.start();
-
-    // Serial
-
-    //vertex3d apex = cg->randomApex();
-
-    //todo if multi-point does not work well, it makes more sense
-    // to parallelize this step
-    vector<vertex3d> apexes = cg->furthestApexes(1); // todo tune
-
-    apexTime += t.get_next();
-
-    if (apexes.size() <= 0) break;
     round ++;
 
-#ifdef VERBOSE
-    cout << ">>>>>>>>>" << endl;
-    cout << "apexes = ";
-    for (auto x: apexes) cout << x << " "; cout << endl;
-#endif
+    if (hullSize < 64) {
 
-#ifdef WRITE
-    context->writeHull();
-#endif
+      serRound ++;
+      tr.start();
+      t.start();
 
-    size_t numApex = apexes.size();
-    sequence<_edge<linkedFacet3d, vertex3d>>* FE[numApex];
-    sequence<linkedFacet3d*>* FB[numApex];
+      linkedFacet3d* f0 = hullSize < 512 ? cg->facetWalk() : nullptr;
+      vertex3d apex = cg->furthestApex(f0);
 
-    // todo threshold to run serial algorithm
+      apexTime += t.get_next();
 
-    // Compute frontier and reserve facets
-    parallel_for(0, numApex, [&](size_t a) {
-			       auto frontier = cg->computeFrontierAndReserve(apexes[a]);
+      if (apex.isEmpty()) break;
 
-			       sequence<_edge<linkedFacet3d, vertex3d>>* frontierEdges = get<0>(frontier);
-			       sequence<linkedFacet3d*>* facetsBeneath = get<1>(frontier);
-			       FE[a] = frontierEdges;
-			       FB[a] = facetsBeneath;
-			     });
+      auto frontier = cg->computeFrontier(apex);
+      auto frontierEdges = get<0>(frontier);
+      auto facetsBeneath = get<1>(frontier);
 
-    frontierTime += t.get_next();
+      frontierTime += t.get_next();
 
-    // Check reservation for success, then reset reservation
-    bool success[numApex];
-    // size_t c = 0;
-    parallel_for(0, numApex, [&](size_t a) {
-			       if (!cg->confirmReservation( apexes[a], FB[a]->cut(0, FB[a]->size()) )) {
-				 success[a] = false;
-			       } else {
-				 //c++;
-				 success[a] = true;
-			       }
-			     });
-    parallel_for(0, numApex, [&](size_t a) {
-			       cg->resetReservation(apexes[a], FB[a]->cut(0, FB[a]->size()));
-			     });
+      // Create new facets
+      auto newFacets = sequence<linkedFacet3d*>(frontierEdges->size());
 
-    // cout << "hull size = " << context->hullSize() << endl;
-    // cout << "num apex = " << numApex << endl;
-    // cout << "success = " << c << endl;
-    // if (c == 0) abort();
+      for (size_t i=0; i<frontierEdges->size(); ++i) {
+	_edge e = frontierEdges->at(i);
+	newFacets[i] = makeFacet(e.a, e.b, apex);
+      }
 
-    // todo filter out successful points and use parfor1
+      // Connect new facets
+      for (size_t i=0; i<frontierEdges->size(); ++i) {
+	linkFacet(newFacets[i],
+		  newFacets[(i+1)%frontierEdges->size()],
+		  frontierEdges->at(i).ff,
+		  newFacets[(i-1+frontierEdges->size())%frontierEdges->size()]
+		  );
+      }
 
-    // Process the successful points
-    parallel_for(0, numApex, [&](size_t a) {
-			       if (success[a]) {
+      context->H = newFacets[0];
 
-				 // Create new facets
-				 auto newFacets = sequence<linkedFacet3d*>(FE[a]->size());
+      cg->redistribute(facetsBeneath->cut(0, facetsBeneath->size()), make_slice(newFacets));
 
-				 for (size_t i=0; i<FE[a]->size(); ++i) {
-				   _edge e = FE[a]->at(i);
-				   newFacets[i] = makeFacet(e.a, e.b, apexes[a]);
+      hullSize += frontierEdges->size() - facetsBeneath->size();
+
+      splitTime += t.stop();
+
+      // Delete existing facets
+      for(int j=0; j<facetsBeneath->size(); ++j)
+	delete facetsBeneath->at(j);
+
+      delete frontierEdges;
+      delete facetsBeneath;
+
+      serTime += tr.stop();
+    } else {
+      tr.start();
+      t.start();
+
+      // todo points chosen are close, which is bad
+      sequence<vertex3d> apexes0 = cg->furthestApexes(parlay::num_workers()); // todo tune
+      //sequence<vertex3d> apexes0 = cg->randomApexes(hullSize); // todo tune
+
+      apexTime += t.get_next();
+
+      if (apexes0.size() <= 0) break;
+
+      size_t numApex0 = apexes0.size();
+      sequence<sequence<_edge<linkedFacet3d, vertex3d>>*> FE0(numApex0);
+      sequence<sequence<linkedFacet3d*>*> FB0(numApex0);
+
+      // Compute frontier and reserve facets
+      parallel_for(0, numApex0, [&](size_t a) {
+				 auto frontier = cg->computeFrontierAndReserve(apexes0[a]);
+
+				 sequence<_edge<linkedFacet3d, vertex3d>>* frontierEdges = get<0>(frontier);
+				 sequence<linkedFacet3d*>* facetsBeneath = get<1>(frontier);
+				 FE0[a] = frontierEdges;
+				 FB0[a] = facetsBeneath;
+			       });
+
+      frontierTime += t.get_next();
+
+      // Check reservation for success, then reset reservation
+      sequence<bool> success(numApex0);
+      parallel_for(0, numApex0, [&](size_t a) {
+				 if (!cg->confirmReservation( apexes0[a], FB0[a]->cut(0, FB0[a]->size()) )) {
+				   success[a] = false;
+				 } else {
+				   success[a] = true;
+				 }
+			       });
+      parallel_for(0, numApex0, [&](size_t a) {
+				 cg->resetReservation(apexes0[a], FB0[a]->cut(0, FB0[a]->size()));
+			       });
+
+      // todo filter out successful points and use parfor1
+      auto apexes = parlay::pack(make_slice(apexes0), success);
+      auto FE = parlay::pack(make_slice(FE0), success);
+      auto FB = parlay::pack(make_slice(FB0), success);
+      size_t numApex = apexes.size();
+
+      sequence<int> increase(numApex, 0);
+
+      // Process the successful points
+      parallel_for(0, numApex, [&](size_t a) {
+				   // Create new facets
+				   auto newFacets = sequence<linkedFacet3d*>(FE[a]->size());
+
+				   for (size_t i=0; i<FE[a]->size(); ++i) {
+				     _edge e = FE[a]->at(i);
+				     newFacets[i] = makeFacet(e.a, e.b, apexes[a]);
+				   }
+
+				   // Connect new facets
+				   for (size_t i=0; i<FE[a]->size(); ++i) {
+				     linkFacet(newFacets[i],
+					       newFacets[(i+1)%FE[a]->size()],
+					       FE[a]->at(i).ff,
+					       newFacets[(i-1+FE[a]->size())%FE[a]->size()]
+					       );
+				   }
+
+				   context->H = newFacets[0]; // todo data race
+
+				   cg->redistribute(FB[a]->cut(0, FB[a]->size()), make_slice(newFacets));
+
+				   increase[a] = FE[a]->size() - FB[a]->size();
+			       });
+
+      hullSize += parlay::scan_inplace(make_slice(increase), addm<int>());
+
+      //todo remove
+      // if (!cg->checkReset()) {// checking this is expensive O(nh)
+      //   cout << "not reset " << endl; abort();
+      // }
+
+      splitTime += t.stop();
+
+      // Clean up
+      parallel_for(0, numApex0, [&](size_t a) {
+				 if (success[a]) {
+				   // Delete existing facets
+				   for(int j=0; j<FB0[a]->size(); ++j)
+				     delete FB0[a]->at(j);
 				 }
 
-				 // Connect new facets
-				 for (size_t i=0; i<FE[a]->size(); ++i) {
-				   linkFacet(newFacets[i],
-					     newFacets[(i+1)%FE[a]->size()],
-					     FE[a]->at(i).ff,
-					     newFacets[(i-1+FE[a]->size())%FE[a]->size()]
-					     );
-				 }
+				 delete FE0[a];
+				 delete FB0[a];
+			       });
 
-				 context->H = newFacets[0]; // todo data race
-
-				 cg->redistribute(FB[a]->cut(0, FB[a]->size()), make_slice(newFacets));
-			       }// END if success
-			     });
-
-    //todo remove
-    // if (!cg->checkReset()) {// checking this is expensive O(nh)
-    //   cout << "not reset " << endl; abort();
-    // }
-
-    splitTime += t.stop();
-
-    // Clean up
-    parallel_for(0, numApex, [&](size_t a) {
-			       if (success[a]) {
-				 // Delete existing facets
-				 for(int j=0; j<FB[a]->size(); ++j)
-				   delete FB[a]->at(j);
-			       }
-
-			       delete FE[a];
-			       delete FB[a];
-			     });
+      parTime += tr.stop();
+    } // End serial/parallel if
 
   }
   cout << "apex-time = " << apexTime << endl;
   cout << "frontier-time = " << frontierTime << endl;
   cout << "create-split-time = " << splitTime << endl;
   cout << "#-rounds = " << round << endl;
-
-#ifdef VERBOSE
-  cout << "hull-size = " << context->hullSize() << endl;
-#endif
+  cout << "#-ser-rounds = " << serRound << endl;
+  cout << "ser-time = " << serTime << endl;
+  cout << "#-par-rounds = " << round - serRound << endl;
+  cout << "par-time = " << parTime << endl;
+  cout << "hull-size = " << hullSize << endl;
 
 #ifdef WRITE
   context->writeHull();
