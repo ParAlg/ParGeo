@@ -882,6 +882,8 @@ sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
     auto frontierEdges = get<0>(frontier);
     auto facetsBeneath = get<1>(frontier);
 
+    frontierTime += t.get_next();
+
     // Check for frontier error, usually caused by numerical errors in rare cases
     for(size_t i=0; i<frontierEdges->size(); ++i) {
       auto pv = frontierEdges->at((i+frontierEdges->size()-1)%frontierEdges->size());
@@ -905,7 +907,6 @@ sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
       cout << *f << " ";
     cout << endl;
 #endif
-    frontierTime += t.get_next();
 
     // Create new facets
     auto newFacets = sequence<linkedFacet3d*>(frontierEdges->size());
@@ -1014,6 +1015,7 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
       tr.start();
       t.start();
 
+    loopStart:
       linkedFacet3d* f0 = hullSize < 512 ? cg->facetWalk() : nullptr;
       vertex3d apex = cg->furthestApex(f0);
 
@@ -1026,6 +1028,16 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
       auto facetsBeneath = get<1>(frontier);
 
       frontierTime += t.get_next();
+
+      // Check for frontier error, usually caused by numerical errors in rare cases
+      for(size_t i=0; i<frontierEdges->size(); ++i) {
+	auto pv = frontierEdges->at((i+frontierEdges->size()-1)%frontierEdges->size());
+	auto cv = frontierEdges->at(i);
+	if (pv.b != cv.a && pv.a != cv.a && pv.b != cv.b && pv.a != cv.b) {
+	  apex.attribute.seeFacet->clear();
+	  goto loopStart;
+	}
+      }
 
       // Create new facets
       auto newFacets = sequence<linkedFacet3d*>(frontierEdges->size());
@@ -1089,14 +1101,28 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
       frontierTime += t.get_next();
 
       // Check reservation for success, then reset reservation
+      // Also check for numerical errors, set to unsuccessful if detected
       sequence<bool> success(numApex0);
       parallel_for(0, numApex0, [&](size_t a) {
+
+				 // Check reservation
 				 if (!cg->confirmReservation( apexes0[a], FB0[a]->cut(0, FB0[a]->size()) )) {
 				   success[a] = false;
 				 } else {
 				   success[a] = true;
 				 }
-			       });
+
+				 // Check for near-denegeracy via frontier
+				 for(size_t i=0; i<FE0[a]->size(); ++i) {
+				   auto pv = FE0[a]->at((i+FE0[a]->size()-1)%FE0[a]->size());
+				   auto cv = FE0[a]->at(i);
+				   if (pv.b != cv.a && pv.a != cv.a && pv.b != cv.b && pv.a != cv.b) {
+				     apexes0[a].attribute.seeFacet->clear();
+				     success[a] = false;
+				   }
+				 }
+
+				});
       parallel_for(0, numApex0, [&](size_t a) {
 				 cg->resetReservation(apexes0[a], FB0[a]->cut(0, FB0[a]->size()));
 			       });

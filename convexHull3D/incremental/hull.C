@@ -9,9 +9,10 @@ using namespace std;
 
 parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &P) {
   size_t n = P.size();
+  cout << "#-points = " << n << endl;
 
-  //auto H = incrementHull3dSerial<pargeo::fpoint<3>>(make_slice(P));
-  auto H = incrementHull3d<pargeo::fpoint<3>>(make_slice(P));
+  auto H = incrementHull3dSerial<pargeo::fpoint<3>>(make_slice(P));
+  //auto H = incrementHull3d<pargeo::fpoint<3>>(make_slice(P));
 
   //cout << "hull size = " << H.size() << endl;
   return H;
