@@ -76,14 +76,14 @@ bool visible(facetT* f, vertexT p) {
 // Facet and vertex with attributes
 ////////////////////////////
 
-template <class pt> struct linkedFacet3d;
+struct linkedFacet3d;
 
 struct vertexAtt;
 
 using vertex3d = pargeo::_point<3, pointT::floatT, pointT::floatT, vertexAtt>;
 
 struct vertexAtt {
-  linkedFacet3d<vertex3d> *seeFacet;
+  linkedFacet3d *seeFacet;
   vertexAtt() {}
 };
 
@@ -93,24 +93,23 @@ static std::ostream& operator<<(std::ostream& os, const vertex3d v) {
   return os;
 }
 
-template <class pt> // todo this template might be redundant
 struct linkedFacet3d {
   //typedef vector<vertex3d> seqT;
   typedef sequence<vertex3d> seqT;
 
   vertex3d a, b, c;
-  linkedFacet3d<pt> *abFacet;
-  linkedFacet3d<pt> *bcFacet;
-  linkedFacet3d<pt> *caFacet;
+  linkedFacet3d *abFacet;
+  linkedFacet3d *bcFacet;
+  linkedFacet3d *caFacet;
 
   // Stores the minimum memory address of the seeFacet of the reserving vertices
   std::atomic<size_t> reservation; // todo (not always used but has little impact on speed)
 
-  void reserve(pt& p) {
+  void reserve(vertex3d& p) {
     parlay::write_min(&reservation, (size_t)p.attribute.seeFacet, std::less<size_t>());
   }
 
-  bool reserved(pt& p) {
+  bool reserved(vertex3d& p) {
     return reservation == (size_t)p.attribute.seeFacet;
   }
 
@@ -126,20 +125,18 @@ struct linkedFacet3d {
     typename vertex3d::floatT m = numericKnob;
     auto apex = vertex3d();
 
-    if (true) {//size() < 1000) {
-      for (size_t i=0; i<size(); ++i) {
-	auto m2 = signedVolume(a, b, c, at(i));
-	if (m2 > m) {
-	  m = m2;
-	  apex = at(i);
-	}
-      }
-    } else {
-      // apex = parlay::max_element(seeList->cut(0, seeList->size()),
-      // 				 [&](vertex3d aa, vertex3d bb) {
-      // 				   return signedVolume(a, b, c, aa) < signedVolume(a, b, c, bb);
-      // 				 });
-    }
+    // for (size_t i=0; i<size(); ++i) {
+    //   auto m2 = signedVolume(a, b, c, at(i));
+    //   if (m2 > m) {
+    // 	m = m2;
+    // 	apex = at(i);
+    //   }
+    // }
+
+    apex = parlay::max_element(seeList->cut(0, seeList->size()),
+			       [&](vertex3d aa, vertex3d bb) {
+				 return signedVolume(a, b, c, aa) < signedVolume(a, b, c, bb);
+			       });
 
     return apex;
   }
@@ -158,15 +155,14 @@ struct linkedFacet3d {
   }
 };
 
-template<class pt>
-static std::ostream& operator<<(std::ostream& os, const linkedFacet3d<pt> v) {
+static std::ostream& operator<<(std::ostream& os, const linkedFacet3d v) {
   os << "(" << v.a << "," << v.b << "," << v.c << ")";
   return os;
 }
 
 // a, b, c can be input in any order
-linkedFacet3d<vertex3d>* makeFacet(vertex3d a, vertex3d b, vertex3d c) {
-  auto f = new linkedFacet3d<vertex3d>(a, b, c);
+linkedFacet3d* makeFacet(vertex3d a, vertex3d b, vertex3d c) {
+  auto f = new linkedFacet3d(a, b, c);
   return f;
 }
 
@@ -426,9 +422,9 @@ public:
   }
 
   // If n not supplied, find furthest apexes of all facets
-  typename linkedFacet3d<vertexT>::seqT furthestApexes(size_t n=-1) {
+  vector<vertex3d> furthestApexes(size_t n=-1) {
     size_t found = 0;
-    typename linkedFacet3d<vertexT>::seqT apexes;
+    vector<vertex3d> apexes;
 
     auto fVisit = [&](_edge<facetT, vertexT> e) {return true;};
     auto fDo = [&](_edge<facetT, vertexT> e) {
@@ -605,7 +601,7 @@ public:
 	}
       }
     } else {
-      auto tmpBuffer = typename linkedFacet3d<vertexT>::seqT(fn);
+      auto tmpBuffer = typename linkedFacet3d::seqT(fn);
       fn = 0;
       for(int j=0; j<nf; ++j) {
 	parallel_for(0, facetsBeneath[j]->size(),
@@ -641,8 +637,7 @@ public:
 ////////////////////////////
 
 template<class pt>
-conflictList<linkedFacet3d<vertex3d>, vertex3d> *makeInitialHull(slice<pt*, pt*> P) {
-  using linkedFacet3d = linkedFacet3d<vertex3d>;
+conflictList<linkedFacet3d, vertex3d> *makeInitialHull(slice<pt*, pt*> P) {
 
   // Find 8 extrema assuming no duplicate
   auto xx = minmax_element(P, [&](pt i, pt j) {return i[0]<j[0];});
@@ -767,7 +762,6 @@ conflictList<linkedFacet3d<vertex3d>, vertex3d> *makeInitialHull(slice<pt*, pt*>
 template<class pt>
 sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
   using facet3d = facet3d<pt>;
-  using linkedFacet3d = linkedFacet3d<vertex3d>;
 
 #ifdef WRITE
   {
@@ -896,7 +890,6 @@ sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
 template<class pt>
 sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
   using facet3d = facet3d<pt>;
-  using linkedFacet3d = linkedFacet3d<vertex3d>;
 
 #ifdef WRITE
   {
@@ -930,7 +923,7 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
 
     //todo if multi-point does not work well, it makes more sense
     // to parallelize this step
-    linkedFacet3d::seqT apexes = cg->furthestApexes(1); // todo tune
+    vector<vertex3d> apexes = cg->furthestApexes(1); // todo tune
 
     apexTime += t.get_next();
 
