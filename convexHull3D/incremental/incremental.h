@@ -24,6 +24,7 @@
 
 //#define WRITE // Write to file, visualize using python3 plot.py
 //#define VERBOSE
+//#define SILENT
 #define PSEUDO_ORIGIN
 #define SERIAL
 
@@ -845,7 +846,7 @@ sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
   auto cg = makeInitialHull(P);
   _hull<linkedFacet3d, vertex3d> *context = cg->context;
 
-  cout << "init-time = " << t.stop() << endl;
+  double initTime = t.stop();
 
   size_t errors = 0;
   size_t round = 0;
@@ -948,12 +949,16 @@ sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
     delete facetsBeneath;
 
   }
+
+#ifndef SILENT
+  cout << "init-time = " << initTime << endl;
   cout << "apex-time = " << apexTime << endl;
   cout << "frontier-time = " << frontierTime << endl;
   cout << "create-time = " << createTime << endl;
   cout << "split-time = " << splitTime << endl;
   cout << "#-rounds = " << round << endl;
   cout << "#-errors = " << errors << endl;
+#endif
 
 #ifdef VERBOSE
   cout << "hull-size = " << context->hullSize() << endl;
@@ -992,7 +997,7 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
   auto cg = makeInitialHull(P);
   _hull<linkedFacet3d, vertex3d> *context = cg->context;
 
-  cout << "init-time = " << t.stop() << endl;
+  double initTime = t.stop();
 
   size_t round = 0;
   size_t serRound = 0;
@@ -1186,6 +1191,8 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
     } // End serial/parallel if
 
   }
+#ifndef SILENT
+  cout << "init-time = " << initTime << endl;
   cout << "apex-time = " << apexTime << endl;
   cout << "frontier-time = " << frontierTime << endl;
   cout << "create-split-time = " << splitTime << endl;
@@ -1195,12 +1202,13 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
   cout << "#-par-rounds = " << round - serRound << endl;
   cout << "par-time = " << parTime << endl;
   cout << "hull-size = " << hullSize << endl;
+#endif
 
 #ifdef WRITE
   context->writeHull();
 #endif
-  //free stuff
 
+  // todo free stuff
   // todo
   auto dummy = sequence<facet3d>(); dummy.reserve(1);
   return dummy;
