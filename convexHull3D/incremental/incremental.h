@@ -645,7 +645,20 @@ public:
     for(int j=0; j<nf; ++j) {
       fn += facetsBeneath[j]->size();
     }
-
+#ifdef SERIAL
+    for(int i=0; i<nf; ++i) { // Old facet loop
+      for(size_t j=0; j<facetsBeneath[i]->size(); ++j) { // Point loop
+	facetsBeneath[i]->at(j).attribute.seeFacet = nullptr;
+	for (int k=0; k<nnf; ++k) { // New facet loop
+	  if (canSee(newFacets[k], facetsBeneath[i]->at(j))) {
+	    facetsBeneath[i]->at(j).attribute.seeFacet = newFacets[k];
+	    newFacets[k]->push_back(facetsBeneath[i]->at(j));
+	    break;
+	  }
+	}
+      }
+    }
+#else
     if (fn < 1000) {
       for(int i=0; i<nf; ++i) { // Old facet loop
 	for(size_t j=0; j<facetsBeneath[i]->size(); ++j) { // Point loop
@@ -687,6 +700,7 @@ public:
 	newFacets[j]->seeList = chunks[j];
       }
     }
+#endif // Serial
 
   }
 };
@@ -748,7 +762,13 @@ conflictList<linkedFacet3d, vertex3d> *makeInitialHull(slice<pt*, pt*> P) {
   linkFacet(f6, f4, f7, f2);
   linkFacet(f7, f3, f6, f5);
 
-  if (Q.size() < 1000) {
+#ifdef SERIAL
+  bool serial = true;
+#else
+  bool serial = false;
+#endif
+
+  if (Q.size() < 1000 || serial) {
 
     for(size_t i=0; i<P.size(); i++) {
       if (visible(f0, Q[i])) {
