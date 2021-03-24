@@ -84,7 +84,7 @@ namespace kdtKnn {
   class kdNode {
     typedef int intT;
     typedef double floatT;
-    typedef point<dim> pointT;
+    typedef pargeo::point<dim> pointT;
     typedef kdNode<dim, objT> nodeT;
 
     static const int boxInclude = 0;
@@ -103,13 +103,24 @@ namespace kdtKnn {
 
     // Methods
 
+    inline void minCoords(pointT& _pMin, pointT& p) {
+      for(int i=0; i<_pMin.dim; ++i)
+	_pMin[i] = min(_pMin[i], p[i]);
+    }
+
+    inline void maxCoords(pointT& _pMax, pointT& p) {
+      for(int i=0; i<_pMax.dim; ++i)
+	_pMax[i] = max(_pMax[i], p[i]);
+    }
+
     inline void boundingBoxSerial() {
-      pMin = pointT(items[0]->coordinate());
-      pMax = pointT(items[0]->coordinate());
+      pMin = pointT(items[0]->coords());
+      pMax = pointT(items[0]->coords());
       for(intT i=0; i<n; ++i) {
-	pMin.minCoords(items[i]->coordinate());
-	pMax.maxCoords(items[i]->coordinate());
-      }}
+	minCoords(pMin, items[i][0]);
+	maxCoords(pMax, items[i][0]);
+      }
+    }
 
     inline void boundingBoxParallel() {
       intT P = parlay::num_workers()*8;
@@ -117,21 +128,21 @@ namespace kdtKnn {
       pointT localMin[P];
       pointT localMax[P];
       for (intT i=0; i<P; ++i) {
-	localMin[i] = pointT(items[0]->coordinate());
-	localMax[i] = pointT(items[0]->coordinate());}
+	localMin[i] = pointT(items[0]->coords());
+	localMax[i] = pointT(items[0]->coords());}
       parlay::parallel_for(0, P,
 			   [&](intT p) {
 			     intT s = p*blockSize;
 			     intT e = min((intT)(p+1)*blockSize,n);
 			     for (intT j=s; j<e; ++j) {
-			       localMin[p].minCoords(items[j]->coordinate());
-			       localMax[p].maxCoords(items[j]->coordinate());}
+			       minCoords(localMin[p], items[j][0]);
+			       maxCoords(localMax[p], items[j][0]);}
 			   });
-      pMin = pointT(items[0]->coordinate());
-      pMax = pointT(items[0]->coordinate());
+      pMin = pointT(items[0]->coords());
+      pMax = pointT(items[0]->coords());
       for(intT p=0; p<P; ++p) {
-	pMin.minCoords(localMin[p].x);
-	pMax.maxCoords(localMax[p].x);}
+	minCoords(pMin, localMin[p]);
+	maxCoords(pMax, localMax[p]);}
     }
 
     inline intT splitItemSerial(floatT xM) {
@@ -140,8 +151,8 @@ namespace kdtKnn {
       intT lPt = 0;
       intT rPt = n-1;
       while (lPt < rPt) {
-	if (items[lPt]->coordinate(k)>=xM) {
-	  while (items[rPt]->coordinate(k)>=xM && lPt < rPt) {
+	if (items[lPt]->at(k)>=xM) {
+	  while (items[rPt]->at(k)>=xM && lPt < rPt) {
 	    rPt--;
 	  }
 	  if (lPt < rPt) {
@@ -151,7 +162,7 @@ namespace kdtKnn {
 	}
 	lPt++;
       }
-      if (items[lPt]->coordinate(k) < xM) lPt++;
+      if (items[lPt]->at(k) < xM) lPt++;
       return lPt;
     }
 
@@ -169,7 +180,7 @@ namespace kdtKnn {
 
     inline bool itemInBox(pointT pMin1, pointT pMax1, objT* item) {
       for(int i=0; i<dim; ++i) {
-	if (pMax1[i]<item->coordinate(i) || pMin1[i]>item->coordinate(i)) return false;
+	if (pMax1[i]<item->at(i) || pMin1[i]>item->at(i)) return false;
       }
       return true;
     }
@@ -223,7 +234,7 @@ namespace kdtKnn {
 	// Split items by xM in dim k (parallel)
 	parlay::parallel_for(0, n,
 			     [&](intT i) {
-			       if (items[i]->coordinate(k)<xM) flags[i]=1;
+			       if (items[i]->at(k)<xM) flags[i]=1;
 			       else flags[i] = 0;});
 	auto mySplit = parlay::internal::split_two(items, flags);
 	auto splited = mySplit.first;
@@ -348,7 +359,7 @@ namespace kdtKnn {
   template<int dim, class objT>
   void kdNode<dim, objT>::knnHelper(objT& q, buffer<objT*>& out) {
     // find the leaf first
-    int relation = boxCompare(getMin(), getMax(), pointT(q.coordinate()), pointT(q.coordinate()));
+    int relation = boxCompare(getMin(), getMax(), pointT(q.coords()), pointT(q.coords()));
     if (relation == boxExclude) {
       return;
     } else {
@@ -379,9 +390,9 @@ namespace kdtKnn {
   }
 
   template<int dim, class objT>
-  parlay::sequence<size_t> kdtKnn(parlay::sequence<point<dim>> &queries, size_t k) {
-    kdNode<dim, point<dim>>* tree = buildKdt<dim, point<dim>>(queries, true);
-    auto out = parlay::sequence<elem<point<dim>*>>(2*k*queries.size());
+  parlay::sequence<size_t> kdtKnn(parlay::sequence<pargeo::point<dim>> &queries, size_t k) {
+    kdNode<dim, pargeo::point<dim>>* tree = buildKdt<dim, pargeo::point<dim>>(queries, true);
+    auto out = parlay::sequence<elem<pargeo::point<dim>*>>(2*k*queries.size());
     auto idx = parlay::sequence<size_t>(k*queries.size());
     parlay::parallel_for(0, queries.size(), [&](intT i) {
 					      buffer buf = buffer<objT*>(k, out.cut(i*2*k, (i+1)*2*k));
@@ -398,8 +409,8 @@ namespace kdtKnn {
   }
 
   template<int dim, class objT>
-  parlay::sequence<size_t> bruteforceKnn(parlay::sequence<point<dim>> &queries, size_t k) {
-    auto out = parlay::sequence<elem<point<dim>*>>(2*k*queries.size());
+  parlay::sequence<size_t> bruteforceKnn(parlay::sequence<pargeo::point<dim>> &queries, size_t k) {
+    auto out = parlay::sequence<elem<pargeo::point<dim>*>>(2*k*queries.size());
     auto idx = parlay::sequence<size_t>(k*queries.size());
     parlay::parallel_for(0, queries.size(), [&](intT i) {
 					      objT q = queries[i];

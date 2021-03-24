@@ -1,8 +1,8 @@
 #include <iostream>
 #include <algorithm>
 #include "parlay/parallel.h"
+#include "geometry/point.h"
 #include "common/get_time.h"
-#include "common/geometry.h"
 #include "common/geometryIO.h"
 #include "common/parse_command_line.h"
 #include "knn.h"
@@ -13,7 +13,7 @@ using namespace benchIO;
 using coord = double;
 
 template<int dim>
-void timeKnn(parlay::sequence<point<dim>> &P, size_t k, int rounds, char const *outFile) {
+void timeKnn(parlay::sequence<pargeo::point<dim>> &P, size_t k, int rounds, char const *outFile) {
   timer t; t.start();
   parlay::sequence<size_t> I;
   for(int i=0; i<rounds; ++i) {
@@ -34,10 +34,10 @@ int main(int argc, char* argv[]) {
   int dim = readDimensionFromFile(iFile);//todo make cheaper
 
   if (dim == 2) {
-    parlay::sequence<point<2>> Points = readPointsFromFile<point<2>>(iFile);
+    parlay::sequence<pargeo::point<2>> Points = readPointsFromFile<pargeo::point<2>>(iFile);
     timeKnn<2>(Points, k, rounds, oFile);
   } else if (dim == 3) {
-    parlay::sequence<point<3>> Points = readPointsFromFile<point<3>>(iFile);
+    parlay::sequence<pargeo::point<3>> Points = readPointsFromFile<pargeo::point<3>>(iFile);
     timeKnn<3>(Points, k, rounds, oFile);
   }
 }
