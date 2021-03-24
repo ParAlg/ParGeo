@@ -59,7 +59,7 @@ namespace knnBuf {
     bool hasK() {return ptr >= k;}
 
     elem<T> keepK() {
-      if (ptr < k) abort();
+      if (ptr < k) throw std::runtime_error("Error, kbuffer not enough k.");
       ptr = k;
       std::nth_element(buf.begin(), buf.begin()+k, buf.end());
       return buf[k];
@@ -149,7 +149,7 @@ namespace kdtKnn {
 
     inline intT splitItemSerial(floatT xM) {
       if (n < 2) {
-	cout << "error, kdTree splitting singleton, abort" << endl;abort();}
+	throw std::runtime_error("Error, kdTree splitting singleton.");}
       intT lPt = 0;
       intT rPt = n-1;
       while (lPt < rPt) {
@@ -211,7 +211,8 @@ namespace kdtKnn {
 	if (median == 0 || median == n) {median = ceil(n/2.0);}
 
 	if (!space[0].isEmpty() || !space[2*median-1].isEmpty()) {
-	  cout << "error, kdNode overwrite, abort" << endl;abort();}
+	  throw std::runtime_error("Error, kdNode overwrite.");
+	}
 
 	// Recursive construction
 	space[0] = nodeT(items.cut(0, median), median, space+1, leafSize);
@@ -246,7 +247,8 @@ namespace kdtKnn {
 	if (median == 0 || median == n) {median = (n/2.0);}
 
 	if (!space[0].isEmpty() || !space[2*median-1].isEmpty()) {
-	  cout << "error, kdNode overwrite, abort" << endl;abort();}
+	  throw std::runtime_error("Error, kdNode overwrite.");
+	}
 
 	// Recursive construction
 	parlay::par_do([&](){space[0] = nodeT(items.cut(0, median), median, space+1, flags.cut(0, median), leafSize);},
@@ -378,8 +380,7 @@ namespace kdtKnn {
 
     if (!out.hasK()) {
       if (siblin() == NULL) {
-	cout << "error, knnHelper reached root node without enough neighbors. k = " << k << endl;
-	abort();
+	throw std::runtime_error("Error, knnHelper reached root node without enough neighbors.");
       }
       for (intT i=0; i<siblin()->size(); ++i) {
 	objT* p = siblin()->getItem(i);

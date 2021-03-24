@@ -21,7 +21,6 @@ py::array_t<size_t> py_kdtknn(py::array_t<double, py::array::c_style | py::array
   if (dim == 2) {
     parlay::sequence<pargeo::point<2>> array_vec(n);
     std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
-    for (auto x: array_vec) std::cout << x << std::endl;
     parlay::sequence<size_t> result_vec = kdtKnn::kdtKnn<2, pargeo::point<2>>(array_vec, k);
     auto result = py::array_t<size_t>(k * n);
     auto result_buffer = result.request();
@@ -31,7 +30,6 @@ py::array_t<size_t> py_kdtknn(py::array_t<double, py::array::c_style | py::array
   } else if (dim == 3) {
     parlay::sequence<pargeo::point<3>> array_vec(n);
     std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
-    for (auto x: array_vec) std::cout << x << std::endl;
     parlay::sequence<size_t> result_vec = kdtKnn::kdtKnn<3, pargeo::point<3>>(array_vec, k);
     auto result = py::array_t<size_t>(k * n);
     auto result_buffer = result.request();
