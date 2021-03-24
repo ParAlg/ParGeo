@@ -1,66 +1,51 @@
 #include "kdtKnn.h"
-
-template<int dim>
-std::vector<size_t> knnCaller(std::vector<double> &P, size_t k) {
-  if (k < 2 || k > P.size()) {
-    std::cout << "Error, k = " << k << " k must range from 2 to #-data-points, abort" << std::endl;
-    abort();
-  }
-
-  size_t n = P.size();
-
-  double* mem = &P[0];
-  auto memp = (pargeo::point<dim> *) mem;
-
-  auto _P = parlay::sequence<pargeo::point<dim>>(n/dim);
-  parlay::parallel_for(0, n/dim, [&](size_t i) {
-			   _P[i] = memp[i];
-			 });
-
-  parlay::sequence<size_t> nnIdx = kdtKnn::kdtKnn<dim, pargeo::point<dim>>(_P, k);
-
-  size_t *r = nnIdx.data();
-  return std::vector(r, r+k*n/dim);
-}
-
-// ----------------
-// Python interface
-// ----------------
-// reference: https://github.com/tdegeus/pybind11_examples/blob/master/03_numpy-1D_cpp-vector/example.cpp
-
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
 
 namespace py = pybind11;
 
-// wrap C++ function with NumPy array IO
 py::array_t<size_t> py_kdtknn(py::array_t<double, py::array::c_style | py::array::forcecast> array, size_t k)
 {
-  // allocate std::vector (to pass to the C++ function)
-  std::vector<double> array_vec(array.size());
 
-  // copy py::array -> std::vector
-  std::memcpy(array_vec.data(),array.data(),array.size()*sizeof(double));
+  if (array.ndim() != 2)
+    throw std::runtime_error("Input should be 2-D NumPy array");
 
-  // call pure C++ function
-  std::vector<size_t> result_vec = knnCaller<2>(array_vec, k); // todo dimensionality
+  if (sizeof(pargeo::point<2>) != 16)
+    throw std::runtime_error("sizeof(pargeo::point<2>) != 16, check point.h");
 
-  // allocate py::array (to pass the result of the C++ function to Python)
-  auto result        = py::array_t<size_t>(array.size());
-  auto result_buffer = result.request();
-  size_t *result_ptr    = (size_t *) result_buffer.ptr;
+  int dim = array.shape()[1];
 
-  // copy std::vector -> py::array
-  std::memcpy(result_ptr,result_vec.data(),result_vec.size()*sizeof(size_t));
+  size_t n = array.size() / dim;
 
-  return result;
+  if (dim == 2) {
+    parlay::sequence<pargeo::point<2>> array_vec(n);
+    std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
+    for (auto x: array_vec) std::cout << x << std::endl;
+    parlay::sequence<size_t> result_vec = kdtKnn::kdtKnn<2, pargeo::point<2>>(array_vec, k);
+    auto result = py::array_t<size_t>(k * n);
+    auto result_buffer = result.request();
+    size_t *result_ptr = (size_t *) result_buffer.ptr;
+    std::memcpy(result_ptr,result_vec.data(),result_vec.size()*sizeof(size_t));
+    return result;
+  } else if (dim == 3) {
+    parlay::sequence<pargeo::point<3>> array_vec(n);
+    std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
+    for (auto x: array_vec) std::cout << x << std::endl;
+    parlay::sequence<size_t> result_vec = kdtKnn::kdtKnn<3, pargeo::point<3>>(array_vec, k);
+    auto result = py::array_t<size_t>(k * n);
+    auto result_buffer = result.request();
+    size_t *result_ptr = (size_t *) result_buffer.ptr;
+    std::memcpy(result_ptr,result_vec.data(),result_vec.size()*sizeof(size_t));
+    return result;
+  } else
+    throw std::runtime_error("Right now the code only supports 2d or 3d points.");
+
 }
 
-// wrap as Python module
 PYBIND11_MODULE(pyknn, m)
 {
-  m.doc() = "pybind11 knn";
+  m.doc() = "Kd-tree based Euclidean KNN on point data sets.";
 
-  m.def("kdtknn", &py_kdtknn, "Compute the knn of the input points");
+  m.def("kdtknn", &py_kdtknn, "Input: 2d-numpy array containing points in R^2 or R^3; an integer k indicating the number of neighbors desired (k>=2 as the search includes self). Output: a 1d-numpy array of size k * n, containing indices of the KNNs of the input points concatenated.");
 }

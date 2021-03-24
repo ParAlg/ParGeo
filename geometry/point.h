@@ -10,7 +10,9 @@
 namespace pargeo {
   using namespace std;
 
-  struct _empty {};
+  struct _empty {
+    int arr[0]; // todo this produces a struct of size 0 but seems dangerous, need to check
+  };
 
   template <int _dim, class _tData, class _tFloat, class _tAtt> class _point {
 
