@@ -27,6 +27,7 @@
 #include <algorithm> // nth_element
 #include "parlay/parallel.h"
 #include "parlay/sequence.h"
+#include "geometry/point.h"
 
 namespace knnBuf {
 
@@ -79,6 +80,7 @@ namespace knnBuf {
 namespace kdtKnn {
 
   using namespace knnBuf;
+  using namespace std;
 
   template<int dim, class objT>
   class kdNode {
