@@ -20,8 +20,8 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#ifndef KDT_ANN_H
-#define KDT_ANN_H
+#ifndef KDT_KNN_H
+#define KDT_KNN_H
 
 #include <limits> // numeric_limits
 #include <algorithm> // nth_element

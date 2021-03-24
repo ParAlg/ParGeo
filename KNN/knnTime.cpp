@@ -27,7 +27,7 @@ void timeKnn(parlay::sequence<point<dim>> &P, size_t k, int rounds, char const *
 int main(int argc, char* argv[]) {
   commandLine P(argc,argv,"[-o <outFile>] [-r <rounds>] <inFile>");
   char* iFile = P.getArgument(0);
-  size_t k = P.getOptionIntValue("-k",1);
+  size_t k = P.getOptionIntValue("-k",2);
   char* oFile = P.getOptionValue("-o");
   int rounds = P.getOptionIntValue("-r",1);
 
