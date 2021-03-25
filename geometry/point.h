@@ -57,6 +57,8 @@ namespace pargeo {
 
     _tData& operator[](int i) {return x[i];}
 
+    _tData& at(int i) {return x[i];}
+
     friend bool operator==(_point a, _point b) {
       for (int ii=0; ii<dim; ++ii) {
 	if (a[ii] != b[ii]) return false;}

@@ -1,1 +1,1 @@
-../bench/knn.h
+../knn.h
