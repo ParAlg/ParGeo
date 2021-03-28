@@ -75,7 +75,16 @@ py::array_t<double> dendrogram(py::array_t<int, py::array::c_style | py::array::
   idxmap.clear();
   sizes.clear();
 
-  auto result = py::array_t<double>(4 * (n-1));
+  int nn = n-1; // have to use nn instead of n-1, otherwise can't compile
+    auto result = py::array(py::buffer_info(
+        nullptr,            /* Pointer to data (nullptr -> ask NumPy to allocate!) */
+        sizeof(double),     /* Size of one item */
+        py::format_descriptor<double>::value, /* Buffer format */
+        2,          /* How many dimensions? */
+        { nn, 4 },  /* Number of elements for each dimension */
+        { sizeof(double)*4, sizeof(double) }  /* Strides for each dimension */
+    ));
+
   auto result_buffer = result.request();
   double *result_ptr = (double *) result_buffer.ptr;
   parlay::parallel_for(0, n-1,
