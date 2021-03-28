@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.10)
+
 project(example)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -17,7 +18,7 @@ else()
   set(CMAKE_CXX_FLAGS "-DPARLAY_SEQUENTIAL -mcx16 -O3 -DNDEBUG ${EXTRA_FLAGS}")
 endif()
 
-find_package(PythonInterp REQUIRED)
+find_package(Python COMPONENTS Interpreter Development)
 include_directories(${PYTHON_INCLUDE_DIRS})
 
 message(STATUS "--------------- General configuration -------------")
