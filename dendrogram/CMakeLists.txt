@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.10)
+
 project(example)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -17,8 +18,19 @@ else()
   set(CMAKE_CXX_FLAGS "-DPARLAY_SEQUENTIAL -mcx16 -O3 -DNDEBUG ${EXTRA_FLAGS}")
 endif()
 
-find_package(PythonInterp REQUIRED)
+find_package(Python COMPONENTS Interpreter Development)
 include_directories(${PYTHON_INCLUDE_DIRS})
+
+message(STATUS "--------------- General configuration -------------")
+message(STATUS "CMake Generator:                ${CMAKE_GENERATOR}")
+message(STATUS "Compiler:                       ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+message(STATUS "Build type:                     ${CMAKE_BUILD_TYPE}")
+message(STATUS "CMAKE_CXX_FLAGS:                ${CMAKE_CXX_FLAGS}")
+message(STATUS "CMAKE_CXX_FLAGS_DEBUG:          ${CMAKE_CXX_FLAGS_DEBUG}")
+message(STATUS "CMAKE_CXX_FLAGS_RELEASE:        ${CMAKE_CXX_FLAGS_RELEASE}")
+message(STATUS "CMAKE_CXX_FLAGS_RELWITHDEBINFO: ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+message(STATUS "CMAKE_EXE_LINKER_FLAGS          ${CMAKE_CXX_LINKER_FLAGS}")
+message(STATUS "CMAKE_INSTALL_PREFIX:           ${CMAKE_INSTALL_PREFIX}" )
 
 add_subdirectory(pybind11)
 pybind11_add_module(example example.cpp)
