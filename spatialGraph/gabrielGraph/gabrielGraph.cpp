@@ -42,8 +42,8 @@ parlay::sequence<edge> spatialGraph(parlay::sequence<pargeo::point<dim>> &P) {
 			size_t u = T[(i-1)%3];
 			size_t v = T[(i+1)%3];
 			pt c = (P[u] + P[v])/2;
-			typename pt::floatT rq = (P[u] - P[v]).lenSqr();
-			typename pt::floatT dis = (P[i] - c).lenSqr();
+			typename pt::floatT rq = (P[u] - P[v]).length()/2;
+			typename pt::floatT dis = (P[i] - c).length();
 			if (dis <= rq) { // not ok
 			  edges[idx*3 + i] = make_tuple(edge(u,v), false);
 			} else { // ok
@@ -58,9 +58,9 @@ parlay::sequence<edge> spatialGraph(parlay::sequence<pargeo::point<dim>> &P) {
 		      });
 
   // Group edges
-  sort(edges, [&](edgepair e1, edgepair e2) {
+  sort_inplace(edges, [&](edgepair e1, edgepair e2) {
 		return get<0>(e1).u == get<0>(e2).u ?
-		  (get<0>(e1).v < get<0>(e2).v ? true : false) :
+		  (get<0>(e1).v < get<0>(e2).v):
 		  (get<0>(e1).u < get<0>(e2).u);
 	      });
 
@@ -80,11 +80,17 @@ parlay::sequence<edge> spatialGraph(parlay::sequence<pargeo::point<dim>> &P) {
   flag[flag.size()-1] = ne;
 
   sequence<edge> edges2(ne);
-  parallel_for(0, ne, [&](size_t i) {
+  parallel_for(0, nt*3, [&](size_t i) {
 			if (flag[i] != flag[i+1]) {
 			  edges2[flag[i]] = get<0>(edges[i]);
 			}
   		      });
+
+  // parallel_for(0, edges2.size(), [&](size_t i) {
+  // 				  auto e = edges2[i];
+  // 				  cout << "(" << e.u << "," << e.v << ")" << " ";
+  // 				});
+  // cout << endl;
 
   cout << "graph-gen-time = " << t.stop() << endl;
 
