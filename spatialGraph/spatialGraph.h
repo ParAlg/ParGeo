@@ -1,3 +1,5 @@
+#pragma once
+
 #include "geometry/point.h"
 #include "parlay/primitives.h"
 
@@ -21,6 +23,10 @@ namespace sgInternal {
       return e2.u != u || e2.v != v;
     }
   };
+
+  // std::ostream& operator<<(std::ostream& os, const _edge& e) {
+  //   return os << "(" << e.u << "," << e.v << ")";
+  // }
 
 }
 

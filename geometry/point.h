@@ -55,6 +55,11 @@ namespace pargeo {
       for (int i=0; i<_dim; ++i) xx[i] = x[i]*dv;
       return _point(xx);}
 
+    _point operator/(_tData dv) {
+      _tData xx[_dim];
+      for (int i=0; i<_dim; ++i) xx[i] = x[i]/dv;
+      return _point(xx);}
+
     _tData& operator[](int i) {return x[i];}
 
     _tData& at(int i) {return x[i];}
