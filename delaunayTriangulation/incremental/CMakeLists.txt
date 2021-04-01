@@ -1,1 +1,1 @@
-add_executable(incDelaunay delaunayTime.cpp delaunay.cpp)
+add_executable(delaunay delaunayTime.cpp delaunay.cpp)

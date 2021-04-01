@@ -4,7 +4,9 @@
 
 using namespace std;
 
-struct emptyT {};
+struct emptyT {
+  int arr[0]; // todo this produces a struct of size 0 but seems dangerous, need to check
+};
 
 struct hashIntPair {
   inline size_t operator () (const pair<int, int>& t) const {

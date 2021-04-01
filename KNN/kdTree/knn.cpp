@@ -1,7 +1,7 @@
 #include <algorithm>
 #include "parlay/parallel.h"
 #include "parlay/primitives.h"
-#include "common/geometry.h"
+#include "geometry/point.h"
 #include "knn.h"
 #include "kdtKnn.h"
 
