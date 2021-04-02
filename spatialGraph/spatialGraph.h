@@ -8,7 +8,7 @@ namespace sgInternal {
     size_t u,v;
 
     _edge(size_t _u, size_t _v): u(_u), v(_v) {
-      if (u > v) swap(u,v);
+      if (u > v) std::swap(u,v);
     }
 
     _edge(): u(-1), v(-1) { }

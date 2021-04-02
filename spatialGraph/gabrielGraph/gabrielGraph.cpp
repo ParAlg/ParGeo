@@ -32,6 +32,7 @@ parlay::sequence<edge> spatialGraph(parlay::sequence<pargeo::point<dim>> &P) {
   using pt = pargeo::point<dim>;
   using edgepair = tuple<edge,bool>;
 
+  size_t n = P.size();
   size_t nt = Tri.numTriangles();
   sequence<edgepair> edges(nt*3+1);
   edges[edges.size()-1] = make_tuple(edge(), false);
@@ -41,6 +42,8 @@ parlay::sequence<edge> spatialGraph(parlay::sequence<pargeo::point<dim>> &P) {
 		      for(int i=0; i<3; ++i) {
 			size_t u = T[(i-1)%3];
 			size_t v = T[(i+1)%3];
+			if (u >= n || v >= n)
+			  continue;
 			pt c = (P[u] + P[v])/2;
 			typename pt::floatT rq = (P[u] - P[v]).length()/2;
 			typename pt::floatT dis = (P[i] - c).length();
