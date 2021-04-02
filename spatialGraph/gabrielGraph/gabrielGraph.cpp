@@ -67,13 +67,24 @@ parlay::sequence<edge> spatialGraph(parlay::sequence<pargeo::point<dim>> &P) {
   // Keep valid edges
   sequence<size_t> flag(nt*3+1);
   parallel_for(0, edges.size(), [&](size_t i) {
-				  if ( get<1>(edges[i]) ) {
-				    if ( get<0>(edges[i])!=get<0>(edges[i+1]) ) {
-				      flag[i] = true;
+				  if ( get<0>(edges[i]) == get<0>(edges[i+1]) ) {
+				    // edge appears twice, need to check if both are ok
+				    flag[i] = get<1>(edges[i]) && get<1>(edges[i]);
+				  } else {
+				    // 1. edge appeared twice, but is the second one (don't take)
+				    // 2. edge appears once, only check self
+				    if ( i > 0 ) {
+				      if (get<0>(edges[i]) != get<0>(edges[i-1])) {
+					// case 2
+					flag[i] = get<1>(edges[i]);
+				      } else {
+					flag[i] = false;
+				      }
+				    } else {
+				      // case 2
+				      flag[i] = get<1>(edges[i]);
 				    }
-				    else flag[i] = false;
 				  }
-				  else flag[i] = false;
 				});
 
   size_t ne = scan_inplace(flag.cut(0,nt*3));
