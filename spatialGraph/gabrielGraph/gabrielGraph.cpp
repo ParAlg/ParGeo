@@ -8,7 +8,6 @@
 #include "spatialGraph.h"
 #include "incremental/delaunay.h"
 
-
 template<int dim>
 parlay::sequence<edge> spatialGraph(parlay::sequence<pargeo::point<dim>> &P) {
   using namespace parlay;
@@ -40,14 +39,21 @@ parlay::sequence<edge> spatialGraph(parlay::sequence<pargeo::point<dim>> &P) {
   // Process a triangle
   auto processTri = [&](tri &T, size_t idx) {
 		      for(int i=0; i<3; ++i) {
-			size_t u = T[(i-1)%3];
-			size_t v = T[(i+1)%3];
-			if (u >= n || v >= n)
+			// Testing if x violates u,v
+			size_t x = T[i];
+			size_t u = T[(i+1)%3];
+			size_t v = T[(i+2)%3];
+
+			// Discard irrelevant edges of boundary triangle edges
+			if (u >= n || v >= n) {
+			  edges[idx*3 + i] = make_tuple(edge(u,v), false);
 			  continue;
+			}
+
 			pt c = (P[u] + P[v])/2;
 			typename pt::floatT rq = (P[u] - P[v]).length()/2;
-			typename pt::floatT dis = (P[i] - c).length();
-			if (dis <= rq) { // not ok
+			typename pt::floatT dis = (P[x] - c).length();
+			if (x < n && dis <= rq) { // not gabriel
 			  edges[idx*3 + i] = make_tuple(edge(u,v), false);
 			} else { // ok
 			  edges[idx*3 + i] = make_tuple(edge(u,v), true);
@@ -67,31 +73,27 @@ parlay::sequence<edge> spatialGraph(parlay::sequence<pargeo::point<dim>> &P) {
 		  (get<0>(e1).u < get<0>(e2).u);
 	      });
 
+  // parallel_for(0, edges.size(), [&](size_t i) {
+  // 				  auto e = get<0>(edges[i]);
+  // 				  cout << "(" << e.u << "," << e.v << ")" << get<1>(edges[i]) << " ";
+  // 				});
+  // cout << endl;
+
   // Keep valid edges
+  //  - appears twice && both are valid in their own triangles
   sequence<size_t> flag(nt*3+1);
   parallel_for(0, edges.size(), [&](size_t i) {
-				  if ( get<0>(edges[i]) == get<0>(edges[i+1]) ) {
-				    // edge appears twice, need to check if both are ok
-				    flag[i] = get<1>(edges[i]) && get<1>(edges[i]);
+				  if ( get<0>(edges[i]) == get<0>(edges[i+1]) &&
+				       get<1>(edges[i]) &&
+				       get<1>(edges[i+1]) ) {
+				    flag[i] = 1;
 				  } else {
-				    // 1. edge appeared twice, but is the second one (don't take)
-				    // 2. edge appears once, only check self
-				    if ( i > 0 ) {
-				      if (get<0>(edges[i]) != get<0>(edges[i-1])) {
-					// case 2
-					flag[i] = get<1>(edges[i]);
-				      } else {
-					flag[i] = false;
-				      }
-				    } else {
-				      // case 2
-				      flag[i] = get<1>(edges[i]);
-				    }
+				    flag[i] = 0;
 				  }
 				});
 
   size_t ne = scan_inplace(flag.cut(0,nt*3));
-  flag[flag.size()-1] = ne;
+  flag[nt*3] = ne;
 
   sequence<edge> edges2(ne);
   parallel_for(0, nt*3, [&](size_t i) {

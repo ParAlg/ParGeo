@@ -1,4 +1,4 @@
-#define VERBOSE
+//#define VERBOSE
 
 #ifdef VERBOSE
 #include "common/get_time.h"
@@ -51,8 +51,9 @@ py::array_t<size_t> py_gabriel(py::array_t<double, py::array::c_style | py::arra
     std::cout << "::copy-out-time = " << t.stop() << std::endl;
 #endif
     return result;
-  } else
-    throw std::runtime_error("Right now the code only supports 2d or 3d points.");
+  } else {
+    throw std::runtime_error("Only supports 2d points.");
+  }
 
 }
 
@@ -60,5 +61,5 @@ PYBIND11_MODULE(pygabriel, m)
 {
   m.doc() = "Generates edge list for a Gabriel graph for a point data set in R^2.";
 
-  m.def("gabriel_graph", &py_gabriel, "Input: 2d-numpy array containing n points in R^2. Output: array E of size n*2, where E[i] and E[i+1] are point indices represents an undirected edge of the resulting Gabriel graph.");
+  m.def("gabriel_graph", &py_gabriel, "Input: 2d-numpy array containing n points in R^2. Output: array E of size n*2, where E[i] and E[i+1] forall i are point indices represents an undirected edge of the resulting Gabriel graph.");
 }
