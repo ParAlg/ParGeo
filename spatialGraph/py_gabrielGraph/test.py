@@ -1,24 +1,23 @@
 import numpy as np
-from pygabriel import gabriel_graph
 from datetime import datetime
 
 from matplotlib import pyplot as plt
 from matplotlib.collections import LineCollection
 
+from pygraph import delaunay_graph
+from pygraph import gabriel_graph
+
 start_time = None
 
-def test(n, name, savePlot = False):
+def test(points, name, gen, savePlot = False):
   dim = 2
   print("\n" + name)
 
-  points = np.random.random((n, dim))
-  print("Data generated (python)")
-  print("Gabriel graph, timer start")
   start_time = datetime.now()
-  edges = gabriel_graph(points)
+  edges = gen(points)
   end_time = datetime.now()
-  print('Duration: {}'.format(end_time - start_time))
-  print("#edges =", len(edges)/2)
+  print("graph-gen-time: {}".format(end_time - start_time))
+  print("#-edges =", len(edges)/2)
   edges.shape = (-1, 2) # reshape to 2 x #edges
 
   if savePlot:
@@ -34,6 +33,6 @@ def test(n, name, savePlot = False):
     plt.gca().set_aspect('equal', adjustable='box')
     fig.savefig(name+".png")
 
-test(10, "test 1 - 10", False)
-test(100, "test 2 - 100", True)
-test(1000000, "test 3 - 100", False)
+points = np.random.random((100, 2))
+test(points, "rand-delaunay-100", delaunay_graph, True)
+test(points, "rand-gabriel-100", gabriel_graph, True)
