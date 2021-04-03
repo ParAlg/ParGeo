@@ -31,4 +31,4 @@ message(STATUS "CMAKE_INSTALL_PREFIX:           ${CMAKE_INSTALL_PREFIX}" )
 
 add_subdirectory(delaunayGraph)
 add_subdirectory(gabrielGraph)
-add_subdirectory(py_gabrielGraph)
+add_subdirectory(py_spatialGraph)
