@@ -13,7 +13,7 @@ namespace sgInternal {
 
     _edge(): u(-1), v(-1) { }
 
-    bool isEmpty() { return u < 0; }
+    bool isEmpty() { return u == -1; }
 
     bool operator==(_edge e2) {
       return e2.u == u && e2.v == v;
@@ -24,14 +24,12 @@ namespace sgInternal {
     }
   };
 
-  // std::ostream& operator<<(std::ostream& os, const _edge& e) {
-  //   return os << "(" << e.u << "," << e.v << ")";
-  // }
-
 }
 
 using edge = sgInternal::_edge;
 
-// outputs edge list
 template<int dim>
-parlay::sequence<edge> spatialGraph(parlay::sequence<pargeo::point<dim>> &S);
+parlay::sequence<edge> delaunayGraph(parlay::sequence<pargeo::point<dim>> &S);
+
+template<int dim>
+parlay::sequence<edge> gabrielGraph(parlay::sequence<pargeo::point<dim>> &S);

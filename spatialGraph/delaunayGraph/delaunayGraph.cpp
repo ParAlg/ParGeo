@@ -9,7 +9,7 @@
 #include "incremental/delaunay.h"
 
 template<int dim>
-parlay::sequence<edge> spatialGraph(parlay::sequence<pargeo::point<dim>> &P) {
+parlay::sequence<edge> delaunayGraph(parlay::sequence<pargeo::point<dim>> &P) {
   using namespace parlay;
   using namespace std;
 
@@ -46,6 +46,8 @@ parlay::sequence<edge> spatialGraph(parlay::sequence<pargeo::point<dim>> &P) {
 			// Keep non-boundary edges
 			if (u < n && v < n)
 			  edges[idx*3 + i] = edge(u,v);
+			else
+			  edges[idx*3 + i] = edge();
 
 		      }
 		    };
@@ -64,7 +66,7 @@ parlay::sequence<edge> spatialGraph(parlay::sequence<pargeo::point<dim>> &P) {
   // Only keep each edge once
   sequence<size_t> flag(nt*3);
   parallel_for(0, edges.size(), [&](size_t i) {
-				  if ( edges[i] == edges[i+1] )
+				  if ( edges[i] == edges[i+1] && !edges[i].isEmpty() )
 				    flag[i] = 1;
 				  else
 				    flag[i] = 0;
@@ -79,5 +81,5 @@ parlay::sequence<edge> spatialGraph(parlay::sequence<pargeo::point<dim>> &P) {
   return edges2;
 }
 
-template parlay::sequence<edge> spatialGraph<2>(parlay::sequence<pargeo::point<2>> &);
-template parlay::sequence<edge> spatialGraph<3>(parlay::sequence<pargeo::point<3>> &);
+template parlay::sequence<edge> delaunayGraph<2>(parlay::sequence<pargeo::point<2>> &);
+template parlay::sequence<edge> delaunayGraph<3>(parlay::sequence<pargeo::point<3>> &);

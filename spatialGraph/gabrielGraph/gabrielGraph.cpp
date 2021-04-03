@@ -9,7 +9,7 @@
 #include "incremental/delaunay.h"
 
 template<int dim>
-parlay::sequence<edge> spatialGraph(parlay::sequence<pargeo::point<dim>> &P) {
+parlay::sequence<edge> gabrielGraph(parlay::sequence<pargeo::point<dim>> &P) {
   using namespace parlay;
   using namespace std;
 
@@ -115,5 +115,5 @@ parlay::sequence<edge> spatialGraph(parlay::sequence<pargeo::point<dim>> &P) {
   return edges2;
 }
 
-template parlay::sequence<edge> spatialGraph<2>(parlay::sequence<pargeo::point<2>> &);
-template parlay::sequence<edge> spatialGraph<3>(parlay::sequence<pargeo::point<3>> &);
+template parlay::sequence<edge> gabrielGraph<2>(parlay::sequence<pargeo::point<2>> &);
+template parlay::sequence<edge> gabrielGraph<3>(parlay::sequence<pargeo::point<3>> &);
