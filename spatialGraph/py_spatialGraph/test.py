@@ -6,15 +6,19 @@ from matplotlib.collections import LineCollection
 
 from pygraph import delaunay_graph
 from pygraph import gabriel_graph
+from pygraph import knn_graph
 
 start_time = None
 
-def test(points, name, gen, savePlot = False):
+def test(points, name, gen, savePlot = False, k = -1):
   dim = 2
   print("\n" + name)
 
   start_time = datetime.now()
-  edges = gen(points)
+  if k < 0:
+    edges = gen(points)
+  else:
+    edges = gen(points, k)
   end_time = datetime.now()
   print("graph-gen-time: {}".format(end_time - start_time))
   print("#-edges =", len(edges)/2)
@@ -36,3 +40,6 @@ def test(points, name, gen, savePlot = False):
 points = np.random.random((100, 2))
 test(points, "rand-delaunay-100", delaunay_graph, True)
 test(points, "rand-gabriel-100", gabriel_graph, True)
+test(points, "rand-knn1-100", knn_graph, True, 1)
+test(points, "rand-knn2-100", knn_graph, True, 2)
+test(points, "rand-knn10-100", knn_graph, True, 10)
