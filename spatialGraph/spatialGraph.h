@@ -1,7 +1,8 @@
 #pragma once
 
 #include "geometry/point.h"
-#include "parlay/primitives.h"
+#include "parlay/primitives.h" // ?
+#include "parlay/sequence.h"
 
 namespace sgInternal {
   struct _edge {
@@ -33,3 +34,6 @@ parlay::sequence<edge> delaunayGraph(parlay::sequence<pargeo::point<dim>> &S);
 
 template<int dim>
 parlay::sequence<edge> gabrielGraph(parlay::sequence<pargeo::point<dim>> &S);
+
+template<int dim>
+parlay::sequence<edge> knnGraph(parlay::sequence<pargeo::point<dim>> &S, size_t k);
