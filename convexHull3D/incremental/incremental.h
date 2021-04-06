@@ -24,7 +24,7 @@
 
 //#define WRITE // Write to file, visualize using python3 plot.py
 //#define VERBOSE
-//#define SILENT
+#define SILENT
 #define PSEUDO_ORIGIN
 #define SERIAL
 
@@ -106,6 +106,18 @@ inline typename pt::floatT signedVolume(pt a, pt b, pt c, pt d) {
 template<class facetT, class vertexT>
 bool visible(facetT* f, vertexT p) {
   if (signedVolume(f->a, f->b, f->c, p) > numericKnob)
+    return true;
+  else
+    return false;
+}
+
+template<class facetT, class vertexT>
+bool visibleCast(facetT* f, vertexT p) {
+  if (signedVolume(vertex3d(f->a.coords()),
+		   vertex3d(f->b.coords()),
+		   vertex3d(f->c.coords()),
+		   vertex3d(p.coords())
+		   ) > numericKnob)
     return true;
   else
     return false;
@@ -387,6 +399,19 @@ e.b==e.ff.a    e.a==e.ff.c
     if (start) dfsFacet(start, fVisit, fDo, fStop);
     else dfsFacet(H, fVisit, fDo, fStop);
     if (!checker) cout << endl;
+  }
+
+  template<class pt>
+  void getHull(sequence<facet3d<pt>>& out) {
+
+    auto fVisit = [&](_edge<facetT, vertexT> e) { return true;};
+    auto fDo = [&](_edge<facetT, vertexT> e) {
+		 out.emplace_back(pt(e.ff->a.coords()),
+				  pt(e.ff->b.coords()),
+				  pt(e.ff->c.coords()));};
+    auto fStop = [&]() { return false;};
+
+    dfsFacet(H, fVisit, fDo, fStop);
   }
 
 #ifdef WRITE
@@ -989,9 +1014,9 @@ sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
 #endif
   //free stuff
 
-  // todo
-  auto dummy = sequence<facet3d>(); dummy.reserve(1);
-  return dummy;
+  auto result = sequence<facet3d>();
+  context->getHull<pt>(result);
+  return result;
 }
 
 
@@ -1229,9 +1254,10 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
 #endif
 
   // todo free stuff
-  // todo
-  auto dummy = sequence<facet3d>(); dummy.reserve(1);
-  return dummy;
+
+  auto result = sequence<facet3d>();
+  context->getHull<pt>(result);
+  return result;
 }
 
 #endif // ifndef SERIAL
