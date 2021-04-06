@@ -33,6 +33,7 @@
 #include <fstream>
 #endif
 
+#include <set>
 #include <atomic>
 #include <vector>
 #include <assert.h>
@@ -61,6 +62,9 @@ struct vertexAtt;
 using vertex3d = pargeo::_point<3, pointT::floatT, pointT::floatT, vertexAtt>;
 
 struct vertexAtt {
+#ifdef VERBOSE
+  size_t i;
+#endif
   linkedFacet3d *seeFacet;
   vertexAtt() {}
 };
@@ -197,7 +201,11 @@ struct linkedFacet3d {
 };
 
 static std::ostream& operator<<(std::ostream& os, const linkedFacet3d& v) {
+#ifdef VERBOSE
+  os << "(" << v.a.attribute.i << "," << v.b.attribute.i << "," << v.c.attribute.i << ")";
+#else
   os << "(" << v.a << "," << v.b << "," << v.c << ")";
+#endif
   return os;
 }
 
@@ -391,7 +399,7 @@ e.b==e.ff.a    e.a==e.ff.c
 		   cout << "Erroneous hull size = " << hullSize(e.ff) << endl;
 		   abort();
 		 }
-		 if (!checker) cout << *e.ff << " ";
+		 if (!checker) cout << *e.ff << ":" << e.ff->size() << " ";
 	       };
     auto fStop = [&]() { return false;};
 
@@ -735,7 +743,7 @@ public:
 ////////////////////////////
 
 template<class pt>
-conflictList<linkedFacet3d, vertex3d> *makeInitialHull(slice<pt*, pt*> P) {
+conflictList<linkedFacet3d, vertex3d> *makeInitialHull8(slice<pt*, pt*> P) {
 
   // Find 8 extrema assuming no duplicate
   auto xx = minmax_element(P, [&](pt i, pt j) {return i[0]<j[0];});
@@ -758,6 +766,9 @@ conflictList<linkedFacet3d, vertex3d> *makeInitialHull(slice<pt*, pt*> P) {
   parallel_for(0, P.size(), [&](size_t i) {
 			      for(int j=0; j<P[i].dim; ++j)
 				Q[i][j] = P[i][j];
+#ifdef VERBOSE
+			      Q[i].attribute.i = i;
+#endif
 			    });
 
 #ifdef PSEUDO_ORIGIN
@@ -867,6 +878,121 @@ conflictList<linkedFacet3d, vertex3d> *makeInitialHull(slice<pt*, pt*> P) {
   return new conflictList(context);
 }
 
+template<class pt>
+conflictList<linkedFacet3d, vertex3d> *makeInitialHull4(slice<pt*, pt*> P) {
+
+  size_t X[6]; // extrema
+
+  auto xx = minmax_element(P, [&](pt i, pt j) {return i[0]<j[0];});
+  X[0] = xx.first - &P[0]; X[1] = xx.second - &P[0];
+
+  auto yy = minmax_element(P, [&](pt i, pt j) {return i[1]<j[1];});
+  X[2] = yy.first - &P[0]; X[3] = yy.second - &P[0];
+
+  auto zz = minmax_element(P, [&](pt i, pt j) {return i[2]<j[2];});
+  X[4] = zz.first - &P[0]; X[5] = zz.second - &P[0];
+
+  // Initialize points with visible facet link
+  auto Q = linkedFacet3d::seqT(P.size());
+  parallel_for(0, P.size(), [&](size_t i) {
+			      for(int j=0; j<P[i].dim; ++j)
+				Q[i][j] = P[i][j];
+#ifdef VERBOSE
+			      Q[i].attribute.i = i;
+#endif
+			    });
+
+  set<size_t, greater<size_t>> pts;
+  if (X[1]-X[0] > X[3]-X[2] && X[1]-X[0] > X[5]-X[4]) {
+    pts.insert(X[0]); pts.insert(X[1]); pts.insert(X[3]); pts.insert(X[5]);
+  } else if (X[3]-X[2] > X[1]-X[0] && X[3]-X[2] > X[5]-X[4]) {
+    pts.insert(X[2]); pts.insert(X[3]); pts.insert(X[1]); pts.insert(X[5]);
+  } else {
+    pts.insert(X[4]); pts.insert(X[5]); pts.insert(X[1]); pts.insert(X[3]);
+  }
+
+  int pp = 0;
+  while (pts.size() < 4) pts.insert(X[pp++]);
+
+  auto itr = pts.begin();
+  size_t c1 = *itr; itr++; size_t c2 = *itr; itr++;
+  size_t c3 = *itr; itr++; size_t c4 = *itr;
+
+#ifdef PSEUDO_ORIGIN
+  // Compute pseudo-origin, average the initial points
+  origin = Q[c1] + Q[c2] + Q[c3] + Q[c4];
+  origin[0] = origin[0] / 4;
+  origin[1] = origin[1] / 4;
+  origin[2] = origin[2] / 4;
+#endif
+
+  // Make initial facets
+  auto f0 = makeFacet(Q[c1], Q[c2], Q[c3]);
+  auto f1 = makeFacet(Q[c1], Q[c2], Q[c4]);
+  auto f2 = makeFacet(Q[c3], Q[c4], Q[c2]);
+  auto f3 = makeFacet(Q[c3], Q[c4], Q[c1]);
+
+  linkFacet(f0, f1, f2, f3);
+  linkFacet(f1, f0, f2, f3);
+  linkFacet(f2, f1, f0, f3);
+  linkFacet(f3, f1, f2, f0);
+
+#ifdef SERIAL
+  bool serial = true;
+#else
+  bool serial = false;
+#endif
+
+  if (Q.size() < 1000 || serial) {
+
+    for(size_t i=0; i<P.size(); i++) {
+      if (visible(f0, Q[i])) {
+	Q[i].attribute.seeFacet = f0;
+	f0->push_back(Q[i]);
+      } else if (visible(f1, Q[i])) {
+	Q[i].attribute.seeFacet = f1;
+	f1->push_back(Q[i]);
+      } else if (visible(f2, Q[i])) {
+	Q[i].attribute.seeFacet = f2;
+	f2->push_back(Q[i]);
+      } else if (visible(f3, Q[i])) {
+	Q[i].attribute.seeFacet = f3;
+	f3->push_back(Q[i]);
+      } else {
+	Q[i].attribute.seeFacet = nullptr;
+      }
+    }
+
+  } else {
+
+    auto flag = sequence<int>(P.size());
+    parallel_for(0, P.size(), [&](size_t i) {
+				if (visible(f0, Q[i])) {
+				  flag[i] = 0; Q[i].attribute.seeFacet = f0;
+				} else if (visible(f1, Q[i])) {
+				  flag[i] = 1; Q[i].attribute.seeFacet = f1;
+				} else if (visible(f2, Q[i])) {
+				  flag[i] = 2; Q[i].attribute.seeFacet = f2;
+				} else if (visible(f3, Q[i])) {
+				  flag[i] = 3; Q[i].attribute.seeFacet = f3;
+				} else {
+				  flag[i] = 4; Q[i].attribute.seeFacet = nullptr;
+				}
+			      });
+
+    auto chunks = split_k(5, &Q, flag);
+
+    f0->seeList = chunks[0];
+    f1->seeList = chunks[1];
+    f2->seeList = chunks[2];
+    f3->seeList = chunks[3];
+  }
+
+  auto context = new _hull<linkedFacet3d, vertex3d>(f0);
+
+  return new conflictList(context);
+}
+
 ////////////////////////////
 // Main
 ////////////////////////////
@@ -888,7 +1014,7 @@ sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
 
   timer t; t.start();
 
-  auto cg = makeInitialHull(P);
+  auto cg = makeInitialHull8(P);
   _hull<linkedFacet3d, vertex3d> *context = cg->context;
 
   double initTime = t.stop();
@@ -906,23 +1032,23 @@ sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
   loopStart:
     // Serial
 
+#ifdef WRITE
+    context->writeHull();
+#endif
+
     //vertex3d apex = cg->randomApex();
     vertex3d apex = cg->furthestApex();
 
 #ifdef VERBOSE
     cout << ">>>>>>>>>" << endl;
     context->printHull();
-    cout << "apex chosen = " << apex << endl;
+    cout << "apex chosen = " << apex.attribute.i << endl;
 #endif
     apexTime += t.get_next();
 
     if (apex.isEmpty()) break;
 
     round ++;
-
-#ifdef WRITE
-    context->writeHull();
-#endif
 
     auto frontier = cg->computeFrontier(apex);
     auto frontierEdges = get<0>(frontier);
@@ -942,9 +1068,11 @@ sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
     }
 
 #ifdef VERBOSE
+    cout << "visible = " << *apex.attribute.seeFacet << endl;
+
     cout << "frontier = ";
     for(auto e: *frontierEdges) {
-      cout << e.a << "," << e.b << " ";
+      cout << e.a.attribute.i << "," << e.b.attribute.i << " ";
     }
     cout << endl;
 
@@ -1039,7 +1167,7 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
 
   timer t; t.start();
 
-  auto cg = makeInitialHull(P);
+  auto cg = makeInitialHull8(P);
   _hull<linkedFacet3d, vertex3d> *context = cg->context;
 
   double initTime = t.stop();
