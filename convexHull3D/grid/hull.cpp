@@ -6,8 +6,8 @@
 #include "incremental.h"
 #include "hull.h"
 
-#include <iostream>
-#include <fstream>
+// #include <iostream>
+// #include <fstream>
 
 using namespace std;
 
@@ -54,10 +54,6 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
   //     myfile << P[p] << p << endl;
   //   myfile.close();
   // }
-
-  // auto HH = incrementHull3dSerial<pargeo::fpoint<3>>(make_slice(P));
-  // cout << HH.size() << endl;
-  // return parlay::sequence<facet3d<pargeo::fpoint<3>>>();
 
   timer t; t.start();
 
