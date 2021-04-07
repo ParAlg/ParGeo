@@ -7,6 +7,7 @@ from matplotlib.collections import LineCollection
 from pygraph import delaunay_graph
 from pygraph import gabriel_graph
 from pygraph import knn_graph
+from pygraph import beta_skeleton
 
 start_time = None
 
@@ -43,3 +44,7 @@ test(points, "rand-gabriel-100", gabriel_graph, True)
 test(points, "rand-knn1-100", knn_graph, True, 1)
 test(points, "rand-knn2-100", knn_graph, True, 2)
 test(points, "rand-knn10-100", knn_graph, True, 10)
+test(points, "beta-skeleton0.5-100", beta_skeleton, True, 0.5)
+test(points, "beta-skeleton1-100", beta_skeleton, True, 1)
+test(points, "beta-skeleton2-100", beta_skeleton, True, 2)
+test(points, "beta-skeleton5-100", beta_skeleton, True, 5)
