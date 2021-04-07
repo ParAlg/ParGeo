@@ -5,38 +5,9 @@
 #include "common/geometry.h"
 #include "incremental.h"
 #include "hull.h"
-
-// #include <iostream>
-// #include <fstream>
+#include "grid.h"
 
 using namespace std;
-
-inline tuple<short,short,short> unpack(size_t g) {
-  return make_tuple((short)g, (short)(g>>16), (short)(g>>32));
-}
-
-inline size_t pack(pargeo::fpoint<3> p, pargeo::fpoint<3>::floatT gsize) {
-  size_t g = 0;
-  for(int i=0; i<3; ++i) {
-    unsigned short tmp = floor(p[i] / gsize);
-    size_t tmp2 = 0;
-    tmp2 += tmp;
-    g |= tmp2 << (16*i);
-  }
-  return g;
-}
-
-struct gridAtt3d {
-  size_t id;
-
-  gridAtt3d() {}
-
-  gridAtt3d(pargeo::fpoint<3> p, pargeo::fpoint<3>::floatT gsize) {
-    id = pack(p, gsize);
-  }
-};
-
-using gridpt3d = pargeo::_point<3, pointT::floatT, pointT::floatT, gridAtt3d>;
 
 parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &P) {
   using namespace std;
@@ -46,18 +17,23 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
   size_t n = P.size();
   cout << "#-points = " << n << endl;
 
-  // {
-  //   ofstream myfile;
-  //   myfile.open("hull.txt", std::ofstream::trunc); myfile.close();
-  //   myfile.open("point.txt", std::ofstream::trunc);
-  //   for(size_t p=0; p<P.size(); ++p)
-  //     myfile << P[p] << p << endl;
-  //   myfile.close();
-  // }
-
   timer t; t.start();
 
-  floatT gsize = 300; // todo tune
+  // Estimate the grid size
+
+  std::atomic<floatT> extrema[6];
+  parallel_for(0, P.size(), [&](size_t i){
+			      write_max(&extrema[0], P[i][0], std::less<floatT>());
+			      write_min(&extrema[1], P[i][0], std::less<floatT>());
+			      write_max(&extrema[2], P[i][1], std::less<floatT>());
+			      write_min(&extrema[3], P[i][1], std::less<floatT>());
+			      write_max(&extrema[4], P[i][2], std::less<floatT>());
+			      write_min(&extrema[5], P[i][2], std::less<floatT>());
+			    });
+  floatT gsize = max(extrema[4]-extrema[5],
+		     max((extrema[2]-extrema[3]),(extrema[1]-extrema[0]))) / 10;
+
+  cout << "estimation-time = " << t.get_next() << endl;
 
   hashtable<hash_numeric<size_t>> table(P.size(), hash_numeric<size_t>());
   auto gridPoints = sequence<gridpt3d>(P.size());
@@ -72,20 +48,19 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
 				     else return false;
 				   });
 
-  cout << "#-sample-1 = " << sample.size() << endl;
+  cout << "#-grids = " << sample.size() << endl;
 
-  cout << "sampling-1-time = " << t.get_next() << endl;
+  cout << "compute-grid-time = " << t.get_next() << endl;
 
   sequence<facet3d<gridpt3d>> H = incrementHull3dSerial<gridpt3d>(make_slice(sample));
   //auto H = incrementHull3d<pargeo::fpoint<3>>(make_slice(P));
 
-  cout << "hull-1-time = " << t.get_next() << endl;
+  cout << "compute-hull-time = " << t.get_next() << endl;
 
-  cout << "hull-1-size = " << H.size() << endl;
+  cout << "hull-size = " << H.size() << endl;
 
-  // Put the points back, but only part of them
+  // Returns true if the box intersect with hull
   auto boxCrossHull = [&](gridpt3d* box) {
-			// find out using H and box
 			// 0: in
 			// 1: out
 			int ok = 0;
@@ -112,9 +87,6 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
 
   hashtable<hash_numeric<size_t>> table2(grids.size(), hash_numeric<size_t>());
 
-  // ofstream myfile2;
-  // myfile2.open("other.txt", std::ofstream::trunc);
-
   auto remainingBox =
     parlay::filter(make_slice(grids), [&](size_t g) {
 					gridpt3d box[8];
@@ -131,8 +103,6 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
 					box[7] = box[0]; box[7][0]+=gsize; box[7][1]+=gsize; box[7][2]+=gsize;
 					if (boxCrossHull(box)) {
 					  table2.insert(g);
-					  // for(int i=0; i<8; ++i)
-					  //   myfile2 << box[i][0] << " " << box[i][1] << " " << box[i][2] << endl;
 					  return true;
 					} else {
 					  return false;
@@ -140,30 +110,21 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
 				      });
 
 
-  // myfile2.close();
-  cout << "#-grids-remain = " << table2.count() << endl;
-
   auto sample2 =
     parlay::filter(make_slice(gridPoints), [&](gridpt3d p) {
 					     if (table2.find(p.attribute.id) != -1) return true;
 					     else return false;
 					   });
 
- // {
- //    ofstream myfile;
- //    myfile.open("hull.txt", std::ofstream::trunc);
- //    for(auto x: sample2)
- //      myfile << x[0] << " " << x[1] << " " << x[2] << endl;
- //    myfile.close();
- //  }
-  cout << "#-points-remain = " << sample2.size() << endl;
+  cout << "filtering-time = " << t.get_next() << endl;
 
-  cout << "grid-2-time = " << t.get_next() << endl;
+  cout << "#-grids = " << table2.count() << endl;
+  cout << "#-rem-points = " << sample2.size() << endl;
 
   sequence<facet3d<gridpt3d>> H2 = incrementHull3dSerial<gridpt3d>(make_slice(sample2));
   cout << H2.size() << endl;
 
-  cout << "hull-2-time = " << t.get_next() << endl;
+  cout << "hull-time = " << t.get_next() << endl;
 
   return sequence<facet3d<pargeo::fpoint<3>>>(); //todo
 }
