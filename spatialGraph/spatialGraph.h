@@ -39,4 +39,4 @@ template<int dim>
 parlay::sequence<edge> gabrielGraph(parlay::sequence<pargeo::point<dim>> &S);
 
 template<int dim>
-parlay::sequence<edge> betaSkeleton(parlay::sequence<pargeo::point<dim>> &S, double b);
+parlay::sequence<edge> betaSkeleton(parlay::sequence<pargeo::point<dim>> &S, double);
