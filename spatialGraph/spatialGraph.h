@@ -30,10 +30,13 @@ namespace sgInternal {
 using edge = sgInternal::_edge;
 
 template<int dim>
+parlay::sequence<edge> knnGraph(parlay::sequence<pargeo::point<dim>> &S, size_t k);
+
+template<int dim>
 parlay::sequence<edge> delaunayGraph(parlay::sequence<pargeo::point<dim>> &S);
 
 template<int dim>
 parlay::sequence<edge> gabrielGraph(parlay::sequence<pargeo::point<dim>> &S);
 
 template<int dim>
-parlay::sequence<edge> knnGraph(parlay::sequence<pargeo::point<dim>> &S, size_t k);
+parlay::sequence<edge> betaSkeleton(parlay::sequence<pargeo::point<dim>> &S, double b);
