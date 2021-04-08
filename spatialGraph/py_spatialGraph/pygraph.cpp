@@ -40,7 +40,7 @@ py::array_t<size_t> py_delaunay(py::array_t<double, py::array::c_style | py::arr
     std::cout << "::copy-in-time = " << t.get_next() << std::endl;
 #endif
 
-    parlay::sequence<edge> result_vec = delaunayGraph<2>(array_vec);
+    parlay::sequence<pargeo::edge> result_vec = pargeo::delaunayGraph<2>(array_vec);
 
 #ifdef VERBOSE
     std::cout << "::compute-time = " << t.get_next() << std::endl;
@@ -86,7 +86,7 @@ py::array_t<size_t> py_gabriel(py::array_t<double, py::array::c_style | py::arra
     std::cout << "::copy-in-time = " << t.get_next() << std::endl;
 #endif
 
-    parlay::sequence<edge> result_vec = gabrielGraph<2>(array_vec);
+    parlay::sequence<pargeo::edge> result_vec = pargeo::gabrielGraph<2>(array_vec);
 
 #ifdef VERBOSE
     std::cout << "::compute-time = " << t.get_next() << std::endl;
@@ -132,7 +132,7 @@ py::array_t<size_t> py_skeleton(py::array_t<double, py::array::c_style | py::arr
     std::cout << "::copy-in-time = " << t.get_next() << std::endl;
 #endif
 
-    parlay::sequence<edge> result_vec = betaSkeleton<2>(array_vec, beta);
+    parlay::sequence<pargeo::edge> result_vec = pargeo::betaSkeleton<2>(array_vec, beta);
 
 #ifdef VERBOSE
     std::cout << "::compute-time = " << t.get_next() << std::endl;
@@ -178,7 +178,7 @@ py::array_t<size_t> py_knngraph(py::array_t<double, py::array::c_style | py::arr
     std::cout << "::copy-in-time = " << t.get_next() << std::endl;
 #endif
 
-    parlay::sequence<edge> result_vec = knnGraph<2>(array_vec, k);
+    parlay::sequence<pargeo::edge> result_vec = pargeo::knnGraph<2>(array_vec, k);
 
 #ifdef VERBOSE
     std::cout << "::compute-time = " << t.get_next() << std::endl;

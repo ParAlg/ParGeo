@@ -9,7 +9,8 @@
 #include "incremental/delaunay.h"
 
 template<int dim>
-parlay::sequence<edge> delaunayGraph(parlay::sequence<pargeo::point<dim>> &P) {
+parlay::sequence<pargeo::edge> pargeo::delaunayGraph(parlay::sequence<pargeo::point<dim>> &P) {
+  using namespace pbbsbench;
   using namespace parlay;
   using namespace std;
 
@@ -35,7 +36,7 @@ parlay::sequence<edge> delaunayGraph(parlay::sequence<pargeo::point<dim>> &P) {
 
   size_t n = P.size();
   size_t nt = Tri.numTriangles();
-  sequence<edge> edges(nt*3+1);
+  sequence<pargeo::edge> edges(nt*3+1);
   edges[nt*3] = edge();
 
   // Process a triangle
@@ -74,7 +75,7 @@ parlay::sequence<edge> delaunayGraph(parlay::sequence<pargeo::point<dim>> &P) {
 				    flag[i] = 0;
 				});
 
-  sequence<edge> edges2 = pack(edges, flag);
+  sequence<pargeo::edge> edges2 = pack(edges, flag);
 
 #ifndef SILENT
   cout << "graph-gen-time = " << t.stop() << endl;
@@ -84,5 +85,5 @@ parlay::sequence<edge> delaunayGraph(parlay::sequence<pargeo::point<dim>> &P) {
   return edges2;
 }
 
-template parlay::sequence<edge> delaunayGraph<2>(parlay::sequence<pargeo::point<2>> &);
-template parlay::sequence<edge> delaunayGraph<3>(parlay::sequence<pargeo::point<3>> &);
+template parlay::sequence<pargeo::edge> pargeo::delaunayGraph<2>(parlay::sequence<pargeo::point<2>> &);
+template parlay::sequence<pargeo::edge> pargeo::delaunayGraph<3>(parlay::sequence<pargeo::point<3>> &);

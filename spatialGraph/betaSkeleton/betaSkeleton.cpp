@@ -7,12 +7,11 @@
 #include "common/get_time.h"
 #include "spatialGraph.h"
 #include "kdt.h"
-#include "incremental/delaunay.h"
 
 template<int dim>
-parlay::sequence<edge> betaSkeleton(parlay::sequence<pargeo::point<dim>> &P, double beta) {
+parlay::sequence<pargeo::edge> pargeo::betaSkeleton(parlay::sequence<pargeo::point<dim>> &P, double beta) {
   using namespace parlay;
-  using namespace kdt;
+  using namespace skeletonKdt;
   using namespace std;
   using pt = pargeo::point<dim>;
 
@@ -26,7 +25,7 @@ parlay::sequence<edge> betaSkeleton(parlay::sequence<pargeo::point<dim>> &P, dou
   cout << "beta = " << beta << endl;
   timer t; t.start();
 #endif
-  sequence<edge> dedges = delaunayGraph<dim>(P);
+  sequence<pargeo::edge> dedges = pargeo::delaunayGraph<dim>(P);
 #ifndef SILENT
   cout << "#delaunay-edges = " << dedges.size() << endl;
   cout << "delaunay-time = " << t.get_next() << endl;
@@ -56,5 +55,5 @@ parlay::sequence<edge> betaSkeleton(parlay::sequence<pargeo::point<dim>> &P, dou
   return skeleton;
 }
 
-template parlay::sequence<edge> betaSkeleton<2>(parlay::sequence<pargeo::point<2>> &, double);
-template parlay::sequence<edge> betaSkeleton<3>(parlay::sequence<pargeo::point<3>> &, double);
+template parlay::sequence<pargeo::edge> pargeo::betaSkeleton<2>(parlay::sequence<pargeo::point<2>> &, double);
+template parlay::sequence<pargeo::edge> pargeo::betaSkeleton<3>(parlay::sequence<pargeo::point<3>> &, double);

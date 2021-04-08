@@ -37,7 +37,7 @@ py::array_t<size_t> py_kdtknn(py::array_t<double, py::array::c_style | py::array
 #ifdef VERBOSE
     std::cout << "::copy-in-time = " << t.get_next() << std::endl;
 #endif
-    parlay::sequence<size_t> result_vec = kdtKnn::kdtKnn<2, pargeo::point<2>>(array_vec, k);
+    parlay::sequence<size_t> result_vec = pargeo::kdtKnn::kdtKnn<2, pargeo::point<2>>(array_vec, k);
 #ifdef VERBOSE
     std::cout << "::knn-time = " << t.get_next() << std::endl;
 #endif
@@ -58,7 +58,7 @@ py::array_t<size_t> py_kdtknn(py::array_t<double, py::array::c_style | py::array
 #ifdef VERBOSE
     std::cout << "::copy-in-time = " << t.get_next() << std::endl;
 #endif
-    parlay::sequence<size_t> result_vec = kdtKnn::kdtKnn<3, pargeo::point<3>>(array_vec, k);
+    parlay::sequence<size_t> result_vec = pargeo::kdtKnn::kdtKnn<3, pargeo::point<3>>(array_vec, k);
 #ifdef VERBOSE
     std::cout << "::knn-time = " << t.get_next() << std::endl;
 #endif

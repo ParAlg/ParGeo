@@ -30,6 +30,8 @@
 #include "neighbors.h"
 #include "delaunay.h"
 
+namespace pbbsbench {
+
 using parlay::parallel_for;
 using parlay::sequence;
 using parlay::delayed_seq;
@@ -363,3 +365,5 @@ triangles<pointT> delaunay(sequence<pointT> &P) {
 #endif
   return triangles<pointT>(result_points, result_triangles);
 }
+
+} // End name space pbbsbench

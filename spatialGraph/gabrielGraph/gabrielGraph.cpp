@@ -9,9 +9,10 @@
 #include "incremental/delaunay.h"
 
 template<int dim>
-parlay::sequence<edge> gabrielGraph(parlay::sequence<pargeo::point<dim>> &P) {
+parlay::sequence<pargeo::edge> pargeo::gabrielGraph(parlay::sequence<pargeo::point<dim>> &P) {
   using namespace parlay;
   using namespace std;
+  using namespace pbbsbench;
 
   if (dim != 2)
     throw std::runtime_error("Error, gabriel graph only supports 2 dimensional inputs.");
@@ -98,7 +99,7 @@ parlay::sequence<edge> gabrielGraph(parlay::sequence<pargeo::point<dim>> &P) {
   size_t ne = scan_inplace(flag.cut(0,nt*3));
   flag[nt*3] = ne;
 
-  sequence<edge> edges2(ne);
+  sequence<pargeo::edge> edges2(ne);
   parallel_for(0, nt*3, [&](size_t i) {
 			if (flag[i] != flag[i+1]) {
 			  edges2[flag[i]] = get<0>(edges[i]);
@@ -119,5 +120,5 @@ parlay::sequence<edge> gabrielGraph(parlay::sequence<pargeo::point<dim>> &P) {
   return edges2;
 }
 
-template parlay::sequence<edge> gabrielGraph<2>(parlay::sequence<pargeo::point<2>> &);
-template parlay::sequence<edge> gabrielGraph<3>(parlay::sequence<pargeo::point<3>> &);
+template parlay::sequence<pargeo::edge> pargeo::gabrielGraph<2>(parlay::sequence<pargeo::point<2>> &);
+template parlay::sequence<pargeo::edge> pargeo::gabrielGraph<3>(parlay::sequence<pargeo::point<3>> &);

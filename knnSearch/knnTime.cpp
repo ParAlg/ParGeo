@@ -9,6 +9,7 @@
 
 using namespace std;
 using namespace benchIO;
+using namespace pargeo;
 
 template<int dim>
 void timeKnn(parlay::sequence<pargeo::point<dim>> &P, size_t k, int rounds, char const *outFile) {

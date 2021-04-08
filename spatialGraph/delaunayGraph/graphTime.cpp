@@ -9,6 +9,7 @@
 
 using namespace std;
 using namespace benchIO;
+using namespace pargeo;
 
 template<int dim>
 void timeGraph(parlay::sequence<pargeo::point<dim>> &P, int rounds, char const *outFile) {

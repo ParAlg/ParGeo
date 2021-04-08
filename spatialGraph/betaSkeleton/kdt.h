@@ -20,8 +20,7 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#ifndef KDT_H
-#define KDT_H
+#pragma once
 
 #include <limits> // numeric_limits
 //#include <algorithm> // nth_element
@@ -29,7 +28,7 @@
 #include "parlay/sequence.h"
 #include "geometry/point.h"
 
-namespace kdt {
+namespace skeletonKdt {
 
   using namespace std;
 
@@ -326,5 +325,3 @@ namespace kdt {
   }
 
 } // End namespace
-
-#endif

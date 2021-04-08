@@ -30,6 +30,7 @@
 #include "delaunay.h"
 using namespace std;
 using namespace benchIO;
+using namespace pbbsbench;
 
 // *************************************************************
 //  TIMING

@@ -4,6 +4,8 @@
 #include "parlay/primitives.h" // ?
 #include "parlay/sequence.h"
 
+namespace pargeo {
+
 namespace sgInternal {
   struct _edge {
     size_t u,v;
@@ -40,3 +42,5 @@ parlay::sequence<edge> gabrielGraph(parlay::sequence<pargeo::point<dim>> &S);
 
 template<int dim>
 parlay::sequence<edge> betaSkeleton(parlay::sequence<pargeo::point<dim>> &S, double);
+
+} // End namespace pargeo

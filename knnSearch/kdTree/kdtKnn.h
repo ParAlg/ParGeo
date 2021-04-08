@@ -20,14 +20,15 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#ifndef KDT_KNN_H
-#define KDT_KNN_H
+#pragma once
 
 #include <limits> // numeric_limits
 #include <algorithm> // nth_element
 #include "parlay/parallel.h"
 #include "parlay/sequence.h"
 #include "geometry/point.h"
+
+namespace pargeo {
 
 namespace knnBuf {
 
@@ -433,4 +434,4 @@ namespace kdtKnn {
   }
 }
 
-#endif
+} // End namespace pargeo

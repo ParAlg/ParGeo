@@ -26,6 +26,8 @@
 #include "common/geometry.h"
 #include "common/get_time.h"
 
+namespace pbbsbench {
+
 // vtx must support v->pt
 // and v->pt must support pt.dimension(), pt[i],
 //    (pt1 - pt2).Length(), pt1 + (pt2 - pt3)
@@ -299,3 +301,5 @@ private:
   }
   
 };
+
+} // End namespace pbbsbench

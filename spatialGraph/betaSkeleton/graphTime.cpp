@@ -9,12 +9,13 @@
 
 using namespace std;
 using namespace benchIO;
+using namespace pargeo;
 
 template<int dim>
 void timeGraph(parlay::sequence<pargeo::point<dim>> &P, double b, int rounds, char const *outFile) {
   timer t; t.start();
   for(int i=0; i<rounds; ++i) {
-    auto I = betaSkeleton<dim>(P, b);
+    auto I = pargeo::betaSkeleton<dim>(P, b);
     cout << "round-time = " << t.get_next() << endl;
   }
   t.stop();

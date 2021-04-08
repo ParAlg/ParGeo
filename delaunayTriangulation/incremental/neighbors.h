@@ -27,6 +27,8 @@
 #include "common/geometry.h"
 #include "oct_tree.h"
 
+namespace pbbsbench {
+
 // A k-nearest neighbor structure
 // requires vertexT to have pointT and vectT typedefs
 template <class vtx, int max_k>
@@ -199,3 +201,5 @@ void ANN(parlay::sequence<vtx*> &v, int k) {
   }
   t.next("delete tree");
 }
+
+} // End namespace pbbsbench
