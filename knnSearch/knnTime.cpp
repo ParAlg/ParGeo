@@ -26,7 +26,7 @@ void timeKnn(parlay::sequence<pargeo::point<dim>> &P, size_t k, int rounds, char
 int main(int argc, char* argv[]) {
   commandLine P(argc,argv,"[-o <outFile>] [-r <rounds>] <inFile>");
   char* iFile = P.getArgument(0);
-  size_t k = P.getOptionIntValue("-k",2);
+  size_t k = P.getOptionIntValue("-k",1);
   char* oFile = P.getOptionValue("-o");
   int rounds = P.getOptionIntValue("-r",1);
 

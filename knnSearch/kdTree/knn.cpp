@@ -9,13 +9,13 @@ using namespace std;
 
 template<int dim>
 parlay::sequence<size_t> pargeo::knn(parlay::sequence<pargeo::point<dim>> &P, size_t k) {
-  if (k < 2 || k > P.size()) {
-    cout << "Error, k = " << k << " k must range from 2 to #-data-points, abort" << endl;
+  if (k < 1 || k > P.size()-1) {
+    cout << "Error, k = " << k << " k must range from 1 to #-data-points-1, abort" << endl;
     abort();
   }
 
-  parlay::sequence<size_t> nnIdx = kdtKnn::kdtKnn<dim, pargeo::point<dim>>(P, k);
-  //parlay::sequence<size_t> nnIdx2 = kdtKnn::bruteforceKnn<dim, pargeo::point<dim>>(P, k);
+  parlay::sequence<size_t> nnIdx = kdtKnn::kdtKnn<dim, pargeo::point<dim>>(P, k+1);
+  //parlay::sequence<size_t> nnIdx2 = kdtKnn::bruteforceKnn<dim, pargeo::point<dim>>(P, k+1);
 
   return nnIdx;
 }
