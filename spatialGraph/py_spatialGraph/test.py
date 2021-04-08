@@ -4,10 +4,10 @@ from datetime import datetime
 from matplotlib import pyplot as plt
 from matplotlib.collections import LineCollection
 
-from pygraph import delaunay_graph
-from pygraph import gabriel_graph
-from pygraph import knn_graph
-from pygraph import beta_skeleton
+from geograph import delaunay_graph
+from geograph import gabriel_graph
+from geograph import knn_graph
+from geograph import beta_skeleton
 
 start_time = None
 
