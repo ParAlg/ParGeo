@@ -1,1 +1,1 @@
-../../KNN/kdTree/kdtKnn.h
+../../knnSearch/kdTree/kdtKnn.h

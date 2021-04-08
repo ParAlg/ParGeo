@@ -1,1 +1,0 @@
-../../delaunayTriangulation/incrementalDelaunay/delaunayQs.h
