@@ -1,4 +1,6 @@
-//#define VERBOSE
+#ifndef SILENT
+#define VERBOSE
+#endif
 
 #ifdef VERBOSE
 #include "common/get_time.h"

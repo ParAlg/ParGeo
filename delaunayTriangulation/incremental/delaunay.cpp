@@ -334,12 +334,16 @@ triangles<pointT> delaunay(sequence<pointT> &P) {
   auto V = tabulate(n, [&] (size_t i) -> vertex_t* {
 			 return &Vertices[i];});
   vertex_t* v0 = &Vertices[n];
-  
+
+#ifndef SILENT
   t.next("initialize");
+#endif
   // main loop to add all points
 
   incrementally_add_points(V, v0);
+#ifndef SILENT
   t.next("add points");
+#endif
 
   if (CHECK) check_delaunay(Triangles, boundary_size);
 
@@ -354,8 +358,8 @@ triangles<pointT> delaunay(sequence<pointT> &P) {
     pointT r = (i < n) ? P[i] : Vertices[i].pt;
     //cout << r[0] << ", " << r[1] << endl;
     return r;});
-
+#ifndef SILENT
   t.next("generate output");
-
+#endif
   return triangles<pointT>(result_points, result_triangles);
 }

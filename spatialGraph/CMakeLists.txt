@@ -5,11 +5,16 @@ project(spatialGraph)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+option(NO_OUTPUT "No output" ON)
 option(USE_PARALLEL "Parallel scheduler" ON)
 option(USE_WARNINGS "Warning flags" OFF)
 
 if (USE_WARNINGS)
   set(EXTRA_FLAGS "-Wall -Wextra")
+endif()
+
+if (NO_OUTPUT)
+  set(EXTRA_FLAGS "-DSILENT ${EXTRA_FLAGS}")
 endif()
 
 if(USE_PARALLEL)

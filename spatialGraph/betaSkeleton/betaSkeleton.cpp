@@ -22,20 +22,21 @@ parlay::sequence<edge> betaSkeleton(parlay::sequence<pargeo::point<dim>> &P, dou
   if (beta < 0)
     throw std::runtime_error("Error, beta skeleton only takes beta >= 0.");
 
+#ifndef SILENT
   cout << "beta = " << beta << endl;
-
   timer t; t.start();
+#endif
   sequence<edge> dedges = delaunayGraph<dim>(P);
-
+#ifndef SILENT
   cout << "#delaunay-edges = " << dedges.size() << endl;
   cout << "delaunay-time = " << t.get_next() << endl;
-
+#endif
   // Take a subset of qualifying edges
 
   kdNode<dim, pt>* tree = buildKdt<dim, pt>(P, true);
-
+#ifndef SILENT
   cout << "build-tree-time = " << t.get_next() << endl;
-
+#endif
   auto skeleton = parlay::filter(dedges,
 				 [&](edge e) {
 				   if (beta < 1) {
@@ -48,10 +49,10 @@ parlay::sequence<edge> betaSkeleton(parlay::sequence<pargeo::point<dim>> &P, dou
 				     return !tree->nonEmptyLune(c1, r, c2, r, &P[e.u], &P[e.v]);
 				   }
 				 });
-
+#ifndef SILENT
   cout << "edge-pruning-time = " << t.stop() << endl;
   cout << "#edges = " << skeleton.size() << endl;
-
+#endif
   return skeleton;
 }
 

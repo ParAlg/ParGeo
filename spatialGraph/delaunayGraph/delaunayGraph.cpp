@@ -15,20 +15,22 @@ parlay::sequence<edge> delaunayGraph(parlay::sequence<pargeo::point<dim>> &P) {
 
   if (dim != 2)
     throw std::runtime_error("Error, delaunay graph only supports 2 dimensional inputs.");
-
+#ifndef SILENT
   timer t; t.start();
-
+#endif
   // A pbbsbench point data structure
   sequence<point2d<double>> P2d(P.size());
   parallel_for(0, P.size(), [&](size_t i) {
 			      P2d[i].x = P[i][0];
 			      P2d[i].y = P[i][1];
 			    });
+#ifndef SILENT
   cout << "data-convert-time = " << t.get_next() << endl;
-
+#endif
   triangles<point2d<double>> Tri = delaunay(P2d);
+#ifndef SILENT
   cout << "triangulation-time = " << t.get_next() << endl;
-
+#endif
   using pt = pargeo::point<dim>;
 
   size_t n = P.size();
@@ -74,10 +76,11 @@ parlay::sequence<edge> delaunayGraph(parlay::sequence<pargeo::point<dim>> &P) {
 
   sequence<edge> edges2 = pack(edges, flag);
 
+#ifndef SILENT
   cout << "graph-gen-time = " << t.stop() << endl;
-
   cout << "#-triangles = " << nt << endl;
   cout << "#delaunay-edges = " << edges2.size() << endl;
+#endif
   return edges2;
 }
 

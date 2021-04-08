@@ -15,7 +15,7 @@ parlay::sequence<edge> knnGraph(parlay::sequence<pargeo::point<dim>> &P, size_t 
     throw std::runtime_error("k must range from 1 to n-1");
 
   // Call knn
-  parlay::sequence<size_t> nnIdx = kdtKnn::bruteforceKnn<dim, pargeo::point<dim>>(P, k+1);
+  parlay::sequence<size_t> nnIdx = kdtKnn::kdtKnn<dim, pargeo::point<dim>>(P, k+1);
 
   // Convert to edge list
   auto edges = parlay::sequence<edge>(k * P.size());
