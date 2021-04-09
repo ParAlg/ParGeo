@@ -23,7 +23,6 @@ def test(points, name, gen, savePlot = False, k = -1):
   end_time = datetime.now()
   print("graph-gen-time: {}".format(end_time - start_time))
   print("#-edges =", len(edges)/2)
-  edges.shape = (-1, 2) # reshape to 2 x #edges
 
   if savePlot:
     lc = LineCollection(points[edges])

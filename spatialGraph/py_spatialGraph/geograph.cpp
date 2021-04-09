@@ -45,14 +45,20 @@ py::array_t<size_t> py_delaunay(py::array_t<double, py::array::c_style | py::arr
 #ifdef VERBOSE
     std::cout << "::compute-time = " << t.get_next() << std::endl;
 #endif
-    auto result = py::array_t<size_t>(2 * result_vec.size());
-    auto result_buffer = result.request();
-    size_t *result_ptr = (size_t *) result_buffer.ptr;
-    std::memcpy(result_ptr,result_vec.data(),result_vec.size()*sizeof(size_t)*2);
-#ifdef VERBOSE
-    std::cout << "::copy-out-time = " << t.stop() << std::endl;
-#endif
-    return result;
+
+    ssize_t ndim = 2;
+    std::vector<ssize_t> shape = { (ssize_t) result_vec.size(), 2 };
+    std::vector<ssize_t> strides = { sizeof(size_t) * 2 , sizeof(size_t) };
+
+    // return a 2d numpy array
+    return py::array(py::buffer_info(result_vec.data(),                       /* data as contiguous array  */
+				     sizeof(size_t),                          /* size of one scalar        */
+				     py::format_descriptor<size_t>::format(), /* data type                 */
+				     2,                                       /* number of dimensions      */
+				     shape,                                   /* shape of the matrix       */
+				     strides                                  /* strides for each axis     */
+				     ));
+
   } else {
     throw std::runtime_error("Only supports 2d points.");
   }
@@ -91,14 +97,20 @@ py::array_t<size_t> py_gabriel(py::array_t<double, py::array::c_style | py::arra
 #ifdef VERBOSE
     std::cout << "::compute-time = " << t.get_next() << std::endl;
 #endif
-    auto result = py::array_t<size_t>(2 * result_vec.size());
-    auto result_buffer = result.request();
-    size_t *result_ptr = (size_t *) result_buffer.ptr;
-    std::memcpy(result_ptr,result_vec.data(),result_vec.size()*sizeof(size_t)*2);
-#ifdef VERBOSE
-    std::cout << "::copy-out-time = " << t.stop() << std::endl;
-#endif
-    return result;
+
+    ssize_t ndim = 2;
+    std::vector<ssize_t> shape = { (ssize_t)result_vec.size(), 2 };
+    std::vector<ssize_t> strides = { sizeof(size_t) * 2 , sizeof(size_t) };
+
+    // return a 2d numpy array
+    return py::array(py::buffer_info(result_vec.data(),                       /* data as contiguous array  */
+				     sizeof(size_t),                          /* size of one scalar        */
+				     py::format_descriptor<size_t>::format(), /* data type                 */
+				     2,                                       /* number of dimensions      */
+				     shape,                                   /* shape of the matrix       */
+				     strides                                  /* strides for each axis     */
+				     ));
+
   } else {
     throw std::runtime_error("Only supports 2d points.");
   }
@@ -137,14 +149,20 @@ py::array_t<size_t> py_skeleton(py::array_t<double, py::array::c_style | py::arr
 #ifdef VERBOSE
     std::cout << "::compute-time = " << t.get_next() << std::endl;
 #endif
-    auto result = py::array_t<size_t>(2 * result_vec.size());
-    auto result_buffer = result.request();
-    size_t *result_ptr = (size_t *) result_buffer.ptr;
-    std::memcpy(result_ptr,result_vec.data(),result_vec.size()*sizeof(size_t)*2);
-#ifdef VERBOSE
-    std::cout << "::copy-out-time = " << t.stop() << std::endl;
-#endif
-    return result;
+
+    ssize_t ndim = 2;
+    std::vector<ssize_t> shape = { (ssize_t)result_vec.size(), 2 };
+    std::vector<ssize_t> strides = { sizeof(size_t) * 2 , sizeof(size_t) };
+
+    // return a 2d numpy array
+    return py::array(py::buffer_info(result_vec.data(),                       /* data as contiguous array  */
+				     sizeof(size_t),                          /* size of one scalar        */
+				     py::format_descriptor<size_t>::format(), /* data type                 */
+				     2,                                       /* number of dimensions      */
+				     shape,                                   /* shape of the matrix       */
+				     strides                                  /* strides for each axis     */
+				     ));
+
   } else {
     throw std::runtime_error("Only supports 2d points.");
   }
@@ -183,14 +201,19 @@ py::array_t<size_t> py_knngraph(py::array_t<double, py::array::c_style | py::arr
 #ifdef VERBOSE
     std::cout << "::compute-time = " << t.get_next() << std::endl;
 #endif
-    auto result = py::array_t<size_t>(2 * result_vec.size());
-    auto result_buffer = result.request();
-    size_t *result_ptr = (size_t *) result_buffer.ptr;
-    std::memcpy(result_ptr,result_vec.data(),result_vec.size()*sizeof(size_t)*2);
-#ifdef VERBOSE
-    std::cout << "::copy-out-time = " << t.stop() << std::endl;
-#endif
-    return result;
+
+    ssize_t ndim = 2;
+    std::vector<ssize_t> shape = { (ssize_t)result_vec.size(), 2 };
+    std::vector<ssize_t> strides = { sizeof(size_t) * 2 , sizeof(size_t) };
+
+    // return a 2d numpy array
+    return py::array(py::buffer_info(result_vec.data(),                       /* data as contiguous array  */
+				     sizeof(size_t),                          /* size of one scalar        */
+				     py::format_descriptor<size_t>::format(), /* data type                 */
+				     2,                                       /* number of dimensions      */
+				     shape,                                   /* shape of the matrix       */
+				     strides                                  /* strides for each axis     */
+				     ));
   } else {
     throw std::runtime_error("Only supports 2d points.");
   }
