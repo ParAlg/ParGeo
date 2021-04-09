@@ -1,9 +1,7 @@
-# pargeo
+# Pargeo: A Library for Parallal Algorithms in Computational Geometry
 
-This repository uses a submodule (parlaylib). To pull the submodule, in pargeo:
+Pargeo uses parlaylib and pybind11. To initialize them as submodule:
 
 \> git submodule init
 
 \> git submodule update
-
-This version of parlaylib has minor updates on top of the cmuparlay version, from which the changes will be synced-over regularly.
