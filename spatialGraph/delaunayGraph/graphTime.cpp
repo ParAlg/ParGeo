@@ -4,11 +4,11 @@
 #include "geometry/point.h"
 #include "common/get_time.h"
 #include "common/geometryIO.h"
+#include "common/graphIO.h"
 #include "common/parse_command_line.h"
 #include "spatialGraph.h"
 
 using namespace std;
-using namespace benchIO;
 using namespace pargeo;
 
 template<int dim>
@@ -17,9 +17,9 @@ void timeGraph(parlay::sequence<pargeo::point<dim>> &P, int rounds, char const *
   for(int i=0; i<rounds; ++i) {
     auto I = delaunayGraph<dim>(P);
     cout << "round-time = " << t.get_next() << endl;
+    if (i == rounds-1 && outFile != NULL) graphIO::writeEdgeSeqToFile(I, outFile);
   }
   t.stop();
-  //if (outFile != NULL) writeIntSeqToFile(I, outFile);
 }
 
 int main(int argc, char* argv[]) {
