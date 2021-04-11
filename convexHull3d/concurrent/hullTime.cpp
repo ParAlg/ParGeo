@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
   commandLine P(argc,argv,"[-o <outFile>] [-r <rounds>] <inFile>");
   char* iFile = P.getArgument(0);
   char* oFile = P.getOptionValue("-o");
-  int numProc = P.getOptionIntValue("-p",1);
+  int numProc = P.getOptionIntValue("-p",0);
   int rounds = P.getOptionIntValue("-r",1);
 
   int dim = readDimensionFromFile(iFile);//todo make cheaper

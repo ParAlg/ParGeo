@@ -35,12 +35,13 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
 
   cout << "estimation-time = " << t.get_next() << endl;
 
-  hashtable<hash_numeric<size_t>> table(P.size(), hash_numeric<size_t>());
   auto gridPoints = sequence<gridpt3d>(P.size());
   parallel_for(0, P.size(), [&](size_t i){
 			      gridPoints[i] = gridpt3d(P[i].coords());
 			      gridPoints[i].attribute = gridAtt3d(P[i], gsize);
 			    });
+
+  hashtable<hash_numeric<size_t>> table(P.size(), hash_numeric<size_t>());
 
   auto sample =
     parlay::filter(make_slice(gridPoints), [&](gridpt3d p) {
@@ -91,6 +92,7 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
     parlay::filter(make_slice(grids), [&](size_t g) {
 					gridpt3d box[8];
 					auto cs = unpack(g);
+					//todo simplify
 					box[0][0] = gsize * get<0>(cs);
 					box[0][1] = gsize * get<1>(cs);
 					box[0][2] = gsize * get<2>(cs);

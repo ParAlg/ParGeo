@@ -39,11 +39,13 @@
 #include <stack>
 #include <tuple>
 #include "parlay/sequence.h"
+#include "parlay/hash_table.h"
 #include "geometry/point.h"
 #include "geometry/algebra.h"
 #include "common/get_time.h"
 #include "hull.h"
 #include "split.h"
+#include "shared.h"
 
 using namespace parlay;
 using namespace parlay::internal;
@@ -279,11 +281,13 @@ template <class facetT, class vertexT>
 struct _hull {
   vertexT origin;
   facetT* H;
+  std::atomic<size_t> hSize;
 
   // Initialize from a given linked-facet-hull and an origin
   template<class pt>
-  _hull(facetT* _H, pt _origin) {
+  _hull(facetT* _H, pt _origin, size_t _hSize) {
     H = _H;
+    hSize = _hSize;
     for (int i=0; i<3; ++i)
       origin[i] = _origin[i];
   }
@@ -291,6 +295,7 @@ struct _hull {
   // Initialize from a point array and four vertices of a simplex
   template<class pt>
   _hull(slice<pt*, pt*> P, size_t c1, size_t c2, size_t c3, size_t c4) {
+    hSize = 4;
 
     pt tmp = P[c1] + P[c2] + P[c3] + P[c4];
     origin[0] = tmp[0] / 4;
@@ -391,13 +396,17 @@ struct _hull {
   */
   template <class F, class G, class H>
   void dfsFacet(facetT* start, F& fVisit, G& fDo, H& fStop) {
-    sequence<facetT*> V;
-    auto mark = [&](facetT* f) {V.push_back(f);};
-    auto visited = [&](facetT* f) {
-		     for (auto g: V) {
-		       if (f == g) return true;
-		     }
-		     return false;};
+    // sequence<facetT*> V;
+    // auto mark = [&](facetT* f) {V.push_back(f);};
+    // auto visited = [&](facetT* f) {
+    // 		     for (auto g: V) {
+    // 		       if (f == g) return true;
+    // 		     }
+    // 		     return false;};
+
+    hashtable<hash_pointer<facetT*>> V(hSize, hash_pointer<facetT*>());
+    auto mark = [&](facetT* f) {V.insert(f);};
+    auto visited = [&](facetT* f) {return V.find(f) != nullptr;};
 
     stack<_edge<facetT, vertexT>> S;
 
@@ -427,6 +436,8 @@ struct _hull {
   void dfsEdge(facetT* start, F& fVisit, G& fDo, H& fStop) {
     using edgeT = _edge<facetT, vertexT>;
 
+    // Quadratic iteration of V seems to be fast
+    // as the involved facets are few
     sequence<edgeT> V;
     auto mark = [&](edgeT f) {V.push_back(f);};
     auto visited = [&](edgeT f) {
@@ -761,10 +772,8 @@ public:
 
   void redistribute(slice<facetT**, facetT**> facetsBeneath,
 		    slice<facetT**, facetT**> newFacets) {
-    // auto canSeeNew = [&](facetT* f, vertexT p, vertexT fArea) {
-    // 		    return visible(f, p, fArea) &&
-    // 		      f->a != p && f->b != p && f->c != p;//todo
-    // 		  };
+
+    parlay::write_add(&context->hSize, newFacets.size() - facetsBeneath.size());
 
     auto canSee = [&](facetT* f, vertexT p) {
 		    return visible(f, p) &&
@@ -781,12 +790,6 @@ public:
       fn += facetsBeneath[j]->size();
     }
 #ifdef SERIAL
-    // vertexT areas[nnf];
-    // for (int k=0; k<nnf; ++k) { // New facet loop
-    //   auto f = newFacets[k];
-    //   areas[k] = crossProduct3d(f->b - f->a, f->c - f->a);
-    // }
-
     for(int i=0; i<nf; ++i) { // Old facet loop
       for(size_t j=0; j<facetsBeneath[i]->size(); ++j) { // Point loop
 	facetsBeneath[i]->at(j).attribute.seeFacet = nullptr;
@@ -1405,7 +1408,8 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
       t.start();
 
       // todo points chosen are close, which is bad
-      sequence<vertex3d> apexes0 = cg->furthestApexes(parlay::num_workers()); // todo tune
+      //sequence<vertex3d> apexes0 = cg->furthestApexes(parlay::num_workers()); // todo tune
+      sequence<vertex3d> apexes0 = cg->spacedFurthestApexes(parlay::num_workers()); // todo tune
       //sequence<vertex3d> apexes0 = cg->randomApexes(hullSize); // todo tune
 
       apexTime += t.get_next();
@@ -1530,8 +1534,6 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
 #ifdef WRITE
   context->writeHull();
 #endif
-
-  // todo free stuff
 
   auto result = sequence<facet3d>();
   context->getHull<pt>(result);
