@@ -30,4 +30,5 @@ message(STATUS "CMAKE_EXE_LINKER_FLAGS          ${CMAKE_CXX_LINKER_FLAGS}")
 message(STATUS "CMAKE_INSTALL_PREFIX:           ${CMAKE_INSTALL_PREFIX}" )
 
 add_subdirectory(incremental)
+add_subdirectory(concurrent)
 add_subdirectory(grid)

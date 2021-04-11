@@ -64,6 +64,16 @@ namespace pargeo {
 
     _tData& at(int i) {return x[i];}
 
+    friend bool operator<(_point a, _point b) {
+      _tData aVal = 0;
+      _tData bVal = 0;
+      for (int ii=0; ii<dim; ++ii) {
+	aVal += a[ii];
+	bVal += b[ii];
+      }
+      return aVal < bVal;
+    }
+
     friend bool operator==(_point a, _point b) {
       for (int ii=0; ii<dim; ++ii) {
 	if (a[ii] != b[ii]) return false;}

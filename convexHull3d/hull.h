@@ -21,3 +21,5 @@ template <class pt>
 using facet3d = _facet3d<pt, pargeo::_empty>;
 
 parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &P);
+
+parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &P, size_t);

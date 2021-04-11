@@ -25,8 +25,8 @@
 //#define WRITE // Write to file, visualize using python3 plot.py
 //#define VERBOSE
 #define SILENT
-#define PSEUDO_ORIGIN
-#define SERIAL
+//#define PSEUDO_ORIGIN
+//#define SERIAL
 
 #ifdef WRITE
 #include <iostream>
@@ -284,10 +284,14 @@ struct _edge {
  */
 template <class facetT, class vertexT>
 struct _hull {
+  vertexT origin;
   facetT* H;
 
-  _hull(facetT* _H) {
+  template<class pt>
+  _hull(facetT* _H, pt _origin) {
     H = _H;
+    for (int i=0; i<3; ++i)
+      origin[i] = _origin[i];
   }
 
   /* Depth-first hull traversal (no facet repeat)
@@ -414,9 +418,9 @@ e.b==e.ff.a    e.a==e.ff.c
 
     auto fVisit = [&](_edge<facetT, vertexT> e) { return true;};
     auto fDo = [&](_edge<facetT, vertexT> e) {
-		 out.emplace_back(pt(e.ff->a.coords()),
-				  pt(e.ff->b.coords()),
-				  pt(e.ff->c.coords()));};
+		 out.emplace_back(pt((e.ff->a+origin).coords()),
+				  pt((e.ff->b+origin).coords()),
+				  pt((e.ff->c+origin).coords()));};
     auto fStop = [&]() { return false;};
 
     dfsFacet(H, fVisit, fDo, fStop);
@@ -761,23 +765,28 @@ conflictList<linkedFacet3d, vertex3d> *makeInitialHull8(slice<pt*, pt*> P) {
   size_t zMax = zz.second - &P[0];
   assert(zMin != zMax);
 
-  // Initialize points with visible facet link
-  auto Q = linkedFacet3d::seqT(P.size());
-  parallel_for(0, P.size(), [&](size_t i) {
-			      for(int j=0; j<P[i].dim; ++j)
-				Q[i][j] = P[i][j];
-#ifdef VERBOSE
-			      Q[i].attribute.i = i;
-#endif
-			    });
-
 #ifdef PSEUDO_ORIGIN
   // Compute pseudo-origin, average the initial points
-  origin = Q[xMin] + Q[xMax] + Q[yMin] + Q[yMax] + Q[zMin] + Q[zMax];
+  vertex3d origin = Q[xMin] + Q[xMax] + Q[yMin] + Q[yMax] + Q[zMin] + Q[zMax];
   origin[0] = origin[0] / 6;
   origin[1] = origin[1] / 6;
   origin[2] = origin[2] / 6;
 #endif
+
+  pt origin = P[xMin] + P[xMax] + P[yMin] + P[yMax] + P[zMin] + P[zMax];
+  origin[0] = origin[0] / 6;
+  origin[1] = origin[1] / 6;
+  origin[2] = origin[2] / 6;
+
+  // Initialize points with visible facet link
+  auto Q = linkedFacet3d::seqT(P.size());
+  parallel_for(0, P.size(), [&](size_t i) {
+			      for(int j=0; j<P[i].dim; ++j)
+				Q[i][j] = P[i][j] - origin[j];
+#ifdef VERBOSE
+			      Q[i].attribute.i = i;
+#endif
+			    });
 
   // Make initial facets
   auto f0 = makeFacet(Q[xMin], Q[yMin], Q[zMin]);
@@ -873,7 +882,7 @@ conflictList<linkedFacet3d, vertex3d> *makeInitialHull8(slice<pt*, pt*> P) {
     f7->seeList = chunks[7];
   }
 
-  auto context = new _hull<linkedFacet3d, vertex3d>(f0);
+  auto context = new _hull<linkedFacet3d, vertex3d>(f0, origin);
 
   return new conflictList(context);
 }
@@ -892,16 +901,6 @@ conflictList<linkedFacet3d, vertex3d> *makeInitialHull4(slice<pt*, pt*> P) {
   auto zz = minmax_element(P, [&](pt i, pt j) {return i[2]<j[2];});
   X[4] = zz.first - &P[0]; X[5] = zz.second - &P[0];
 
-  // Initialize points with visible facet link
-  auto Q = linkedFacet3d::seqT(P.size());
-  parallel_for(0, P.size(), [&](size_t i) {
-			      for(int j=0; j<P[i].dim; ++j)
-				Q[i][j] = P[i][j];
-#ifdef VERBOSE
-			      Q[i].attribute.i = i;
-#endif
-			    });
-
   set<size_t, greater<size_t>> pts;
   if (X[1]-X[0] > X[3]-X[2] && X[1]-X[0] > X[5]-X[4]) {
     pts.insert(X[0]); pts.insert(X[1]); pts.insert(X[3]); pts.insert(X[5]);
@@ -917,6 +916,21 @@ conflictList<linkedFacet3d, vertex3d> *makeInitialHull4(slice<pt*, pt*> P) {
   auto itr = pts.begin();
   size_t c1 = *itr; itr++; size_t c2 = *itr; itr++;
   size_t c3 = *itr; itr++; size_t c4 = *itr;
+
+  pt origin = P[c1] + P[c2] + P[c3] + P[c4];
+  origin[0] = origin[0] / 4;
+  origin[1] = origin[1] / 4;
+  origin[2] = origin[2] / 4;
+
+  // Initialize points with visible facet link
+  auto Q = linkedFacet3d::seqT(P.size());
+  parallel_for(0, P.size(), [&](size_t i) {
+			      for(int j=0; j<P[i].dim; ++j)
+				Q[i][j] = P[i][j] - origin[j];
+#ifdef VERBOSE
+			      Q[i].attribute.i = i;
+#endif
+			    });
 
 #ifdef PSEUDO_ORIGIN
   // Compute pseudo-origin, average the initial points
@@ -988,7 +1002,7 @@ conflictList<linkedFacet3d, vertex3d> *makeInitialHull4(slice<pt*, pt*> P) {
     f3->seeList = chunks[3];
   }
 
-  auto context = new _hull<linkedFacet3d, vertex3d>(f0);
+  auto context = new _hull<linkedFacet3d, vertex3d>(f0, origin);
 
   return new conflictList(context);
 }
@@ -1014,7 +1028,7 @@ sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
 
   timer t; t.start();
 
-  auto cg = makeInitialHull8(P);
+  auto cg = makeInitialHull4(P);
   _hull<linkedFacet3d, vertex3d> *context = cg->context;
 
   double initTime = t.stop();
@@ -1167,7 +1181,8 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
 
   timer t; t.start();
 
-  auto cg = makeInitialHull8(P);
+  auto cg = makeInitialHull4(P);
+  long hullSize = 4;
   _hull<linkedFacet3d, vertex3d> *context = cg->context;
 
   double initTime = t.stop();
@@ -1181,8 +1196,6 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
   double apexTime = 0;
   double frontierTime = 0;
   double splitTime = 0;
-
-  long hullSize = 8;
 
   while (true) {
     round ++;
