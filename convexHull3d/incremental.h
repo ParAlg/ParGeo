@@ -25,8 +25,7 @@
 //#define WRITE // Write to file, visualize using python3 plot.py
 //#define VERBOSE
 #define SILENT
-//#define PSEUDO_ORIGIN
-//#define SERIAL
+#define SERIAL
 
 #ifdef WRITE
 #include <iostream>
@@ -75,12 +74,7 @@ static std::ostream& operator<<(std::ostream& os, const vertex3d& v) {
   return os;
 }
 
-#ifdef PSEUDO_ORIGIN
-// A pseudo-origin in the center of the initial hull
-vertex3d origin;
-#endif
-
-/* Signed volume of an oriented tetrahedron (example below is positive).
+/* Signed volume (x6) of an oriented tetrahedron (example below is positive).
      d
      o
     /|\
@@ -91,30 +85,28 @@ vertex3d origin;
     x
      origin
 */
-#ifdef PSEUDO_ORIGIN
-template <class pt>
-inline typename pt::floatT signedVolume(pt _a, pt _b, pt _c, pt _d) {
-  pt a = _a - origin;
-  pt b = _b - origin;
-  pt c = _c - origin;
-  pt d = _d - origin;
-  return (a-d).dot(crossProduct3d(b-a, c-a))/6;
-}
-#else
+
 template <class pt>
 inline typename pt::floatT signedVolume(pt a, pt b, pt c, pt d) {
-  return (a-d).dot(crossProduct3d(b-a, c-a))/6;
+  return (a-d).dot(crossProduct3d(b-a, c-a));
 }
-#endif
+
+// area is precomputed from oriented triang a,b,c
+template <class pt>
+inline typename pt::floatT signedVolume(pt a, pt d, pt area) {
+  return (a-d).dot(area);
+}
 
 template<class facetT, class vertexT>
 bool visible(facetT* f, vertexT p) {
-  if (signedVolume(f->a, f->b, f->c, p) > numericKnob)
+  // if (signedVolume(f->a, f->b, f->c, p) > numericKnob)
+  if (signedVolume(f->a, p, f->area) > numericKnob)
     return true;
   else
     return false;
 }
 
+// todo check if still necessary
 template<class facetT, class vertexT>
 bool visibleCast(facetT* f, vertexT p) {
   if (signedVolume(vertex3d(f->a.coords()),
@@ -138,6 +130,7 @@ struct linkedFacet3d {
   linkedFacet3d *abFacet;
   linkedFacet3d *bcFacet;
   linkedFacet3d *caFacet;
+  vertex3d area;
 
   // Stores the minimum memory address of the seeFacet of the reserving vertices
   std::atomic<size_t> reservation; // todo (not always used but has little impact on speed)
@@ -182,17 +175,14 @@ struct linkedFacet3d {
   }
 
   linkedFacet3d(vertex3d _a, vertex3d _b, vertex3d _c): a(_a), b(_b), c(_c) {
-#ifdef PSEUDO_ORIGIN
-    if (pargeo::determinant3by3(a - origin, b - origin, c - origin) > numericKnob)
-      swap(b, c);
-#else
     if (pargeo::determinant3by3(a, b, c) > numericKnob)
       swap(b, c);
-#endif
 
     seeList = new seqT();
 
     reservation = -1; // (unsigned)
+
+    area = crossProduct3d(b-a, c-a);
   }
 
   ~linkedFacet3d() {
@@ -227,8 +217,12 @@ void linkFacet(fc* f, fc* ab, fc* bc, fc* ca) {
 			 return F[i];
 		       }
 		     }
-		     cout << "Error, facet linking failure, abort." << endl;
-		     abort();
+		     // cout << "Facets: " << endl;
+		     // for(int i=0; i<3; ++i)
+		     //   cout << F[i]->a << " " << F[i]->b << " " << F[i]->c << endl;
+		     // cout << "match v1 = " << v1 << endl;
+		     // cout << "match v2 = " << v2 << endl;
+		     throw std::runtime_error("Facet linking failure.");
 		   };
 
   auto linkEdge = [&](fc* f1, fc* f2, vertex3d v1, vertex3d v2) {
@@ -239,8 +233,7 @@ void linkFacet(fc* f, fc* ab, fc* bc, fc* ca) {
 		    else if ( (f2->c==v1 && f2->a==v2) || (f2->c==v2 && f2->a==v1) )
 		      f2->caFacet = f1;
 		    else {
-		      cout << "Error, edge linking failure, abort." << endl;
-		      abort();
+		      throw std::runtime_error("Edge linking failure.");
 		    }
 		  };
 
@@ -287,11 +280,111 @@ struct _hull {
   vertexT origin;
   facetT* H;
 
+  // Initialize from a given linked-facet-hull and an origin
   template<class pt>
   _hull(facetT* _H, pt _origin) {
     H = _H;
     for (int i=0; i<3; ++i)
       origin[i] = _origin[i];
+  }
+
+  // Initialize from a point array and four vertices of a simplex
+  template<class pt>
+  _hull(slice<pt*, pt*> P, size_t c1, size_t c2, size_t c3, size_t c4) {
+
+    pt tmp = P[c1] + P[c2] + P[c3] + P[c4];
+    origin[0] = tmp[0] / 4;
+    origin[1] = tmp[1] / 4;
+    origin[2] = tmp[2] / 4;
+
+    // Initialize points with visible facet link
+    auto Q = linkedFacet3d::seqT(P.size());
+    parallel_for(0, P.size(), [&](size_t i) {
+				for(int j=0; j<P[i].dim; ++j)
+				  Q[i][j] = P[i][j] - origin[j];
+#ifdef VERBOSE
+				Q[i].attribute.i = i;
+#endif
+			      });
+
+    // Make initial facets
+    auto f0 = makeFacet(Q[c1], Q[c2], Q[c3]);
+    auto f1 = makeFacet(Q[c1], Q[c2], Q[c4]);
+    auto f2 = makeFacet(Q[c3], Q[c4], Q[c2]);
+    auto f3 = makeFacet(Q[c3], Q[c4], Q[c1]);
+
+    linkFacet(f0, f1, f2, f3);
+    linkFacet(f1, f0, f2, f3);
+    linkFacet(f2, f1, f0, f3);
+    linkFacet(f3, f1, f2, f0);
+
+#ifdef SERIAL
+    bool serial = true;
+#else
+    bool serial = false;
+#endif
+
+    if (Q.size() < 1000 || serial) {
+
+      for(size_t i=0; i<P.size(); i++) {
+	if (visible(f0, Q[i])) {
+	  Q[i].attribute.seeFacet = f0;
+	  f0->push_back(Q[i]);
+	} else if (visible(f1, Q[i])) {
+	  Q[i].attribute.seeFacet = f1;
+	  f1->push_back(Q[i]);
+	} else if (visible(f2, Q[i])) {
+	  Q[i].attribute.seeFacet = f2;
+	  f2->push_back(Q[i]);
+	} else if (visible(f3, Q[i])) {
+	  Q[i].attribute.seeFacet = f3;
+	  f3->push_back(Q[i]);
+	} else {
+	  Q[i].attribute.seeFacet = nullptr;
+	}
+      }
+
+    } else {
+
+      auto flag = sequence<int>(P.size());
+      parallel_for(0, P.size(), [&](size_t i) {
+				  if (visible(f0, Q[i])) {
+				    flag[i] = 0; Q[i].attribute.seeFacet = f0;
+				  } else if (visible(f1, Q[i])) {
+				    flag[i] = 1; Q[i].attribute.seeFacet = f1;
+				  } else if (visible(f2, Q[i])) {
+				    flag[i] = 2; Q[i].attribute.seeFacet = f2;
+				  } else if (visible(f3, Q[i])) {
+				    flag[i] = 3; Q[i].attribute.seeFacet = f3;
+				  } else {
+				    flag[i] = 4; Q[i].attribute.seeFacet = nullptr;
+				  }
+				});
+
+      auto chunks = split_k(5, &Q, flag);
+
+      f0->seeList = chunks[0];
+      f1->seeList = chunks[1];
+      f2->seeList = chunks[2];
+      f3->seeList = chunks[3];
+    }
+
+#ifdef VERBOSE
+    cout << "initial-hull:" << endl;
+    cout << " facet 0, area = " << f0->area.length()/2 << " #pts = " << f0->size() << endl;
+    cout << " facet 1, area = " << f1->area.length()/2 << " #pts = " << f1->size() << endl;
+    cout << " facet 2, area = " << f2->area.length()/2 << " #pts = " << f2->size() << endl;
+    cout << " facet 3, area = " << f3->area.length()/2 << " #pts = " << f3->size() << endl;
+    cout << " volume = " << abs((f0->a-Q[c4]).dot(f0->area)/6) << endl;
+    // cout << "vertices: " << endl;
+    // cout << " v0 = " << Q[c1]+origin << endl;
+    // cout << " v1 = " << Q[c2]+origin << endl;
+    // cout << " v2 = " << Q[c3]+origin << endl;
+    // cout << " v3 = " << Q[c4]+origin << endl;
+    // cout << "origin = " << origin << endl;
+#endif
+
+    H = f0;
   }
 
   /* Depth-first hull traversal (no facet repeat)
@@ -668,6 +761,11 @@ public:
 
   void redistribute(slice<facetT**, facetT**> facetsBeneath,
 		    slice<facetT**, facetT**> newFacets) {
+    // auto canSeeNew = [&](facetT* f, vertexT p, vertexT fArea) {
+    // 		    return visible(f, p, fArea) &&
+    // 		      f->a != p && f->b != p && f->c != p;//todo
+    // 		  };
+
     auto canSee = [&](facetT* f, vertexT p) {
 		    return visible(f, p) &&
 		      f->a != p && f->b != p && f->c != p;//todo
@@ -683,6 +781,12 @@ public:
       fn += facetsBeneath[j]->size();
     }
 #ifdef SERIAL
+    // vertexT areas[nnf];
+    // for (int k=0; k<nnf; ++k) { // New facet loop
+    //   auto f = newFacets[k];
+    //   areas[k] = crossProduct3d(f->b - f->a, f->c - f->a);
+    // }
+
     for(int i=0; i<nf; ++i) { // Old facet loop
       for(size_t j=0; j<facetsBeneath[i]->size(); ++j) { // Point loop
 	facetsBeneath[i]->at(j).attribute.seeFacet = nullptr;
@@ -747,7 +851,7 @@ public:
 ////////////////////////////
 
 template<class pt>
-conflictList<linkedFacet3d, vertex3d> *makeInitialHull8(slice<pt*, pt*> P) {
+conflictList<linkedFacet3d, vertex3d> *makeInitial8Hull(slice<pt*, pt*> P) {
 
   // Find 8 extrema assuming no duplicate
   auto xx = minmax_element(P, [&](pt i, pt j) {return i[0]<j[0];});
@@ -764,14 +868,6 @@ conflictList<linkedFacet3d, vertex3d> *makeInitialHull8(slice<pt*, pt*> P) {
   size_t zMin = zz.first - &P[0];
   size_t zMax = zz.second - &P[0];
   assert(zMin != zMax);
-
-#ifdef PSEUDO_ORIGIN
-  // Compute pseudo-origin, average the initial points
-  vertex3d origin = Q[xMin] + Q[xMax] + Q[yMin] + Q[yMax] + Q[zMin] + Q[zMax];
-  origin[0] = origin[0] / 6;
-  origin[1] = origin[1] / 6;
-  origin[2] = origin[2] / 6;
-#endif
 
   pt origin = P[xMin] + P[xMax] + P[yMin] + P[yMax] + P[zMin] + P[zMax];
   origin[0] = origin[0] / 6;
@@ -888,7 +984,7 @@ conflictList<linkedFacet3d, vertex3d> *makeInitialHull8(slice<pt*, pt*> P) {
 }
 
 template<class pt>
-conflictList<linkedFacet3d, vertex3d> *makeInitialHull4(slice<pt*, pt*> P) {
+conflictList<linkedFacet3d, vertex3d> *makeInitialSimplex0(slice<pt*, pt*> P) {
 
   size_t X[6]; // extrema
 
@@ -902,9 +998,9 @@ conflictList<linkedFacet3d, vertex3d> *makeInitialHull4(slice<pt*, pt*> P) {
   X[4] = zz.first - &P[0]; X[5] = zz.second - &P[0];
 
   set<size_t, greater<size_t>> pts;
-  if (X[1]-X[0] > X[3]-X[2] && X[1]-X[0] > X[5]-X[4]) {
+  if (P[X[1]][0]-P[X[0]][0] > P[X[3]][1]-P[X[2]][1] && P[X[1]][0]-P[X[0]][0] > P[X[5]][2]-P[X[4]][2]) {
     pts.insert(X[0]); pts.insert(X[1]); pts.insert(X[3]); pts.insert(X[5]);
-  } else if (X[3]-X[2] > X[1]-X[0] && X[3]-X[2] > X[5]-X[4]) {
+  } else if (P[X[3]][1]-P[X[2]][1] > P[X[1]][0]-P[X[0]][0] && P[X[3]][1]-P[X[2]][1] > P[X[5]][2]-P[X[4]][2]) {
     pts.insert(X[2]); pts.insert(X[3]); pts.insert(X[1]); pts.insert(X[5]);
   } else {
     pts.insert(X[4]); pts.insert(X[5]); pts.insert(X[1]); pts.insert(X[3]);
@@ -917,92 +1013,134 @@ conflictList<linkedFacet3d, vertex3d> *makeInitialHull4(slice<pt*, pt*> P) {
   size_t c1 = *itr; itr++; size_t c2 = *itr; itr++;
   size_t c3 = *itr; itr++; size_t c4 = *itr;
 
-  pt origin = P[c1] + P[c2] + P[c3] + P[c4];
-  origin[0] = origin[0] / 4;
-  origin[1] = origin[1] / 4;
-  origin[2] = origin[2] / 4;
+  auto context = new _hull<linkedFacet3d, vertex3d>(P, c1, c2, c3, c4);
 
-  // Initialize points with visible facet link
-  auto Q = linkedFacet3d::seqT(P.size());
-  parallel_for(0, P.size(), [&](size_t i) {
-			      for(int j=0; j<P[i].dim; ++j)
-				Q[i][j] = P[i][j] - origin[j];
-#ifdef VERBOSE
-			      Q[i].attribute.i = i;
-#endif
-			    });
+  return new conflictList(context);
+}
 
-#ifdef PSEUDO_ORIGIN
-  // Compute pseudo-origin, average the initial points
-  origin = Q[c1] + Q[c2] + Q[c3] + Q[c4];
-  origin[0] = origin[0] / 4;
-  origin[1] = origin[1] / 4;
-  origin[2] = origin[2] / 4;
-#endif
+template<class pt>
+conflictList<linkedFacet3d, vertex3d> *makeInitialSimplex1(slice<pt*, pt*> P) {
 
-  // Make initial facets
-  auto f0 = makeFacet(Q[c1], Q[c2], Q[c3]);
-  auto f1 = makeFacet(Q[c1], Q[c2], Q[c4]);
-  auto f2 = makeFacet(Q[c3], Q[c4], Q[c2]);
-  auto f3 = makeFacet(Q[c3], Q[c4], Q[c1]);
-
-  linkFacet(f0, f1, f2, f3);
-  linkFacet(f1, f0, f2, f3);
-  linkFacet(f2, f1, f0, f3);
-  linkFacet(f3, f1, f2, f0);
-
-#ifdef SERIAL
-  bool serial = true;
-#else
-  bool serial = false;
-#endif
-
-  if (Q.size() < 1000 || serial) {
-
-    for(size_t i=0; i<P.size(); i++) {
-      if (visible(f0, Q[i])) {
-	Q[i].attribute.seeFacet = f0;
-	f0->push_back(Q[i]);
-      } else if (visible(f1, Q[i])) {
-	Q[i].attribute.seeFacet = f1;
-	f1->push_back(Q[i]);
-      } else if (visible(f2, Q[i])) {
-	Q[i].attribute.seeFacet = f2;
-	f2->push_back(Q[i]);
-      } else if (visible(f3, Q[i])) {
-	Q[i].attribute.seeFacet = f3;
-	f3->push_back(Q[i]);
-      } else {
-	Q[i].attribute.seeFacet = nullptr;
-      }
+  // Pick largest triangle from sample
+  srand(1);
+  typename pt::floatT myArea = 0;
+  auto keep = [&](pt a, pt b, pt c) {
+		typename pt::floatT newArea = crossProduct3d(b-a, c-a).length();
+		if (newArea > myArea) {
+		  myArea = newArea;
+		  return true;
+		} else
+		  return false;
+	      };
+  size_t xMin, xMax, yApex;
+  pt x1, x2, y1;
+  for (size_t i=0; i<P.size()/100; ++i) {
+    size_t xMin2 = rand()%P.size();
+    size_t xMax2 = rand()%P.size();
+    size_t yApex2 = rand()%P.size();
+    if (keep(P[xMin2], P[xMax2], P[yApex2])) {
+      xMin = xMin2;
+      xMax = xMax2;
+      yApex = yApex2;
     }
+  }
+  x1 = P[xMin];
+  x2 = P[xMax];
+  y1 = P[yApex];
 
+  // Maximize simplex volume
+  pt area = crossProduct3d(x1-y1, x2-y1);
+  auto z = max_element(P, [&](pt i, pt j) {
+			    return abs((y1-i).dot(area)) < abs((y1-j).dot(area));
+			  });
+  size_t zApex = z - &P[0];
+
+  size_t c1 = xMin;
+  size_t c2 = xMax;
+  size_t c3 = yApex;
+  size_t c4 = zApex;
+
+  auto context = new _hull<linkedFacet3d, vertex3d>(P, c1, c2, c3, c4);
+
+  return new conflictList(context);
+}
+
+template<class pt>
+conflictList<linkedFacet3d, vertex3d> *makeInitialSimplex2(slice<pt*, pt*> P) {
+
+  // Maximize triangle area based on fixed xMin and xMax
+  auto xx = minmax_element(P, [&](pt i, pt j) {return i[0]<j[0];});
+  size_t xMin = xx.first - &P[0]; size_t xMax = xx.second - &P[0];
+  pt x1 = P[xMin];
+  pt x2 = P[xMax];
+  auto y = max_element(P, [&](pt i, pt j) {
+			    return crossProduct3d(x1-i, x2-i).length() <
+			      crossProduct3d(x1-j, x2-j).length();
+			  });
+  size_t yApex = y - &P[0];
+  pt y1 = P[yApex];
+
+  // Maximize simplex volume
+  pt area = crossProduct3d(x1-y1, x2-y1);
+  auto z = max_element(P, [&](pt i, pt j) {
+			    return abs((y1-i).dot(area)) < abs((y1-j).dot(area));
+			  });
+  size_t zApex = z - &P[0];
+
+  size_t c1 = xMin;
+  size_t c2 = xMax;
+  size_t c3 = yApex;
+  size_t c4 = zApex;
+
+  auto context = new _hull<linkedFacet3d, vertex3d>(P, c1, c2, c3, c4);
+
+  return new conflictList(context);
+}
+
+template<class pt>
+conflictList<linkedFacet3d, vertex3d> *makeInitialSimplex3(slice<pt*, pt*> P) {
+
+  // Maximize triangle area based on fixed xMin and xMax
+  size_t X[6]; // extrema
+  auto xx = minmax_element(P, [&](pt i, pt j) {return i[0]<j[0];});
+  X[0] = xx.first - &P[0]; X[1] = xx.second - &P[0];
+  auto yy = minmax_element(P, [&](pt i, pt j) {return i[1]<j[1];});
+  X[2] = yy.first - &P[0]; X[3] = yy.second - &P[0];
+  auto zz = minmax_element(P, [&](pt i, pt j) {return i[2]<j[2];});
+  X[4] = zz.first - &P[0]; X[5] = zz.second - &P[0];
+
+  size_t xMin, xMax;
+  if (P[X[1]][0]-P[X[0]][0] > P[X[3]][1]-P[X[2]][1] && P[X[1]][0]-P[X[0]][0] > P[X[5]][2]-P[X[4]][2]) {
+    xMin = X[0]; xMax = X[1];
+  } else if (P[X[3]][1]-P[X[2]][1] > P[X[1]][0]-P[X[0]][0] && P[X[3]][1]-P[X[2]][1] > P[X[5]][2]-P[X[4]][2]) {
+    xMin = X[2]; xMax = X[3];
   } else {
-
-    auto flag = sequence<int>(P.size());
-    parallel_for(0, P.size(), [&](size_t i) {
-				if (visible(f0, Q[i])) {
-				  flag[i] = 0; Q[i].attribute.seeFacet = f0;
-				} else if (visible(f1, Q[i])) {
-				  flag[i] = 1; Q[i].attribute.seeFacet = f1;
-				} else if (visible(f2, Q[i])) {
-				  flag[i] = 2; Q[i].attribute.seeFacet = f2;
-				} else if (visible(f3, Q[i])) {
-				  flag[i] = 3; Q[i].attribute.seeFacet = f3;
-				} else {
-				  flag[i] = 4; Q[i].attribute.seeFacet = nullptr;
-				}
-			      });
-
-    auto chunks = split_k(5, &Q, flag);
-
-    f0->seeList = chunks[0];
-    f1->seeList = chunks[1];
-    f2->seeList = chunks[2];
-    f3->seeList = chunks[3];
+    xMin = X[4]; xMax = X[5];
   }
 
-  auto context = new _hull<linkedFacet3d, vertex3d>(f0, origin);
+  pt x1 = P[xMin];
+  pt x2 = P[xMax];
+
+  auto y = max_element(P, [&](pt i, pt j) {
+			    return crossProduct3d(x1-i, x2-i).length() <
+			      crossProduct3d(x1-j, x2-j).length();
+			  });
+  size_t yApex = y - &P[0];
+  pt y1 = P[yApex];
+
+  // Maximize simplex volume
+  pt area = crossProduct3d(x1-y1, x2-y1);
+  auto z = max_element(P, [&](pt i, pt j) {
+			    return abs((y1-i).dot(area)) < abs((y1-j).dot(area));
+			  });
+  size_t zApex = z - &P[0];
+
+  size_t c1 = xMin;
+  size_t c2 = xMax;
+  size_t c3 = yApex;
+  size_t c4 = zApex;
+
+  auto context = new _hull<linkedFacet3d, vertex3d>(P, c1, c2, c3, c4);
 
   return new conflictList(context);
 }
@@ -1028,7 +1166,7 @@ sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
 
   timer t; t.start();
 
-  auto cg = makeInitialHull4(P);
+  auto cg = makeInitialSimplex3(P);
   _hull<linkedFacet3d, vertex3d> *context = cg->context;
 
   double initTime = t.stop();
@@ -1055,7 +1193,7 @@ sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
 
 #ifdef VERBOSE
     cout << ">>>>>>>>>" << endl;
-    context->printHull();
+    //context->printHull();
     cout << "apex chosen = " << apex.attribute.i << endl;
 #endif
     apexTime += t.get_next();
@@ -1070,11 +1208,10 @@ sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
 
     frontierTime += t.get_next();
 
-    // Check for frontier error, usually caused by numerical errors in rare cases
     for(size_t i=0; i<frontierEdges->size(); ++i) {
-      auto pv = frontierEdges->at((i+frontierEdges->size()-1)%frontierEdges->size());
+      auto nv = frontierEdges->at((i+1)%frontierEdges->size());
       auto cv = frontierEdges->at(i);
-      if (pv.b != cv.a && pv.a != cv.a && pv.b != cv.b && pv.a != cv.b) {
+      if (cv.b != nv.a) {
 	apex.attribute.seeFacet->clear();
 	errors ++;
 	goto loopStart;
@@ -1181,7 +1318,7 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
 
   timer t; t.start();
 
-  auto cg = makeInitialHull4(P);
+  auto cg = makeInitialSimplex3(P);
   long hullSize = 4;
   _hull<linkedFacet3d, vertex3d> *context = cg->context;
 
