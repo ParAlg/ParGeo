@@ -107,6 +107,14 @@ bool visible(facetT* f, vertexT p) {
     return false;
 }
 
+template<class facetT, class vertexT>
+bool visibleNoDup(facetT* f, vertexT p) {
+  if (signedVolume(f->a, p, f->area) > numericKnob)
+    return true && f->a != p && f->b != p && f->c != p;
+  else
+    return false;
+}
+
 // todo check if still necessary
 template<class facetT, class vertexT>
 bool visibleCast(facetT* f, vertexT p) {
@@ -132,6 +140,18 @@ struct linkedFacet3d {
   linkedFacet3d *bcFacet;
   linkedFacet3d *caFacet;
   vertex3d area;
+
+  bool isAdjacent(linkedFacet3d* f2) {
+    vertex3d V[3]; V[0] = a; V[1] = b; V[2] = c;
+    for (int i=0; i<3; ++i) {
+      auto v1 = V[i];
+      auto v2 = V[(i+1)%3];
+      if ( (f2->a == v1 && f2->b == v2) || (f2->a == v2 && f2->b == v1) ) return true;
+      if ( (f2->b == v1 && f2->c == v2) || (f2->b == v2 && f2->c == v1) ) return true;
+      if ( (f2->c == v1 && f2->a == v2) || (f2->c == v2 && f2->a == v1) ) return true;
+    }
+    return false;
+  }
 
   // Stores the minimum memory address of the seeFacet of the reserving vertices
   std::atomic<size_t> reservation; // todo (not always used but has little impact on speed)
@@ -215,11 +235,16 @@ void linkFacet(fc* f, fc* ab, fc* bc, fc* ca) {
 		       if ((F[i]->a==v1 && F[i]->b==v2) || (F[i]->b==v1 && F[i]->a==v2) ||
 			   (F[i]->b==v1 && F[i]->c==v2) || (F[i]->c==v1 && F[i]->b==v2) ||
 			   (F[i]->c==v1 && F[i]->a==v2) || (F[i]->a==v1 && F[i]->c==v2)) {
+			 //cout << "linking " << *F[i] << " to f's (" << v1.attribute.i << "," << v2.attribute.i << ")" << endl;
 			 return F[i];
 		       }
 		     }
-		     cout << "Facets: " << endl;
 #ifdef VERBOSE
+		     cout << "Facets: " << endl;
+		     cout << "linking " << *f << " with " << endl;
+		     cout << *ab << endl;
+		     cout << *bc << endl;
+		     cout << *ca << endl;
 		     for(int i=0; i<3; ++i)
 		       cout << F[i]->a.attribute.i << " "
 			    << F[i]->b.attribute.i << " "
@@ -231,13 +256,16 @@ void linkFacet(fc* f, fc* ab, fc* bc, fc* ca) {
 		   };
 
   auto linkEdge = [&](fc* f1, fc* f2, vertex3d v1, vertex3d v2) {
-		    if ( (f2->a==v1 && f2->b==v2) || (f2->a==v2 && f2->b==v1) )
+		    if ( (f2->a==v1 && f2->b==v2) || (f2->a==v2 && f2->b==v1) ) {
+		      // cout << "linking back (" << f2->a.attribute.i << " " << f2->b.attribute.i << ") to " << *f1 << endl;
 		      f2->abFacet = f1;
-		    else if ( (f2->b==v1 && f2->c==v2) || (f2->b==v2 && f2->c==v1) )
+		    } else if ( (f2->b==v1 && f2->c==v2) || (f2->b==v2 && f2->c==v1) ) {
+		      // cout << "linking back (" << f2->b.attribute.i << " " << f2->c.attribute.i << ") to " << *f1 << endl;
 		      f2->bcFacet = f1;
-		    else if ( (f2->c==v1 && f2->a==v2) || (f2->c==v2 && f2->a==v1) )
+		    } else if ( (f2->c==v1 && f2->a==v2) || (f2->c==v2 && f2->a==v1) ) {
+		      // cout << "linking back (" << f2->c.attribute.i << " " << f2->a.attribute.i << ") to " << *f1 << endl;
 		      f2->caFacet = f1;
-		    else {
+		    } else {
 		      throw std::runtime_error("Edge linking failure.");
 		    }
 		  };
@@ -335,16 +363,16 @@ struct _hull {
     if (Q.size() < 1000 || serial) {
 
       for(size_t i=0; i<P.size(); i++) {
-	if (visible(f0, Q[i])) {
+	if (visibleNoDup(f0, Q[i])) {
 	  Q[i].attribute.seeFacet = f0;
 	  f0->push_back(Q[i]);
-	} else if (visible(f1, Q[i])) {
+	} else if (visibleNoDup(f1, Q[i])) {
 	  Q[i].attribute.seeFacet = f1;
 	  f1->push_back(Q[i]);
-	} else if (visible(f2, Q[i])) {
+	} else if (visibleNoDup(f2, Q[i])) {
 	  Q[i].attribute.seeFacet = f2;
 	  f2->push_back(Q[i]);
-	} else if (visible(f3, Q[i])) {
+	} else if (visibleNoDup(f3, Q[i])) {
 	  Q[i].attribute.seeFacet = f3;
 	  f3->push_back(Q[i]);
 	} else {
@@ -356,13 +384,13 @@ struct _hull {
 
       auto flag = sequence<int>(P.size());
       parallel_for(0, P.size(), [&](size_t i) {
-				  if (visible(f0, Q[i])) {
+				  if (visibleNoDup(f0, Q[i])) {
 				    flag[i] = 0; Q[i].attribute.seeFacet = f0;
-				  } else if (visible(f1, Q[i])) {
+				  } else if (visibleNoDup(f1, Q[i])) {
 				    flag[i] = 1; Q[i].attribute.seeFacet = f1;
-				  } else if (visible(f2, Q[i])) {
+				  } else if (visibleNoDup(f2, Q[i])) {
 				    flag[i] = 2; Q[i].attribute.seeFacet = f2;
-				  } else if (visible(f3, Q[i])) {
+				  } else if (visibleNoDup(f3, Q[i])) {
 				    flag[i] = 3; Q[i].attribute.seeFacet = f3;
 				  } else {
 				    flag[i] = 4; Q[i].attribute.seeFacet = nullptr;
@@ -522,6 +550,26 @@ e.b==e.ff.a    e.a==e.ff.c
     if (start) dfsFacet(start, fVisit, fDo, fStop);
     else dfsFacet(H, fVisit, fDo, fStop);
     if (!checker) cout << endl;
+  }
+
+  void checkHull(facetT* start=nullptr) {
+    cout << "check hull" << endl;
+    auto fVisit = [&](_edge<facetT, vertexT> e) { return true;};
+    auto fDo = [&](_edge<facetT, vertexT> e) {
+		 auto f = e.ff;
+		 if (!
+		     (f->isAdjacent(f->abFacet) && f->abFacet->isAdjacent(f) &&
+		      f->isAdjacent(f->bcFacet) && f->bcFacet->isAdjacent(f) &&
+		      f->isAdjacent(f->caFacet) && f->caFacet->isAdjacent(f))
+		     ) {
+		   printHull();
+		   throw std::runtime_error("Hull is not linked correctly.");
+		 }
+	       };
+    auto fStop = [&]() { return false;};
+
+    if (start) dfsFacet(start, fVisit, fDo, fStop);
+    else dfsFacet(H, fVisit, fDo, fStop);
   }
 
   template<class pt>
@@ -782,11 +830,6 @@ public:
 
     parlay::write_add(&context->hSize, newFacets.size() - facetsBeneath.size());
 
-    auto canSee = [&](facetT* f, vertexT p) {
-		    return visible(f, p) &&
-		      f->a != p && f->b != p && f->c != p;//todo
-		  };
-
     // Redistribute the outside points
 
     int nf = facetsBeneath.size();
@@ -801,7 +844,7 @@ public:
       for(size_t j=0; j<facetsBeneath[i]->size(); ++j) { // Point loop
 	facetsBeneath[i]->at(j).attribute.seeFacet = nullptr;
 	for (int k=0; k<nnf; ++k) { // New facet loop
-	  if (canSee(newFacets[k], facetsBeneath[i]->at(j))) {
+	  if (visibleNoDup(newFacets[k], facetsBeneath[i]->at(j))) {
 	    facetsBeneath[i]->at(j).attribute.seeFacet = newFacets[k];
 	    newFacets[k]->push_back(facetsBeneath[i]->at(j));
 	    break;
@@ -815,7 +858,7 @@ public:
 	for(size_t j=0; j<facetsBeneath[i]->size(); ++j) { // Point loop
 	  facetsBeneath[i]->at(j).attribute.seeFacet = nullptr;
 	  for (int k=0; k<nnf; ++k) { // New facet loop
-	    if (canSee(newFacets[k], facetsBeneath[i]->at(j))) {
+	    if (visibleNoDup(newFacets[k], facetsBeneath[i]->at(j))) {
 	      facetsBeneath[i]->at(j).attribute.seeFacet = newFacets[k];
 	      newFacets[k]->push_back(facetsBeneath[i]->at(j));
 	      break;
@@ -837,7 +880,7 @@ public:
 			    flag[i] = nnf;
 			    tmpBuffer[i].attribute.seeFacet = nullptr;
 			    for (int j=0; j<nnf; ++j) {
-			      if (canSee(newFacets[j], tmpBuffer[i])) {
+			      if (visibleNoDup(newFacets[j], tmpBuffer[i])) {
 				flag[i] = j;
 				tmpBuffer[i].attribute.seeFacet = newFacets[j];
 				break;
@@ -922,28 +965,28 @@ conflictList<linkedFacet3d, vertex3d> *makeInitial8Hull(slice<pt*, pt*> P) {
   if (Q.size() < 1000 || serial) {
 
     for(size_t i=0; i<P.size(); i++) {
-      if (visible(f0, Q[i])) {
+      if (visibleNoDup(f0, Q[i])) {
 	Q[i].attribute.seeFacet = f0;
 	f0->push_back(Q[i]);
-      } else if (visible(f1, Q[i])) {
+      } else if (visibleNoDup(f1, Q[i])) {
 	Q[i].attribute.seeFacet = f1;
 	f1->push_back(Q[i]);
-      } else if (visible(f2, Q[i])) {
+      } else if (visibleNoDup(f2, Q[i])) {
 	Q[i].attribute.seeFacet = f2;
 	f2->push_back(Q[i]);
-      } else if (visible(f3, Q[i])) {
+      } else if (visibleNoDup(f3, Q[i])) {
 	Q[i].attribute.seeFacet = f3;
 	f3->push_back(Q[i]);
-      } else if (visible(f4, Q[i])) {
+      } else if (visibleNoDup(f4, Q[i])) {
 	Q[i].attribute.seeFacet = f4;
 	f4->push_back(Q[i]);
-      } else if (visible(f5, Q[i])) {
+      } else if (visibleNoDup(f5, Q[i])) {
 	Q[i].attribute.seeFacet = f5;
 	f5->push_back(Q[i]);
-      } else if (visible(f6, Q[i])) {
+      } else if (visibleNoDup(f6, Q[i])) {
 	Q[i].attribute.seeFacet = f6;
 	f6->push_back(Q[i]);
-      } else if (visible(f7, Q[i])) {
+      } else if (visibleNoDup(f7, Q[i])) {
 	Q[i].attribute.seeFacet = f7;
 	f7->push_back(Q[i]);
       } else {
@@ -955,21 +998,21 @@ conflictList<linkedFacet3d, vertex3d> *makeInitial8Hull(slice<pt*, pt*> P) {
 
     auto flag = sequence<int>(P.size());
     parallel_for(0, P.size(), [&](size_t i) {
-				if (visible(f0, Q[i])) {
+				if (visibleNoDup(f0, Q[i])) {
 				  flag[i] = 0; Q[i].attribute.seeFacet = f0;
-				} else if (visible(f1, Q[i])) {
+				} else if (visibleNoDup(f1, Q[i])) {
 				  flag[i] = 1; Q[i].attribute.seeFacet = f1;
-				} else if (visible(f2, Q[i])) {
+				} else if (visibleNoDup(f2, Q[i])) {
 				  flag[i] = 2; Q[i].attribute.seeFacet = f2;
-				} else if (visible(f3, Q[i])) {
+				} else if (visibleNoDup(f3, Q[i])) {
 				  flag[i] = 3; Q[i].attribute.seeFacet = f3;
-				} else if (visible(f4, Q[i])) {
+				} else if (visibleNoDup(f4, Q[i])) {
 				  flag[i] = 4; Q[i].attribute.seeFacet = f4;
-				} else if (visible(f5, Q[i])) {
+				} else if (visibleNoDup(f5, Q[i])) {
 				  flag[i] = 5; Q[i].attribute.seeFacet = f5;
-				} else if (visible(f6, Q[i])) {
+				} else if (visibleNoDup(f6, Q[i])) {
 				  flag[i] = 6; Q[i].attribute.seeFacet = f6;
-				} else if (visible(f7, Q[i])) {
+				} else if (visibleNoDup(f7, Q[i])) {
 				  flag[i] = 7; Q[i].attribute.seeFacet = f7;
 				} else {
 				  flag[i] = 8; Q[i].attribute.seeFacet = nullptr;
@@ -1229,7 +1272,11 @@ sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
     }
 
 #ifdef VERBOSE
-    cout << "visible = " << *apex.attribute.seeFacet << endl;
+    cout << "visible = " << *apex.attribute.seeFacet << ": ";
+    for (auto x: *apex.attribute.seeFacet->seeList) {
+      cout << x.attribute.i << " ";
+    }
+    cout << endl;
 
     cout << "frontier = ";
     for(auto e: *frontierEdges) {
