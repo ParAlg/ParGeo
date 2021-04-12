@@ -23,9 +23,8 @@
 #pragma once
 
 //#define WRITE // Write to file, visualize using python3 plot.py
-//#define VERBOSE
+#define VERBOSE
 #define SILENT
-#define SERIAL
 
 #ifdef WRITE
 #include <iostream>
@@ -485,7 +484,11 @@ e.b==e.ff.a    e.a==e.ff.c
     }
   }
 
-  size_t hullSize(facetT* start=nullptr) {
+  std::atomic<size_t>& hullSize() {
+    return hSize;
+  }
+
+  size_t hullSizeDfs(facetT* start=nullptr) {
     size_t s = 0;
     auto fVisit = [&](_edge<facetT, vertexT> e) { return true;};
     auto fDo = [&](_edge<facetT, vertexT> e) { s++;};
@@ -498,13 +501,13 @@ e.b==e.ff.a    e.a==e.ff.c
   // Also checks the hull integrity
   void printHull(facetT* start=nullptr, bool checker=true) {
     if (checker) printHull(start, false);
-    size_t hs = hullSize();
+    size_t hs = hullSizeDfs();
     auto fVisit = [&](_edge<facetT, vertexT> e) { return true;};
     auto fDo = [&](_edge<facetT, vertexT> e) {
-		 if (checker && hullSize(e.ff) != hs) {
+		 if (checker && hullSizeDfs(e.ff) != hs) {
 		   cout << " ..." << endl;
 		   cout << "Error, inconsistency detected, abort" << endl;
-		   cout << "Erroneous hull size = " << hullSize(e.ff) << endl;
+		   cout << "Erroneous hull size = " << hullSizeDfs(e.ff) << endl;
 		   abort();
 		 }
 		 if (!checker) cout << *e.ff << ":" << e.ff->size() << " ";
@@ -1288,7 +1291,7 @@ sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
 #endif
 
 #ifdef VERBOSE
-  cout << "hull-size = " << context->hullSize() << endl;
+  cout << "hull-size = " << context->hullSizeDfs() << endl;
 #endif
 
 #ifdef WRITE
@@ -1300,9 +1303,6 @@ sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
   context->getHull<pt>(result);
   return result;
 }
-
-
-#ifndef SERIAL
 
 template<class pt>
 sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
@@ -1322,7 +1322,7 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
   timer t; t.start();
 
   auto cg = makeInitialSimplex3(P);
-  long hullSize = 4;
+
   _hull<linkedFacet3d, vertex3d> *context = cg->context;
 
   double initTime = t.stop();
@@ -1340,14 +1340,14 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
   while (true) {
     round ++;
 
-    if (hullSize < 64) {
+    if (context->hullSize() < 64) {
 
       serRound ++;
       tr.start();
       t.start();
 
     loopStart:
-      linkedFacet3d* f0 = hullSize < 512 ? cg->facetWalk() : nullptr;
+      linkedFacet3d* f0 = context->hullSize() < 512 ? cg->facetWalk() : nullptr;
       vertex3d apex = cg->furthestApex(f0);
 
       apexTime += t.get_next();
@@ -1362,9 +1362,9 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
 
       // Check for frontier error, usually caused by numerical errors in rare cases
       for(size_t i=0; i<frontierEdges->size(); ++i) {
-	auto pv = frontierEdges->at((i+frontierEdges->size()-1)%frontierEdges->size());
+	auto nv = frontierEdges->at((i+1)%frontierEdges->size());
 	auto cv = frontierEdges->at(i);
-	if (pv.b != cv.a && pv.a != cv.a && pv.b != cv.b && pv.a != cv.b) {
+	if (cv.b != nv.a) {
 	  apex.attribute.seeFacet->clear();
 	  goto loopStart;
 	}
@@ -1391,8 +1391,6 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
 
       cg->redistribute(facetsBeneath->cut(0, facetsBeneath->size()), make_slice(newFacets));
 
-      hullSize += frontierEdges->size() - facetsBeneath->size();
-
       splitTime += t.stop();
 
       // Delete existing facets
@@ -1408,9 +1406,8 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
       t.start();
 
       // todo points chosen are close, which is bad
-      //sequence<vertex3d> apexes0 = cg->furthestApexes(parlay::num_workers()); // todo tune
-      sequence<vertex3d> apexes0 = cg->spacedFurthestApexes(parlay::num_workers()); // todo tune
-      //sequence<vertex3d> apexes0 = cg->randomApexes(hullSize); // todo tune
+      sequence<vertex3d> apexes0 = cg->furthestApexes(parlay::num_workers()); // todo tune
+      //sequence<vertex3d> apexes0 = cg->randomApexes(context->hullSize()); // todo tune
 
       apexTime += t.get_next();
 
@@ -1444,11 +1441,11 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
 				   success[a] = true;
 				 }
 
-				 // Check for near-denegeracy via frontier
+				 // Check for numerical errors in the frontier
 				 for(size_t i=0; i<FE0[a]->size(); ++i) {
-				   auto pv = FE0[a]->at((i+FE0[a]->size()-1)%FE0[a]->size());
+				   auto nv = FE0[a]->at((i+1)%FE0[a]->size());
 				   auto cv = FE0[a]->at(i);
-				   if (pv.b != cv.a && pv.a != cv.a && pv.b != cv.b && pv.a != cv.b) {
+				   if (cv.b != nv.a) {
 				     apexes0[a].attribute.seeFacet->clear();
 				     success[a] = false;
 				   }
@@ -1459,7 +1456,6 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
 				 cg->resetReservation(apexes0[a], FB0[a]->cut(0, FB0[a]->size()));
 			       });
 
-      // todo filter out successful points and use parfor1
       auto apexes = parlay::pack(make_slice(apexes0), success);
       auto FE = parlay::pack(make_slice(FE0), success);
       auto FB = parlay::pack(make_slice(FB0), success);
@@ -1492,8 +1488,6 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
 
 				   increase[a] = FE[a]->size() - FB[a]->size();
 			       });
-
-      hullSize += parlay::scan_inplace(make_slice(increase), addm<int>());
 
       //todo remove
       // if (!cg->checkReset()) {// checking this is expensive O(nh)
@@ -1528,7 +1522,7 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
   cout << "ser-time = " << serTime << endl;
   cout << "#-par-rounds = " << round - serRound << endl;
   cout << "par-time = " << parTime << endl;
-  cout << "hull-size = " << hullSize << endl;
+  cout << "hull-size = " << context->hullSize() << endl;
 #endif
 
 #ifdef WRITE
@@ -1539,5 +1533,3 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
   context->getHull<pt>(result);
   return result;
 }
-
-#endif // ifndef SERIAL

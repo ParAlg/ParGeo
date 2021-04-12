@@ -13,9 +13,9 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
 
   size_t n = P.size();
   cout << "#-points = " << n << endl;
-  cout << "#-procs = " << num_workers() << endl;
 
-  auto H = incrementHull3d<pargeo::fpoint<3>>(make_slice(P));
+  auto H = incrementHull3dSerial<pargeo::fpoint<3>>(make_slice(P));
+  //auto H = incrementHull3d<pargeo::fpoint<3>>(make_slice(P));
   cout << H.size() << endl;
 
   return H;

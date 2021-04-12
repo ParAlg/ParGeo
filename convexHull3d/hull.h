@@ -13,7 +13,7 @@ struct _facet3d {
 
   _facet3d(pt _a, pt _b, pt _c): a(_a), b(_b), c(_c) {
     if (pargeo::determinant3by3(a, b, c) > 0)
-      swap(b, c);
+      std::swap(b, c);
   }
 };
 

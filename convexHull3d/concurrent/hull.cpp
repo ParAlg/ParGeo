@@ -7,8 +7,6 @@
 #include "hull.h"
 #include "grid.h"
 
-using namespace std;
-
 parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &P, size_t numProc = 0) {
   using namespace std;
   using namespace parlay;
