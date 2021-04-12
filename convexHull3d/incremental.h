@@ -23,7 +23,7 @@
 #pragma once
 
 //#define WRITE // Write to file, visualize using python3 plot.py
-#define VERBOSE
+//#define VERBOSE
 #define SILENT
 
 #ifdef WRITE
@@ -218,11 +218,15 @@ void linkFacet(fc* f, fc* ab, fc* bc, fc* ca) {
 			 return F[i];
 		       }
 		     }
-		     // cout << "Facets: " << endl;
-		     // for(int i=0; i<3; ++i)
-		     //   cout << F[i]->a << " " << F[i]->b << " " << F[i]->c << endl;
-		     // cout << "match v1 = " << v1 << endl;
-		     // cout << "match v2 = " << v2 << endl;
+		     cout << "Facets: " << endl;
+#ifdef VERBOSE
+		     for(int i=0; i<3; ++i)
+		       cout << F[i]->a.attribute.i << " "
+			    << F[i]->b.attribute.i << " "
+			    << F[i]->c.attribute.i << endl;
+		     cout << "match v1 = " << v1.attribute.i << endl;
+		     cout << "match v2 = " << v2.attribute.i << endl;
+#endif
 		     throw std::runtime_error("Facet linking failure.");
 		   };
 
@@ -1305,8 +1309,11 @@ sequence<facet3d<pt>> incrementHull3dSerial(slice<pt*, pt*> P) {
 }
 
 template<class pt>
-sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
+sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P, size_t numProc = 0) {
   using facet3d = facet3d<pt>;
+
+  if (numProc == 0)
+    numProc = parlay::num_workers();
 
 #ifdef WRITE
   {
@@ -1406,8 +1413,11 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
       t.start();
 
       // todo points chosen are close, which is bad
-      sequence<vertex3d> apexes0 = cg->furthestApexes(parlay::num_workers()); // todo tune
+      sequence<vertex3d> apexes0 = cg->furthestApexes(numProc); // todo tune
       //sequence<vertex3d> apexes0 = cg->randomApexes(context->hullSize()); // todo tune
+#ifdef VERBOSE
+      size_t np = apexes0.size();
+#endif
 
       apexTime += t.get_next();
 
@@ -1460,7 +1470,9 @@ sequence<facet3d<pt>> incrementHull3d(slice<pt*, pt*> P) {
       auto FE = parlay::pack(make_slice(FE0), success);
       auto FB = parlay::pack(make_slice(FB0), success);
       size_t numApex = apexes.size();
-
+#ifdef VERBOSE
+      cout << numApex << "/" << np << endl;
+#endif
       sequence<int> increase(numApex, 0);
 
       // Process the successful points

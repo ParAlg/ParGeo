@@ -6,7 +6,7 @@
 #include "incremental.h"
 #include "hull.h"
 
-parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &P) {
+parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &P, size_t numProc) {
   using namespace std;
   using namespace parlay;
   using floatT = pargeo::fpoint<3>::floatT;
@@ -15,10 +15,10 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
   cout << "#-points = " << n << endl;
   cout << "#-procs = " << num_workers() << endl;
 
-  auto H = incrementHull3d<pargeo::fpoint<3>>(make_slice(P));
+  auto H = incrementHull3d<pargeo::fpoint<3>>(make_slice(P), numProc);
   cout << H.size() << endl;
 
   return H;
 }
 
-parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &);
+parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &, size_t);
