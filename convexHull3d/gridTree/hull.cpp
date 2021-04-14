@@ -5,9 +5,11 @@
 #include "common/geometry.h"
 #include "incremental.h"
 #include "hullTopology.h"
-#include "gridVertex.h"
 #include "hull.h"
 #include "gridTree.h"
+
+#include <iostream>
+#include <fstream>
 
 using namespace std;
 
@@ -20,17 +22,20 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
 
   size_t n = P.size();
 
-  auto tree = gridTree3d<pointT>(make_slice(P), 5);
+  auto tree = gridTree3d<pointT>(make_slice(P), 10);
 
-  // Now bridge the two algorithms
-  sequence<gridVertex> Q(P.size());
-  parallel_for(0, P.size(), [&](size_t i) {
-			      Q[i] = gridVertex(P[i].coords());
-			      // Initialize meta data related to the data type
-			      // (gridVertex) todo
-			    });
+  sequence<gridVertex> Q = tree.level(4);
 
-  // Create an initial simplex
+  // ofstream myfile;
+  // myfile.open("hull.txt", std::ofstream::trunc);
+  // for (auto q: Q) {
+  //   myfile << q[0] << " " << q[1] << " " << q[2] << endl;
+  // }
+  // myfile.close();
+
+  cout << Q.size() << endl;
+
+  // Create a coarse simplex
   auto linkedHull = new _hull<linkedFacet3d<gridVertex>, gridVertex>(make_slice(Q));
 
   incrementHull3dSerial<gridVertex>(linkedHull);

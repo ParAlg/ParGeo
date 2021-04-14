@@ -5,12 +5,80 @@
 
 using namespace parlay;
 
+class gridAtt3d;
+
+using gridVertex = pargeo::_point<3, pargeo::fpoint<3>::floatT, pargeo::fpoint<3>::floatT, gridAtt3d>;
+
 struct gridAtt3d {
   using pt = pargeo::fpoint<3>;
-  size_t id;
-  static constexpr size_t maxRange = 65535;
+  using floatT = pt::floatT;
+  static constexpr typename pargeo::fpoint<3>::floatT numericKnob = 1e-5;
 
   gridAtt3d() {}
+
+  size_t id; // grid id
+
+  size_t i; // index, todo check if needed
+
+  linkedFacet3d<gridVertex> *seeFacet;
+
+  /* Signed volume (x6) of an oriented tetrahedron (example below is positive).
+       d
+       o
+      /|\
+     / | o b
+    o--o/
+     a   c
+
+     x
+     origin
+  */
+  template <class pt>
+  inline typename pt::floatT signedVolume(pt a, pt b, pt c, pt d) {
+    return (a-d).dot(crossProduct3d(b-a, c-a));
+  }
+
+  // area is precomputed from oriented triang a,b,c
+  template <class pt>
+  inline typename pt::floatT signedVolume(pt a, pt d, pt area) {
+    return (a-d).dot(area);
+  }
+
+  template<class facetT, class vertexT>
+  bool visible(facetT* f, vertexT p) {
+    if (signedVolume(f->a, p, f->area) > numericKnob)
+      return true;
+    else
+      return false;
+  }
+
+  template<class facetT, class vertexT>
+  bool visibleNoDup(facetT* f, vertexT p) {
+    if (signedVolume(f->a, p, f->area) > numericKnob)
+      return true && f->a != p && f->b != p && f->c != p;
+    else
+      return false;
+  }
+
+};
+
+static std::ostream& operator<<(std::ostream& os, const gridVertex& v) {
+  for (int i=0; i<v.dim; ++i)
+    os << v.x[i] << " ";
+  return os;
+}
+
+template<class pt>
+class gridTree3d {
+  using floatT = gridVertex::floatT;
+  static constexpr int dim = 3;
+  static constexpr size_t maxRange = 65535;
+
+  sequence<gridVertex> P;
+
+  sequence<size_t>* pointers;
+
+  size_t L;
 
   inline size_t shift(size_t x) {
     if (x > maxRange)
@@ -23,12 +91,7 @@ struct gridAtt3d {
     return x;
   }
 
-  void printBin(size_t x) {
-    std::bitset<64> xb(x);
-    cout << xb << endl;
-  }
-
-  gridAtt3d(pargeo::fpoint<3> p, pargeo::fpoint<3> pMin, pargeo::fpoint<3>::floatT gSize) {
+  size_t computeId(pargeo::fpoint<3> p, pargeo::fpoint<3> pMin, floatT gSize) {
     size_t x = floor( (p[0] - pMin[0]) / gSize );
     size_t y = floor( (p[1] - pMin[1]) / gSize );
     size_t z = floor( (p[2] - pMin[2]) / gSize );
@@ -36,41 +99,37 @@ struct gridAtt3d {
     x = shift(x);
     y = shift(y);
     z = shift(z);
-    id = x | (y << 1) | (z << 2);
+    size_t id = x | (y << 1) | (z << 2);
+    return id;
   }
 
   // Level 0 is the coarsest level
-  size_t getLevel(size_t l) {
+  size_t getLevel(gridVertex p, size_t l) {
     // the highest 16 bits are empty
     // starting taking 3-bit numbers
-    return id >> (48 - (l+1)*3);
+    return p.attribute.id >> (48 - (l+1)*3);
   }
-};
-
-using gpt3d = pargeo::_point<3, float, float, gridAtt3d>;
-
-template<class pt>
-class gridTree3d {
-  using floatT = gpt3d::floatT;
-  static constexpr int dim = 3;
-  static constexpr size_t maxGrid = 65535;
-
-  sequence<gpt3d> P;
-
-  sequence<size_t>* pointers;
-
-  size_t L;
 
 public:
-  sequence<size_t> level(size_t l) {
+
+  sequence<size_t> levelIdx(size_t l) {
     return pointers[l];
   }
 
-  gpt3d at(size_t l, size_t i) {
+  sequence<gridVertex> level(size_t l) {
+    sequence<gridVertex> out(pointers[l].size()-1);
+    parallel_for(0, pointers[l].size()-1,
+		 [&](size_t i){
+		   out[i] = P[pointers[l][i]];
+		 });
+    return out;
+  }
+
+  gridVertex at(size_t l, size_t i) {
     return P[pointers[l][i]];
   }
 
-  gpt3d at(size_t i) {
+  gridVertex at(size_t i) {
     return P[i];
   }
 
@@ -91,7 +150,7 @@ public:
 				write_min(&extrema[5], _P[i][2], std::less<floatT>());
 			      });
     floatT gSize = max(extrema[4]-extrema[5],
-		       max((extrema[2]-extrema[3]),(extrema[1]-extrema[0]))) / maxGrid;
+		       max((extrema[2]-extrema[3]),(extrema[1]-extrema[0]))) / maxRange;
 
     pt pMin;
     pMin[0] = extrema[1];
@@ -100,13 +159,14 @@ public:
 
     cout << "grid-size = " << gSize << endl;
 
-    P = sequence<gpt3d>(_P.size());
+    P = sequence<gridVertex>(_P.size());
     parallel_for(0, P.size(), [&](size_t i){
-				P[i] = gpt3d(P[i].coords());
-				P[i].attribute = gridAtt3d(_P[i], pMin, gSize);
+				P[i] = gridVertex(_P[i].coords());
+				P[i].attribute = gridAtt3d();
+				P[i].attribute.id = computeId(_P[i], pMin, gSize);
 			      });
 
-    parlay::sort_inplace(make_slice(P), [&](gpt3d const& a, gpt3d const& b){
+    parlay::sort_inplace(make_slice(P), [&](gridVertex const& a, gridVertex const& b){
 					  return a.attribute.id < b.attribute.id;});
 
     sequence<size_t> flag(P.size()+1);
@@ -116,7 +176,7 @@ public:
     for (int l=0; l<L; ++l) {
       flag[0] = 1;
       parallel_for(1, P.size(), [&](size_t i){
-				  if (P[i].attribute.getLevel(l) != P[i-1].attribute.getLevel(l)) {
+				  if (getLevel(P[i], l) != getLevel(P[i-1], l)) {
 				    flag[i] = 1;
 				  } else flag[i] = 0;
 				});
