@@ -10,15 +10,22 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
   using namespace std;
   using namespace parlay;
   using floatT = pargeo::fpoint<3>::floatT;
+  using pointT = pargeo::fpoint<3>;
+  using facetT = facet3d<pargeo::fpoint<3>>;
 
   size_t n = P.size();
   cout << "#-points = " << n << endl;
   cout << "#-procs = " << num_workers() << endl;
 
-  auto H = incrementHull3d<pargeo::fpoint<3>>(make_slice(P), numProc);
-  cout << H.size() << endl;
+  auto linkedHull = incrementHull3d<pargeo::fpoint<3>>(make_slice(P));
 
-  return H;
+  auto out = sequence<facetT>();
+  linkedHull->getHull<pointT>(out);
+
+  cout << out.size() << endl;
+
+  delete linkedHull;
+  return out;
 }
 
 parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &, size_t);

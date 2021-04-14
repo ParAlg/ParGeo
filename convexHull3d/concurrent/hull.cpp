@@ -5,12 +5,13 @@
 #include "common/geometry.h"
 #include "incremental.h"
 #include "hull.h"
-#include "grid.h"
 
 parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &P, size_t numProc = 0) {
   using namespace std;
   using namespace parlay;
   using pt = pargeo::fpoint<3>;
+  using floatT = pargeo::fpoint<3>::floatT;
+  using facetT = facet3d<pargeo::fpoint<3>>;
 
   size_t n = P.size();
   cout << "#-points = " << n << endl;
@@ -36,7 +37,8 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
 			     size_t s = i * blkSize;
 			     size_t e = min(P.size(), (i+1) * blkSize);
 			     //cout << s << "--" << e << endl;
-			     subHulls[i] = incrementHull3dSerial(P.cut(s, e));
+			     auto linkedHull = incrementHull3dSerial(P.cut(s, e));
+			     linkedHull->getHull<pt>(subHulls[i]);
 			     //cout << subHulls[i].size() << endl;
 			   }, 1);
 
@@ -60,12 +62,17 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
   cout << "merge-time = " << t.get_next() << endl;
 
   cout << "hull-2-input-size = " << uniquePts.size() << endl;
-  auto H = incrementHull3dSerial(make_slice(uniquePts)); // todo parallelize
+  auto finalLinkedHull = incrementHull3dSerial(make_slice(uniquePts)); // todo parallelize
 
   cout << "hull2-time = " << t.stop() << endl;
-  cout << H.size() << endl;
 
-  return H;
+  auto out = sequence<facetT>();
+  finalLinkedHull->getHull<pt>(out);
+
+  cout << out.size() << endl;
+
+  delete finalLinkedHull;
+  return out;
 }
 
 parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &);
