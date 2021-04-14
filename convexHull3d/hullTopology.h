@@ -335,16 +335,15 @@ public:
 
   void setStart(facetT* _H) {H = _H;}
 
-  template<class pt>
-  _hull(slice<pt*, pt*> P) {
+  _hull(slice<vertexT*, vertexT*> P) {
 
     // Maximize triangle area based on fixed xMin and xMax
     size_t X[6]; // extrema
-    auto xx = minmax_element(P, [&](pt i, pt j) {return i[0]<j[0];});
+    auto xx = minmax_element(P, [&](vertexT i, vertexT j) {return i[0]<j[0];});
     X[0] = xx.first - &P[0]; X[1] = xx.second - &P[0];
-    auto yy = minmax_element(P, [&](pt i, pt j) {return i[1]<j[1];});
+    auto yy = minmax_element(P, [&](vertexT i, vertexT j) {return i[1]<j[1];});
     X[2] = yy.first - &P[0]; X[3] = yy.second - &P[0];
-    auto zz = minmax_element(P, [&](pt i, pt j) {return i[2]<j[2];});
+    auto zz = minmax_element(P, [&](vertexT i, vertexT j) {return i[2]<j[2];});
     X[4] = zz.first - &P[0]; X[5] = zz.second - &P[0];
 
     size_t xMin, xMax;
@@ -356,19 +355,19 @@ public:
       xMin = X[4]; xMax = X[5];
     }
 
-    pt x1 = P[xMin];
-    pt x2 = P[xMax];
+    vertexT x1 = P[xMin];
+    vertexT x2 = P[xMax];
 
-    auto y = max_element(P, [&](pt i, pt j) {
+    auto y = max_element(P, [&](vertexT i, vertexT j) {
 			      return crossProduct3d(x1-i, x2-i).length() <
 				crossProduct3d(x1-j, x2-j).length();
 			    });
     size_t yApex = y - &P[0];
-    pt y1 = P[yApex];
+    vertexT y1 = P[yApex];
 
     // Maximize simplex volume
-    pt area = crossProduct3d(x1-y1, x2-y1);
-    auto z = max_element(P, [&](pt i, pt j) {
+    vertexT area = crossProduct3d(x1-y1, x2-y1);
+    auto z = max_element(P, [&](vertexT i, vertexT j) {
 			      return abs((y1-i).dot(area)) < abs((y1-j).dot(area));
 			    });
     size_t zApex = z - &P[0];
@@ -380,19 +379,12 @@ public:
   
     hSize = 4;
 
-    pt tmp = P[c1] + P[c2] + P[c3] + P[c4];
-    origin[0] = tmp[0] / 4;
-    origin[1] = tmp[1] / 4;
-    origin[2] = tmp[2] / 4;
+    origin = (P[c1] + P[c2] + P[c3] + P[c4])/4;
 
     // Initialize points with visible facet link
     auto Q = typename facetT::seqT(P.size());
     parallel_for(0, P.size(), [&](size_t i) {
-				for(int j=0; j<P[i].dim; ++j)
-				  Q[i][j] = P[i][j] - origin[j];
-#ifdef VERBOSE
-				Q[i].attribute.i = i;
-#endif
+				  Q[i] = P[i] - origin;
 			      });
 
     // Make initial facets
@@ -820,6 +812,22 @@ public:
     auto fStop = [&]() { return false;};
 
     dfsFacet(H, fVisit, fDo, fStop);
+  }
+
+  template<class pt>
+  sequence<pt> getHullPts() {
+    sequence<pt> out;
+    auto fVisit = [&](_edge e) { return true;};
+    auto fDo = [&](_edge e) {
+		 out.emplace_back(pt((e.ff->a+origin).coords()));
+		 out.emplace_back(pt((e.ff->b+origin).coords()));
+		 out.emplace_back(pt((e.ff->c+origin).coords()));
+	       };
+    auto fStop = [&]() { return false;};
+
+    dfsFacet(H, fVisit, fDo, fStop);
+    parlay::sort_inplace(out);
+    return parlay::unique(out);
   }
 
 #ifdef WRITE

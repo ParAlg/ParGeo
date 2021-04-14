@@ -19,8 +19,18 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
   cout << "#-points = " << n << endl;
   cout << "#-procs = " << num_workers() << endl;
 
-  auto linkedHull = incrementHull3d<pointT, pointVertex>(make_slice(P));
+  sequence<pointVertex> Q(P.size());
+  parallel_for(0, P.size(), [&](size_t i) {
+			      Q[i] = pointVertex(P[i].coords());
+			    });
 
+  // Create an initial simplex
+  auto linkedHull = new _hull<linkedFacet3d<pointVertex>, pointVertex>(make_slice(Q));
+
+  incrementHull3d<pointVertex>(linkedHull, numProc);
+
+  // linkedHull is translated
+  // getHull will undo the translation
   auto out = sequence<facetT>();
   linkedHull->getHull<pointT>(out);
 

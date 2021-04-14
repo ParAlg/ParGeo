@@ -15,14 +15,33 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
   using namespace std;
   using namespace parlay;
   using floatT = pargeo::fpoint<3>::floatT;
+  using pointT = pargeo::fpoint<3>;
+  using facetT = facet3d<pargeo::fpoint<3>>;
 
   size_t n = P.size();
 
-  auto tree = gridTree3d<pargeo::fpoint<3>>(make_slice(P), 5);
+  auto tree = gridTree3d<pointT>(make_slice(P), 5);
 
-  
+  // Now bridge the two algorithms
+  sequence<gridVertex> Q(P.size());
+  parallel_for(0, P.size(), [&](size_t i) {
+			      Q[i] = gridVertex(P[i].coords());
+			      // Initialize meta data related to the data type
+			      // (gridVertex) todo
+			    });
 
-  return sequence<facet3d<pargeo::fpoint<3>>>(); //todo
+  // Create an initial simplex
+  auto linkedHull = new _hull<linkedFacet3d<gridVertex>, gridVertex>(make_slice(Q));
+
+  incrementHull3dSerial<gridVertex>(linkedHull);
+
+  auto out = sequence<facetT>();
+  linkedHull->getHull<pointT>(out);
+
+  cout << out.size() << endl;
+
+  delete linkedHull;
+  return out;
 }
 
 parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &);

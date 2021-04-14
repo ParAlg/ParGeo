@@ -4,16 +4,14 @@
 
 class vertexAtt;
 
-using pointVertex = pargeo::_point<3, pargeo::fpoint<3>::floatT, pargeo::fpoint<3>::floatT, vertexAtt>;
+using gridVertex = pargeo::_point<3, pargeo::fpoint<3>::floatT, pargeo::fpoint<3>::floatT, vertexAtt>;
 
 class vertexAtt {
 public:
   static constexpr typename pargeo::fpoint<3>::floatT numericKnob = 1e-5;
-
-#ifdef VERBOSE
   size_t i;
-#endif
-  linkedFacet3d<pointVertex> *seeFacet;
+  linkedFacet3d<gridVertex> *seeFacet;
+
   vertexAtt() {}
 
   /* Signed volume (x6) of an oriented tetrahedron (example below is positive).
@@ -57,7 +55,7 @@ public:
 
 };
 
-static std::ostream& operator<<(std::ostream& os, const pointVertex& v) {
+static std::ostream& operator<<(std::ostream& os, const gridVertex& v) {
   for (int i=0; i<v.dim; ++i)
     os << v.x[i] << " ";
   return os;

@@ -41,27 +41,15 @@
 using namespace parlay;
 using namespace parlay::internal;
 
-template<class pt, class vertex3d>
-_hull<linkedFacet3d<vertex3d>, vertex3d> *incrementHull3dSerial(slice<pt*, pt*> P) {
-  using facet3d = facet3d<pt>;
+template<class vertex3d>
+void incrementHull3dSerial(_hull<linkedFacet3d<vertex3d>, vertex3d> *context) {
   using linkedFacet3d = linkedFacet3d<vertex3d>;
 
-#ifdef WRITE
-  {
-    ofstream myfile;
-    myfile.open("hull.txt", std::ofstream::trunc); myfile.close();
-    myfile.open("point.txt", std::ofstream::trunc);
-    for(size_t p=0; p<P.size(); ++p)
-      myfile << P[p] << p << endl;
-    myfile.close();
-  }
-#endif
+  timer t;// t.start();
 
-  timer t; t.start();
+  // auto context = new _hull<linkedFacet3d, vertex3d>(P);//;makeInitialSimplex(P);
 
-  auto context = new _hull<linkedFacet3d, vertex3d>(P);//;makeInitialSimplex(P);
-
-  double initTime = t.stop();
+  // double initTime = t.stop();
 
   size_t errors = 0;
   size_t round = 0;
@@ -187,36 +175,19 @@ _hull<linkedFacet3d<vertex3d>, vertex3d> *incrementHull3dSerial(slice<pt*, pt*> 
 #ifdef WRITE
   context->writeHull();
 #endif
-  //free stuff
 
-  return context;
 }
 
 #ifndef SERIAL
 
-template<class pt, class vertex3d>
-_hull<linkedFacet3d<vertex3d>, vertex3d> *incrementHull3d(slice<pt*, pt*> P, size_t numProc = 0) {
-  using facet3d = facet3d<pt>;
+template<class vertex3d>
+void incrementHull3d(_hull<linkedFacet3d<vertex3d>, vertex3d> *context, size_t numProc = 0) {
   using linkedFacet3d = linkedFacet3d<vertex3d>;
 
   if (numProc == 0)
     numProc = parlay::num_workers();
 
-#ifdef WRITE
-  {
-    ofstream myfile;
-    myfile.open("hull.txt", std::ofstream::trunc); myfile.close();
-    myfile.open("point.txt", std::ofstream::trunc);
-    for(size_t p=0; p<P.size(); ++p)
-      myfile << P[p] << p << endl;
-    myfile.close();
-  }
-#endif
-
   timer t; t.start();
-
-  //auto cg = makeInitialSimplex(P);
-  auto context = new _hull<linkedFacet3d, vertex3d>(P);//;makeInitialSimplex(P);
 
   double initTime = t.stop();
 
@@ -426,8 +397,6 @@ _hull<linkedFacet3d<vertex3d>, vertex3d> *incrementHull3d(slice<pt*, pt*> P, siz
 #ifdef WRITE
   context->writeHull();
 #endif
-
-  return context;
 }
 
 #endif

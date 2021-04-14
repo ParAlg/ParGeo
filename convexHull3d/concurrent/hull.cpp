@@ -33,38 +33,36 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
 
   cout << "#subproblems = " << numProc << endl;
 
-  sequence<sequence<facet3d<pt>>> subHulls(numProc);
+  sequence<sequence<pt>> subHulls(numProc);
+
+  sequence<pointVertex> Q(P.size());
+  parallel_for(0, P.size(), [&](size_t i) {
+			      Q[i] = pointVertex(P[i].coords());});
 
   parallel_for(0, numProc, [&](size_t i) {
 			     size_t s = i * blkSize;
 			     size_t e = min(P.size(), (i+1) * blkSize);
 			     //cout << s << "--" << e << endl;
-			     auto linkedHull = incrementHull3dSerial<pt, pointVertex>(P.cut(s, e));
-			     linkedHull->getHull<pt>(subHulls[i]);
-			     //cout << subHulls[i].size() << endl;
+			     auto linkedHull = new _hull<linkedFacet3d<pointVertex>, pointVertex>(Q.cut(s, e));
+			     incrementHull3dSerial<pointVertex>(linkedHull);
+			     subHulls[i] = linkedHull->getHullPts<pt>();
 			   }, 1);
 
   cout << "subhull-time = " << t.get_next() << endl;
 
-  sequence<facet3d<pt>> mergeHull = parlay::flatten(subHulls);
-  //cout << mergeHull.size() << endl;
-
-  sequence<pt> hullPoints(mergeHull.size()*3);
-
-  parallel_for(0, mergeHull.size(), [&](size_t i) {
-				      hullPoints[i*3] = mergeHull[i].a;
-				      hullPoints[i*3+1] = mergeHull[i].b;
-				      hullPoints[i*3+2] = mergeHull[i].c;
-				    });
-
-  parlay::sort_inplace(hullPoints);
-
-  sequence<pt> uniquePts = parlay::unique(hullPoints);
+  sequence<pt> uniquePts = parlay::flatten(subHulls);
 
   cout << "merge-time = " << t.get_next() << endl;
 
   cout << "hull-2-input-size = " << uniquePts.size() << endl;
-  auto finalLinkedHull = incrementHull3dSerial<pt, pointVertex>(make_slice(uniquePts)); // todo parallelize
+
+  sequence<pointVertex> Q2(uniquePts.size());
+
+  parallel_for(0, uniquePts.size(), [&](size_t i) {
+			      Q2[i] = pointVertex(uniquePts[i].coords());});
+
+  auto finalLinkedHull = new _hull<linkedFacet3d<pointVertex>, pointVertex>(make_slice(Q2));
+  incrementHull3dSerial<pointVertex>(finalLinkedHull); // todo parallelize
 
   cout << "hull2-time = " << t.stop() << endl;
 
