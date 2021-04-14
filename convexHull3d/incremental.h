@@ -41,15 +41,10 @@
 using namespace parlay;
 using namespace parlay::internal;
 
-template<class vertex3d>
-void incrementHull3dSerial(_hull<linkedFacet3d<vertex3d>, vertex3d> *context) {
-  using linkedFacet3d = linkedFacet3d<vertex3d>;
+template<class linkedFacet3d, class vertex3d>
+void incrementHull3dSerial(_hull<linkedFacet3d, vertex3d> *context) {
 
   timer t;// t.start();
-
-  // auto context = new _hull<linkedFacet3d, vertex3d>(P);//;makeInitialSimplex(P);
-
-  // double initTime = t.stop();
 
   size_t errors = 0;
   size_t round = 0;
@@ -180,9 +175,8 @@ void incrementHull3dSerial(_hull<linkedFacet3d<vertex3d>, vertex3d> *context) {
 
 #ifndef SERIAL
 
-template<class vertex3d>
-void incrementHull3d(_hull<linkedFacet3d<vertex3d>, vertex3d> *context, size_t numProc = 0) {
-  using linkedFacet3d = linkedFacet3d<vertex3d>;
+template<class linkedFacet3d, class vertex3d>
+void incrementHull3d(_hull<linkedFacet3d, vertex3d> *context, size_t numProc = 0) {
 
   if (numProc == 0)
     numProc = parlay::num_workers();

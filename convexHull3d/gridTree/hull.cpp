@@ -38,7 +38,7 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
   // Create a coarse simplex
   auto linkedHull = new _hull<linkedFacet3d<gridVertex>, gridVertex>(make_slice(Q));
 
-  incrementHull3dSerial<gridVertex>(linkedHull);
+  incrementHull3dSerial<linkedFacet3d<gridVertex>, gridVertex>(linkedHull);
 
   auto out = sequence<facetT>();
   linkedHull->getHull<pointT>(out);
