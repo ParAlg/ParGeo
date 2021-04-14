@@ -22,9 +22,6 @@
 
 #pragma once
 
-//#define WRITE // Write to file, visualize using python3 plot.py
-//#define VERBOSE
-
 #ifdef WRITE
 #include <iostream>
 #include <fstream>
@@ -40,7 +37,6 @@
 #include "geometry/algebra.h"
 #include "common/get_time.h"
 #include "split.h"
-#include "pointAttribute.h"
 
 using namespace parlay;
 using namespace parlay::internal;
@@ -63,21 +59,23 @@ struct hash_pointer {
   }
 };
 
+template <class vertexT>
 struct linkedFacet3d {
+  //using vertexT = vertex3d;
 #ifdef SERIAL
-  typedef vector<vertex3d> seqT;
+  typedef vector<vertexT> seqT;
 #else
-  typedef sequence<vertex3d> seqT;
+  typedef sequence<vertexT> seqT;
 #endif
 
-  vertex3d a, b, c;
+  vertexT a, b, c;
   linkedFacet3d *abFacet;
   linkedFacet3d *bcFacet;
   linkedFacet3d *caFacet;
-  vertex3d area;
+  vertexT area;
 
   bool isAdjacent(linkedFacet3d* f2) {
-    vertex3d V[3]; V[0] = a; V[1] = b; V[2] = c;
+    vertexT V[3]; V[0] = a; V[1] = b; V[2] = c;
     for (int i=0; i<3; ++i) {
       auto v1 = V[i];
       auto v2 = V[(i+1)%3];
@@ -92,32 +90,32 @@ struct linkedFacet3d {
   // Stores the minimum memory address of the seeFacet of the reserving vertices
   std::atomic<size_t> reservation;
 
-  void reserve(vertex3d& p) {
+  void reserve(vertexT& p) {
     parlay::write_min(&reservation, (size_t)p.attribute.seeFacet, std::less<size_t>());
   }
 
-  bool reserved(vertex3d& p) {
+  bool reserved(vertexT& p) {
     return reservation == (size_t)p.attribute.seeFacet;
   }
 #endif
 
   seqT *seeList;
 
-  vertex3d& at(size_t i) { return seeList->at(i); }
+  vertexT& at(size_t i) { return seeList->at(i); }
 
   size_t size() { return seeList->size(); }
 
   void clear() { seeList->clear(); }
 
-  void push_back(vertex3d v) { seeList->push_back(v); }
+  void push_back(vertexT v) { seeList->push_back(v); }
 
-  vertex3d furthest() {
-    typename vertex3d::floatT m = numericKnob;
-    auto apex = vertex3d();
+  vertexT furthest() {
+    auto apex = vertexT();
+    typename vertexT::floatT m = apex.attribute.numericKnob;
 
 #ifdef SERIAL
     for (size_t i=0; i<size(); ++i) {
-      auto m2 = signedVolume(a, b, c, at(i));
+      auto m2 = at(i).attribute.signedVolume(a, b, c, at(i));
       if (m2 > m) {
 	m = m2;
 	apex = at(i);
@@ -125,15 +123,16 @@ struct linkedFacet3d {
     }
 #else
     apex = parlay::max_element(seeList->cut(0, seeList->size()),
-			       [&](vertex3d aa, vertex3d bb) {
-				 return signedVolume(a, b, c, aa) < signedVolume(a, b, c, bb);
+			       [&](vertexT aa, vertexT bb) {
+				 return aa.attribute.signedVolume(a, b, c, aa) <
+				   bb.attribute.signedVolume(a, b, c, bb);
 			       });
 #endif
     return apex;
   }
 
-  linkedFacet3d(vertex3d _a, vertex3d _b, vertex3d _c): a(_a), b(_b), c(_c) {
-    if (pargeo::determinant3by3(a, b, c) > numericKnob)
+  linkedFacet3d(vertexT _a, vertexT _b, vertexT _c): a(_a), b(_b), c(_c) {
+    if (pargeo::determinant3by3(a, b, c) > _a.attribute.numericKnob)//numericKnob)
       swap(b, c);
 
     seeList = new seqT();
@@ -151,7 +150,8 @@ struct linkedFacet3d {
 
 };
 
-static std::ostream& operator<<(std::ostream& os, const linkedFacet3d& v) {
+template<class vertexT>
+static std::ostream& operator<<(std::ostream& os, const linkedFacet3d<vertexT>& v) {
 #ifdef VERBOSE
   os << "(" << v.a.attribute.i << "," << v.b.attribute.i << "," << v.c.attribute.i << ")";
 #else
@@ -415,16 +415,16 @@ public:
     if (Q.size() < 1000 || serial) {
 
       for(size_t i=0; i<P.size(); i++) {
-	if (visibleNoDup(f0, Q[i])) {
+	if (Q[i].attribute.visibleNoDup(f0, Q[i])) {
 	  Q[i].attribute.seeFacet = f0;
 	  f0->push_back(Q[i]);
-	} else if (visibleNoDup(f1, Q[i])) {
+	} else if (Q[i].attribute.visibleNoDup(f1, Q[i])) {
 	  Q[i].attribute.seeFacet = f1;
 	  f1->push_back(Q[i]);
-	} else if (visibleNoDup(f2, Q[i])) {
+	} else if (Q[i].attribute.visibleNoDup(f2, Q[i])) {
 	  Q[i].attribute.seeFacet = f2;
 	  f2->push_back(Q[i]);
-	} else if (visibleNoDup(f3, Q[i])) {
+	} else if (Q[i].attribute.visibleNoDup(f3, Q[i])) {
 	  Q[i].attribute.seeFacet = f3;
 	  f3->push_back(Q[i]);
 	} else {
@@ -436,13 +436,13 @@ public:
 
       auto flag = sequence<int>(P.size());
       parallel_for(0, P.size(), [&](size_t i) {
-				  if (visibleNoDup(f0, Q[i])) {
+				  if (Q[i].attribute.visibleNoDup(f0, Q[i])) {
 				    flag[i] = 0; Q[i].attribute.seeFacet = f0;
-				  } else if (visibleNoDup(f1, Q[i])) {
+				  } else if (Q[i].attribute.visibleNoDup(f1, Q[i])) {
 				    flag[i] = 1; Q[i].attribute.seeFacet = f1;
-				  } else if (visibleNoDup(f2, Q[i])) {
+				  } else if (Q[i].attribute.visibleNoDup(f2, Q[i])) {
 				    flag[i] = 2; Q[i].attribute.seeFacet = f2;
-				  } else if (visibleNoDup(f3, Q[i])) {
+				  } else if (Q[i].attribute.visibleNoDup(f3, Q[i])) {
 				    flag[i] = 3; Q[i].attribute.seeFacet = f3;
 				  } else {
 				    flag[i] = 4; Q[i].attribute.seeFacet = nullptr;
@@ -565,7 +565,7 @@ public:
     auto fVisit = [&](_edge e) {
 		    // Visit the facet as long as the parent facet is visible to the apex
 		    // e.fb == nullptr for the starting facet (whose parent is nullptr, see dfsEdge(...))
-		    if (e.fb == nullptr || visible(e.fb, apex))
+		    if (e.fb == nullptr || apex.attribute.visible(e.fb, apex))
 		      return true;
 		    else
 		      return false;
@@ -573,14 +573,14 @@ public:
 
     auto fDo = [&](_edge e) {
 		 // Include the facet for deletion if visible
-		 bool seeff = visible(e.ff, apex);
+		 bool seeff = apex.attribute.visible(e.ff, apex);
 		 if ((seeff || e.fb == nullptr) && !facetVisited(e.ff))
 		   facets->push_back(e.ff);
 
 		 if (e.fb == nullptr) return; // Stop for the starting facet
 
 		 // Include an edge joining a visible and an invisible facet as frontier
-		 bool seefb = visible(e.fb, apex);
+		 bool seefb = apex.attribute.visible(e.fb, apex);
 		 if (seefb && !seeff) {
   		   frontier->emplace_back(e.a, e.b, e.ff, e.fb);
 		 }
@@ -701,7 +701,7 @@ public:
       for(size_t j=0; j<facetsBeneath[i]->size(); ++j) { // Point loop
 	facetsBeneath[i]->at(j).attribute.seeFacet = nullptr;
 	for (int k=0; k<nnf; ++k) { // New facet loop
-	  if (visibleNoDup(newFacets[k], facetsBeneath[i]->at(j))) {
+	  if (facetsBeneath[i]->at(j).attribute.visibleNoDup(newFacets[k], facetsBeneath[i]->at(j))) {
 	    facetsBeneath[i]->at(j).attribute.seeFacet = newFacets[k];
 	    newFacets[k]->push_back(facetsBeneath[i]->at(j));
 	    break;
@@ -715,7 +715,7 @@ public:
 	for(size_t j=0; j<facetsBeneath[i]->size(); ++j) { // Point loop
 	  facetsBeneath[i]->at(j).attribute.seeFacet = nullptr;
 	  for (int k=0; k<nnf; ++k) { // New facet loop
-	    if (visibleNoDup(newFacets[k], facetsBeneath[i]->at(j))) {
+	    if (facetsBeneath[i]->at(j).attribute.visibleNoDup(newFacets[k], facetsBeneath[i]->at(j))) {
 	      facetsBeneath[i]->at(j).attribute.seeFacet = newFacets[k];
 	      newFacets[k]->push_back(facetsBeneath[i]->at(j));
 	      break;
@@ -737,7 +737,7 @@ public:
 			    flag[i] = nnf;
 			    tmpBuffer[i].attribute.seeFacet = nullptr;
 			    for (int j=0; j<nnf; ++j) {
-			      if (visibleNoDup(newFacets[j], tmpBuffer[i])) {
+			      if (tmpBuffer[i].attribute.visibleNoDup(newFacets[j], tmpBuffer[i])) {
 				flag[i] = j;
 				tmpBuffer[i].attribute.seeFacet = newFacets[j];
 				break;
