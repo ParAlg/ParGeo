@@ -3,6 +3,8 @@
 #include "parlay/primitives.h"
 #include "parlay/sequence.h"
 #include "common/geometry.h"
+#include "pointVertex.h"
+#include "hullTopology.h"
 #include "incremental.h"
 #include "hull.h"
 
@@ -37,7 +39,7 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
 			     size_t s = i * blkSize;
 			     size_t e = min(P.size(), (i+1) * blkSize);
 			     //cout << s << "--" << e << endl;
-			     auto linkedHull = incrementHull3dSerial(P.cut(s, e));
+			     auto linkedHull = incrementHull3dSerial<pt, pointVertex>(P.cut(s, e));
 			     linkedHull->getHull<pt>(subHulls[i]);
 			     //cout << subHulls[i].size() << endl;
 			   }, 1);
@@ -62,7 +64,7 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
   cout << "merge-time = " << t.get_next() << endl;
 
   cout << "hull-2-input-size = " << uniquePts.size() << endl;
-  auto finalLinkedHull = incrementHull3dSerial(make_slice(uniquePts)); // todo parallelize
+  auto finalLinkedHull = incrementHull3dSerial<pt, pointVertex>(make_slice(uniquePts)); // todo parallelize
 
   cout << "hull2-time = " << t.stop() << endl;
 

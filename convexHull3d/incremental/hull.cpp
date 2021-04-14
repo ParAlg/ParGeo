@@ -4,6 +4,8 @@
 #include "parlay/sequence.h"
 #include "common/geometry.h"
 #include "incremental.h"
+#include "hullTopology.h"
+#include "pointVertex.h"
 #include "hull.h"
 
 parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &P, size_t numProc) {
@@ -17,7 +19,7 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
   cout << "#-points = " << n << endl;
   cout << "#-procs = " << num_workers() << endl;
 
-  auto linkedHull = incrementHull3d<pargeo::fpoint<3>>(make_slice(P));
+  auto linkedHull = incrementHull3d<pointT, pointVertex>(make_slice(P));
 
   auto out = sequence<facetT>();
   linkedHull->getHull<pointT>(out);

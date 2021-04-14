@@ -4,7 +4,7 @@
 
 class vertexAtt;
 
-using vertex3d = pargeo::_point<3, pargeo::fpoint<3>::floatT, pargeo::fpoint<3>::floatT, vertexAtt>;
+using pointVertex = pargeo::_point<3, pargeo::fpoint<3>::floatT, pargeo::fpoint<3>::floatT, vertexAtt>;
 
 class vertexAtt {
 public:
@@ -13,7 +13,7 @@ public:
 #ifdef VERBOSE
   size_t i;
 #endif
-  linkedFacet3d<vertex3d> *seeFacet;
+  linkedFacet3d<pointVertex> *seeFacet;
   vertexAtt() {}
 
   /* Signed volume (x6) of an oriented tetrahedron (example below is positive).
@@ -55,21 +55,9 @@ public:
       return false;
   }
 
-  // todo check if still necessary
-  template<class facetT, class vertexT>
-  bool visibleCast(facetT* f, vertexT p) {
-    if (signedVolume(vertex3d(f->a.coords()),
-		     vertex3d(f->b.coords()),
-		     vertex3d(f->c.coords()),
-		     vertex3d(p.coords())
-		     ) > numericKnob)
-      return true;
-    else
-      return false;
-  }
 };
 
-static std::ostream& operator<<(std::ostream& os, const vertex3d& v) {
+static std::ostream& operator<<(std::ostream& os, const pointVertex& v) {
   for (int i=0; i<v.dim; ++i)
     os << v.x[i] << " ";
   return os;

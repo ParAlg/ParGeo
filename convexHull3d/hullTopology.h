@@ -613,7 +613,7 @@ public:
     auto fVisit = [&](_edge e) {
 		    // Visit the facet as long as the parent facet is visible to the apex
 		    // e.fb == nullptr for the starting facet (whose parent is nullptr, see dfsEdge(...))
-		    if (e.fb == nullptr || visible(e.fb, apex))
+		    if (e.fb == nullptr || apex.attribute.visible(e.fb, apex))
 		      return true;
 		    else
 		      return false;
@@ -622,7 +622,7 @@ public:
     auto fDo = [&](_edge e) {
 		 // Include the facet for deletion if visible
 		 // Also reserve the facet
-		 bool seeff = visible(e.ff, apex);
+		 bool seeff = apex.attribute.visible(e.ff, apex);
 		 if ((seeff || e.fb == nullptr) && !facetVisited(e.ff)) {
 		   facets->push_back(e.ff);
 		   e.ff->reserve(apex);
@@ -632,7 +632,7 @@ public:
 
 		 // Include an edge joining a visible and an invisible facet as frontier
 		 // Also reserve invisible facet adjacent to a visible one
-		 bool seefb = visible(e.fb, apex);
+		 bool seefb = apex.attribute.visible(e.fb, apex);
 		 if (seefb && !seeff) {
 		   frontier->emplace_back(e.a, e.b, e.ff, e.fb);
 		   e.ff->reserve(apex);
