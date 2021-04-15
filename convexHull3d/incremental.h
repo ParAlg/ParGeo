@@ -154,7 +154,6 @@ void incrementHull3dSerial(_hull<linkedFacet3d, vertex3d, origin3d> *context) {
   }
 
 #ifndef SILENT
-  cout << "init-time = " << initTime << endl;
   cout << "apex-time = " << apexTime << endl;
   cout << "frontier-time = " << frontierTime << endl;
   cout << "create-time = " << createTime << endl;
@@ -181,9 +180,7 @@ void incrementHull3d(_hull<linkedFacet3d, vertex3d, origin3d> *context, size_t n
   if (numProc == 0)
     numProc = parlay::num_workers();
 
-  timer t; t.start();
-
-  double initTime = t.stop();
+  timer t;
 
   size_t round = 0;
   size_t serRound = 0;
@@ -376,7 +373,6 @@ void incrementHull3d(_hull<linkedFacet3d, vertex3d, origin3d> *context, size_t n
 
   }
 #ifndef SILENT
-  cout << "init-time = " << initTime << endl;
   cout << "apex-time = " << apexTime << endl;
   cout << "frontier-time = " << frontierTime << endl;
   cout << "create-split-time = " << splitTime << endl;

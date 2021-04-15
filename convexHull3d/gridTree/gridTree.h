@@ -19,8 +19,10 @@ struct gridAtt3d {
   using floatT = pt::floatT;
 
   inline size_t shift(size_t x) {
-    if (x > maxRange)
+    if (x > maxRange) {
+      cout << "Grid number " << x << endl;
       throw std::runtime_error("Grid id exceed 16 bits, make min-grid size larger.");
+    }
 
     x = (x | (x << 16)) & 0x001f0000ff0000ff;
     x = (x | (x <<  8)) & 0x100f00f00f00f00f;
@@ -77,6 +79,8 @@ class gridTree3d {
   floatT gSize;
 
   pt pMin;
+
+  floatT maxSpan;
 public:
 
   sequence<size_t>* levelIdx(size_t l) {
@@ -85,6 +89,10 @@ public:
 
   floatT boxSize(size_t l) {
     return gSize * pow(2, maxBit - l);
+  }
+
+  floatT span() {
+    return maxSpan;
   }
 
   pt getMin() {
@@ -132,11 +140,10 @@ public:
 				write_max(&extrema[4], _P[i][2], std::less<floatT>());
 				write_min(&extrema[5], _P[i][2], std::less<floatT>());
 			      });
-    gSize = max(extrema[4]-extrema[5],
-		max((extrema[2]-extrema[3]),(extrema[1]-extrema[0]))) / maxRange;
-    cout << extrema[4]-extrema[5] << endl;
-    cout << extrema[2]-extrema[3] << endl;
-    cout << extrema[1]-extrema[0] << endl;
+    maxSpan = max(extrema[4]-extrema[5],
+		  max((extrema[2]-extrema[3]),(extrema[1]-extrema[0])));
+    size_t _maxRange = maxRange;
+    gSize = 1.01 * maxSpan / maxRange;
 
     pMin[0] = extrema[1];
     pMin[1] = extrema[3];

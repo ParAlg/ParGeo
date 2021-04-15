@@ -38,6 +38,7 @@
 #include "common/get_time.h"
 #include "split.h"
 
+using namespace std;
 using namespace parlay;
 using namespace parlay::internal;
 
