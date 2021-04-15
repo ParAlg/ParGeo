@@ -41,8 +41,8 @@
 using namespace parlay;
 using namespace parlay::internal;
 
-template<class linkedFacet3d, class vertex3d>
-void incrementHull3dSerial(_hull<linkedFacet3d, vertex3d> *context) {
+template<class linkedFacet3d, class vertex3d, class origin3d>
+void incrementHull3dSerial(_hull<linkedFacet3d, vertex3d, origin3d> *context) {
 
   timer t;// t.start();
 
@@ -116,7 +116,7 @@ void incrementHull3dSerial(_hull<linkedFacet3d, vertex3d> *context) {
     auto newFacets = sequence<linkedFacet3d*>(frontierEdges->size());
 
     for (size_t i=0; i<frontierEdges->size(); ++i) {
-      typename _hull<linkedFacet3d, vertex3d>::_edge e = frontierEdges->at(i);
+      typename _hull<linkedFacet3d, vertex3d, origin3d>::_edge e = frontierEdges->at(i);
       newFacets[i] = new linkedFacet3d(e.a, e.b, apex);
     }
 
@@ -175,8 +175,8 @@ void incrementHull3dSerial(_hull<linkedFacet3d, vertex3d> *context) {
 
 #ifndef SERIAL
 
-template<class linkedFacet3d, class vertex3d>
-void incrementHull3d(_hull<linkedFacet3d, vertex3d> *context, size_t numProc = 0) {
+template<class linkedFacet3d, class vertex3d, class origin3d>
+void incrementHull3d(_hull<linkedFacet3d, vertex3d, origin3d> *context, size_t numProc = 0) {
 
   if (numProc == 0)
     numProc = parlay::num_workers();
@@ -232,7 +232,7 @@ void incrementHull3d(_hull<linkedFacet3d, vertex3d> *context, size_t numProc = 0
       auto newFacets = sequence<linkedFacet3d*>(frontierEdges->size());
 
       for (size_t i=0; i<frontierEdges->size(); ++i) {
-	typename _hull<linkedFacet3d, vertex3d>::_edge e = frontierEdges->at(i);
+	typename _hull<linkedFacet3d, vertex3d, origin3d>::_edge e = frontierEdges->at(i);
 	newFacets[i] = new linkedFacet3d(e.a, e.b, apex);
       }
 
@@ -275,14 +275,14 @@ void incrementHull3d(_hull<linkedFacet3d, vertex3d> *context, size_t numProc = 0
       if (apexes0.size() <= 0) break;
 
       size_t numApex0 = apexes0.size();
-      sequence<sequence<typename _hull<linkedFacet3d, vertex3d>::_edge>*> FE0(numApex0);
+      sequence<sequence<typename _hull<linkedFacet3d, vertex3d, origin3d>::_edge>*> FE0(numApex0);
       sequence<sequence<linkedFacet3d*>*> FB0(numApex0);
 
       // Compute frontier and reserve facets
       parallel_for(0, numApex0, [&](size_t a) {
 				 auto frontier = context->computeFrontierAndReserve(apexes0[a]);
 
-				 sequence<typename _hull<linkedFacet3d, vertex3d>::_edge>* frontierEdges = get<0>(frontier);
+				 sequence<typename _hull<linkedFacet3d, vertex3d, origin3d>::_edge>* frontierEdges = get<0>(frontier);
 				 sequence<linkedFacet3d*>* facetsBeneath = get<1>(frontier);
 				 FE0[a] = frontierEdges;
 				 FB0[a] = facetsBeneath;
@@ -332,7 +332,7 @@ void incrementHull3d(_hull<linkedFacet3d, vertex3d> *context, size_t numProc = 0
 				   auto newFacets = sequence<linkedFacet3d*>(FE[a]->size());
 
 				   for (size_t i=0; i<FE[a]->size(); ++i) {
-				     typename _hull<linkedFacet3d, vertex3d>::_edge e = FE[a]->at(i);
+				     typename _hull<linkedFacet3d, vertex3d, origin3d>::_edge e = FE[a]->at(i);
 				     newFacets[i] = new linkedFacet3d(e.a, e.b, apexes[a]);
 				   }
 

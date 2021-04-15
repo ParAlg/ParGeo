@@ -17,46 +17,6 @@ public:
 #endif
   linkedFacet3d<pointVertex> *seeFacet;
   vertexAtt() {}
-
-  /* Signed volume (x6) of an oriented tetrahedron (example below is positive).
-       d
-       o
-      /|\
-     / | o b
-    o--o/
-     a   c
-
-     x
-     origin
-  */
-  template <class pt>
-  inline typename pt::floatT signedVolume(pt a, pt b, pt c, pt d) {
-    return (a-d).dot(crossProduct3d(b-a, c-a));
-  }
-
-  // area is precomputed from oriented triang a,b,c
-  template <class pt>
-  inline typename pt::floatT signedVolume(pt a, pt d, pt area) {
-    return (a-d).dot(area);
-  }
-
-  template<class facetT, class vertexT>
-  bool visible(facetT* f, vertexT p) {
-    // if (signedVolume(f->a, f->b, f->c, p) > numericKnob)
-    if (signedVolume(f->a, p, f->area) > numericKnob)
-      return true;
-    else
-      return false;
-  }
-
-  template<class facetT, class vertexT>
-  bool visibleNoDup(facetT* f, vertexT p) {
-    if (signedVolume(f->a, p, f->area) > numericKnob)
-      return true && f->a != p && f->b != p && f->c != p;
-    else
-      return false;
-  }
-
 };
 
 static std::ostream& operator<<(std::ostream& os, const pointVertex& v) {
@@ -126,7 +86,7 @@ struct linkedFacet3d {
 
 #ifdef SERIAL
     for (size_t i=0; i<size(); ++i) {
-      auto m2 = at(i).attribute.signedVolume(a, b, c, at(i));
+      auto m2 = pargeo::signedVolumeX6(a, b, c, at(i));
       if (m2 > m) {
 	m = m2;
 	apex = at(i);
@@ -135,8 +95,8 @@ struct linkedFacet3d {
 #else
     apex = parlay::max_element(seeList->cut(0, seeList->size()),
 			       [&](vertexT aa, vertexT bb) {
-				 return aa.attribute.signedVolume(a, b, c, aa) <
-				   bb.attribute.signedVolume(a, b, c, bb);
+				 return pargeo::signedVolumeX6(a, b, c, aa) <
+				   pargeo::signedVolumeX6(a, b, c, bb);
 			       });
 #endif
     return apex;
@@ -170,3 +130,37 @@ static std::ostream& operator<<(std::ostream& os, const linkedFacet3d<vertexT>& 
 #endif
   return os;
 }
+
+class pointOrigin {
+  static constexpr typename pargeo::fpoint<3>::floatT numericKnob = 1e-5;
+  using facetT = linkedFacet3d<pointVertex>;
+  using vertexT = pointVertex;
+
+  vertexT o;
+
+public:
+
+  inline vertexT get() {return o;};
+
+  pointOrigin() {}
+
+  template<class pt>
+  pointOrigin(pt _o) {
+    o = vertexT(_o.coords());
+  }
+
+  inline bool visible(facetT* f, vertexT p) {
+    if (pargeo::signedVolumeX6(f->a, p, f->area) > numericKnob)
+      return true;
+    else
+      return false;
+  }
+
+  inline bool visibleNoDup(facetT* f, vertexT p) {
+    if (pargeo::signedVolumeX6(f->a, p, f->area) > numericKnob)
+      return true && f->a != p && f->b != p && f->c != p;
+    else
+      return false;
+  }
+
+};

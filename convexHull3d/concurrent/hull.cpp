@@ -43,8 +43,8 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
 			     size_t s = i * blkSize;
 			     size_t e = min(P.size(), (i+1) * blkSize);
 			     //cout << s << "--" << e << endl;
-			     auto linkedHull = new _hull<linkedFacet3d<pointVertex>, pointVertex>(Q.cut(s, e));
-			     incrementHull3dSerial<linkedFacet3d<pointVertex>, pointVertex>(linkedHull);
+			     auto linkedHull = new _hull<linkedFacet3d<pointVertex>, pointVertex, pointOrigin>(Q.cut(s, e));
+			     incrementHull3dSerial<linkedFacet3d<pointVertex>, pointVertex, pointOrigin>(linkedHull);
 			     subHulls[i] = linkedHull->getHullPts<pt>();
 			   }, 1);
 
@@ -61,8 +61,8 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
   parallel_for(0, uniquePts.size(), [&](size_t i) {
 			      Q2[i] = pointVertex(uniquePts[i].coords());});
 
-  auto finalLinkedHull = new _hull<linkedFacet3d<pointVertex>, pointVertex>(make_slice(Q2));
-  incrementHull3dSerial<linkedFacet3d<pointVertex>, pointVertex>(finalLinkedHull); // todo parallelize
+  auto finalLinkedHull = new _hull<linkedFacet3d<pointVertex>, pointVertex, pointOrigin>(make_slice(Q2));
+  incrementHull3dSerial<linkedFacet3d<pointVertex>, pointVertex, pointOrigin>(finalLinkedHull); // todo parallelize
 
   cout << "hull2-time = " << t.stop() << endl;
 

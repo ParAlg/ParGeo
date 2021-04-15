@@ -59,13 +59,10 @@ struct hash_pointer {
   }
 };
 
-template <class facetT, class vertexT>
+template <class facetT, class vertexT, class originT>
 struct _hull {
 
 private:
-
-  // An arbitrary coordinate located within the hull
-  vertexT origin;
 
   // A linked structure for the facets
   facetT* H;
@@ -160,6 +157,9 @@ e.b==e.ff.a    e.a==e.ff.c
   }
 
 public:
+  // An arbitrary coordinate class located within the hull
+  // it also contains primitives for visibility test
+  originT origin;
 
   // Link f with ab, bc, ca; the edge matching is automatic -- input in any order
   void linkFacet(facetT* f, facetT* ab, facetT* bc, facetT* ca) {
@@ -278,12 +278,12 @@ public:
   
     hSize = 4;
 
-    origin = (P[c1] + P[c2] + P[c3] + P[c4])/4;
+    origin = originT((P[c1] + P[c2] + P[c3] + P[c4])/4);
 
     // Initialize points with visible facet link
     auto Q = typename facetT::seqT(P.size());
     parallel_for(0, P.size(), [&](size_t i) {
-				  Q[i] = P[i] - origin;
+				Q[i] = P[i] - origin.get();
 			      });
 
     // Make initial facets
@@ -306,16 +306,16 @@ public:
     if (Q.size() < 1000 || serial) {
 
       for(size_t i=0; i<P.size(); i++) {
-	if (Q[i].attribute.visibleNoDup(f0, Q[i])) {
+	if (origin.visibleNoDup(f0, Q[i])) {
 	  Q[i].attribute.seeFacet = f0;
 	  f0->push_back(Q[i]);
-	} else if (Q[i].attribute.visibleNoDup(f1, Q[i])) {
+	} else if (origin.visibleNoDup(f1, Q[i])) {
 	  Q[i].attribute.seeFacet = f1;
 	  f1->push_back(Q[i]);
-	} else if (Q[i].attribute.visibleNoDup(f2, Q[i])) {
+	} else if (origin.visibleNoDup(f2, Q[i])) {
 	  Q[i].attribute.seeFacet = f2;
 	  f2->push_back(Q[i]);
-	} else if (Q[i].attribute.visibleNoDup(f3, Q[i])) {
+	} else if (origin.visibleNoDup(f3, Q[i])) {
 	  Q[i].attribute.seeFacet = f3;
 	  f3->push_back(Q[i]);
 	} else {
@@ -327,13 +327,13 @@ public:
 
       auto flag = sequence<int>(P.size());
       parallel_for(0, P.size(), [&](size_t i) {
-				  if (Q[i].attribute.visibleNoDup(f0, Q[i])) {
+				  if (origin.visibleNoDup(f0, Q[i])) {
 				    flag[i] = 0; Q[i].attribute.seeFacet = f0;
-				  } else if (Q[i].attribute.visibleNoDup(f1, Q[i])) {
+				  } else if (origin.visibleNoDup(f1, Q[i])) {
 				    flag[i] = 1; Q[i].attribute.seeFacet = f1;
-				  } else if (Q[i].attribute.visibleNoDup(f2, Q[i])) {
+				  } else if (origin.visibleNoDup(f2, Q[i])) {
 				    flag[i] = 2; Q[i].attribute.seeFacet = f2;
-				  } else if (Q[i].attribute.visibleNoDup(f3, Q[i])) {
+				  } else if (origin.visibleNoDup(f3, Q[i])) {
 				    flag[i] = 3; Q[i].attribute.seeFacet = f3;
 				  } else {
 				    flag[i] = 4; Q[i].attribute.seeFacet = nullptr;
@@ -456,7 +456,7 @@ public:
     auto fVisit = [&](_edge e) {
 		    // Visit the facet as long as the parent facet is visible to the apex
 		    // e.fb == nullptr for the starting facet (whose parent is nullptr, see dfsEdge(...))
-		    if (e.fb == nullptr || apex.attribute.visible(e.fb, apex))
+		    if (e.fb == nullptr || origin.visible(e.fb, apex))
 		      return true;
 		    else
 		      return false;
@@ -464,14 +464,14 @@ public:
 
     auto fDo = [&](_edge e) {
 		 // Include the facet for deletion if visible
-		 bool seeff = apex.attribute.visible(e.ff, apex);
+		 bool seeff = origin.visible(e.ff, apex);
 		 if ((seeff || e.fb == nullptr) && !facetVisited(e.ff))
 		   facets->push_back(e.ff);
 
 		 if (e.fb == nullptr) return; // Stop for the starting facet
 
 		 // Include an edge joining a visible and an invisible facet as frontier
-		 bool seefb = apex.attribute.visible(e.fb, apex);
+		 bool seefb = origin.visible(e.fb, apex);
 		 if (seefb && !seeff) {
   		   frontier->emplace_back(e.a, e.b, e.ff, e.fb);
 		 }
@@ -504,7 +504,7 @@ public:
     auto fVisit = [&](_edge e) {
 		    // Visit the facet as long as the parent facet is visible to the apex
 		    // e.fb == nullptr for the starting facet (whose parent is nullptr, see dfsEdge(...))
-		    if (e.fb == nullptr || apex.attribute.visible(e.fb, apex))
+		    if (e.fb == nullptr || origin.visible(e.fb, apex))
 		      return true;
 		    else
 		      return false;
@@ -513,7 +513,7 @@ public:
     auto fDo = [&](_edge e) {
 		 // Include the facet for deletion if visible
 		 // Also reserve the facet
-		 bool seeff = apex.attribute.visible(e.ff, apex);
+		 bool seeff = origin.visible(e.ff, apex);
 		 if ((seeff || e.fb == nullptr) && !facetVisited(e.ff)) {
 		   facets->push_back(e.ff);
 		   e.ff->reserve(apex);
@@ -523,7 +523,7 @@ public:
 
 		 // Include an edge joining a visible and an invisible facet as frontier
 		 // Also reserve invisible facet adjacent to a visible one
-		 bool seefb = apex.attribute.visible(e.fb, apex);
+		 bool seefb = origin.visible(e.fb, apex);
 		 if (seefb && !seeff) {
 		   frontier->emplace_back(e.a, e.b, e.ff, e.fb);
 		   e.ff->reserve(apex);
@@ -592,7 +592,7 @@ public:
       for(size_t j=0; j<facetsBeneath[i]->size(); ++j) { // Point loop
 	facetsBeneath[i]->at(j).attribute.seeFacet = nullptr;
 	for (int k=0; k<nnf; ++k) { // New facet loop
-	  if (facetsBeneath[i]->at(j).attribute.visibleNoDup(newFacets[k], facetsBeneath[i]->at(j))) {
+	  if (origin.visibleNoDup(newFacets[k], facetsBeneath[i]->at(j))) {
 	    facetsBeneath[i]->at(j).attribute.seeFacet = newFacets[k];
 	    newFacets[k]->push_back(facetsBeneath[i]->at(j));
 	    break;
@@ -606,7 +606,7 @@ public:
 	for(size_t j=0; j<facetsBeneath[i]->size(); ++j) { // Point loop
 	  facetsBeneath[i]->at(j).attribute.seeFacet = nullptr;
 	  for (int k=0; k<nnf; ++k) { // New facet loop
-	    if (facetsBeneath[i]->at(j).attribute.visibleNoDup(newFacets[k], facetsBeneath[i]->at(j))) {
+	    if (origin.visibleNoDup(newFacets[k], facetsBeneath[i]->at(j))) {
 	      facetsBeneath[i]->at(j).attribute.seeFacet = newFacets[k];
 	      newFacets[k]->push_back(facetsBeneath[i]->at(j));
 	      break;
@@ -628,7 +628,7 @@ public:
 			    flag[i] = nnf;
 			    tmpBuffer[i].attribute.seeFacet = nullptr;
 			    for (int j=0; j<nnf; ++j) {
-			      if (tmpBuffer[i].attribute.visibleNoDup(newFacets[j], tmpBuffer[i])) {
+			      if (origin.visibleNoDup(newFacets[j], tmpBuffer[i])) {
 				flag[i] = j;
 				tmpBuffer[i].attribute.seeFacet = newFacets[j];
 				break;
@@ -704,9 +704,9 @@ public:
   void getHull(sequence<facet3d<pt>>& out) {
     auto fVisit = [&](_edge e) { return true;};
     auto fDo = [&](_edge e) {
-		 out.emplace_back(pt((e.ff->a+origin).coords()),
-				  pt((e.ff->b+origin).coords()),
-				  pt((e.ff->c+origin).coords()));};
+		 out.emplace_back(pt((e.ff->a+origin.get()).coords()),
+				  pt((e.ff->b+origin.get()).coords()),
+				  pt((e.ff->c+origin.get()).coords()));};
     auto fStop = [&]() { return false;};
 
     dfsFacet(H, fVisit, fDo, fStop);
@@ -717,9 +717,9 @@ public:
     sequence<pt> out;
     auto fVisit = [&](_edge e) { return true;};
     auto fDo = [&](_edge e) {
-		 out.emplace_back(pt((e.ff->a+origin).coords()));
-		 out.emplace_back(pt((e.ff->b+origin).coords()));
-		 out.emplace_back(pt((e.ff->c+origin).coords()));
+		 out.emplace_back(pt((e.ff->a+origin.get()).coords()));
+		 out.emplace_back(pt((e.ff->b+origin.get()).coords()));
+		 out.emplace_back(pt((e.ff->c+origin.get()).coords()));
 	       };
     auto fStop = [&]() { return false;};
 

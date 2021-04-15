@@ -2,6 +2,7 @@
 
 #include <bitset>
 #include "parlay/sequence.h"
+#include "geometry/point.h"
 
 using namespace parlay;
 
@@ -12,75 +13,10 @@ using gridVertex = pargeo::_point<3, pargeo::fpoint<3>::floatT, pargeo::fpoint<3
 template <class vertexT> struct linkedFacet3d;
 
 struct gridAtt3d {
+  static constexpr typename pargeo::fpoint<3>::floatT numericKnob = 1e-5;
+  static constexpr size_t maxRange = 65535;
   using pt = pargeo::fpoint<3>;
   using floatT = pt::floatT;
-  static constexpr typename pargeo::fpoint<3>::floatT numericKnob = 1e-5;
-
-  gridAtt3d() {}
-
-  size_t id; // grid id
-
-  size_t i; // index, todo check if needed
-
-  linkedFacet3d<gridVertex> *seeFacet;
-
-  /* Signed volume (x6) of an oriented tetrahedron (example below is positive).
-       d
-       o
-      /|\
-     / | o b
-    o--o/
-     a   c
-
-     x
-     origin
-  */
-  template <class pt>
-  inline typename pt::floatT signedVolume(pt a, pt b, pt c, pt d) {
-    return (a-d).dot(crossProduct3d(b-a, c-a));
-  }
-
-  // area is precomputed from oriented triang a,b,c
-  template <class pt>
-  inline typename pt::floatT signedVolume(pt a, pt d, pt area) {
-    return (a-d).dot(area);
-  }
-
-  template<class facetT, class vertexT>
-  bool visible(facetT* f, vertexT p) {
-    if (signedVolume(f->a, p, f->area) > numericKnob)
-      return true;
-    else
-      return false;
-  }
-
-  template<class facetT, class vertexT>
-  bool visibleNoDup(facetT* f, vertexT p) {
-    if (signedVolume(f->a, p, f->area) > numericKnob)
-      return true && f->a != p && f->b != p && f->c != p;
-    else
-      return false;
-  }
-
-};
-
-static std::ostream& operator<<(std::ostream& os, const gridVertex& v) {
-  for (int i=0; i<v.dim; ++i)
-    os << v.x[i] << " ";
-  return os;
-}
-
-template<class pt>
-class gridTree3d {
-  using floatT = gridVertex::floatT;
-  static constexpr int dim = 3;
-  static constexpr size_t maxRange = 65535;
-
-  sequence<gridVertex> P;
-
-  sequence<size_t>* pointers;
-
-  size_t L;
 
   inline size_t shift(size_t x) {
     if (x > maxRange)
@@ -93,7 +29,7 @@ class gridTree3d {
     return x;
   }
 
-  size_t computeId(pargeo::fpoint<3> p, pargeo::fpoint<3> pMin, floatT gSize) {
+  void computeId(pargeo::fpoint<3> p, pargeo::fpoint<3> pMin, floatT gSize) {
     size_t x = floor( (p[0] - pMin[0]) / gSize );
     size_t y = floor( (p[1] - pMin[1]) / gSize );
     size_t z = floor( (p[2] - pMin[2]) / gSize );
@@ -101,38 +37,83 @@ class gridTree3d {
     x = shift(x);
     y = shift(y);
     z = shift(z);
-    size_t id = x | (y << 1) | (z << 2);
-    return id;
+    id = x | (y << 1) | (z << 2);
   }
 
   // Level 0 is the coarsest level
-  size_t getLevel(gridVertex p, size_t l) {
+  inline size_t getLevel(size_t l) {
     // the highest 16 bits are empty
     // starting taking 3-bit numbers
-    return p.attribute.id >> (48 - (l+1)*3);
+    return id >> (48 - (l+1)*3);
   }
 
+  gridAtt3d() {}
+
+  size_t id; // grid id
+
+  size_t i; // index, todo check if needed
+
+  linkedFacet3d<gridVertex> *seeFacet;
+};
+
+static std::ostream& operator<<(std::ostream& os, const gridVertex& v) {
+  for (int i=0; i<v.dim; ++i)
+    os << v.x[i] << " ";
+  return os;
+}
+
+template<class pt>
+class gridTree3d {
+  using floatT = gridVertex::floatT;
+  static constexpr size_t maxRange = 65535;
+  static constexpr size_t maxBit = 16;
+
+  sequence<gridVertex> P;
+
+  sequence<size_t>** pointers;
+
+  size_t L;
+
+  floatT gSize;
+
+  pt pMin;
 public:
 
-  sequence<size_t> levelIdx(size_t l) {
+  sequence<size_t>* levelIdx(size_t l) {
     return pointers[l];
   }
 
+  floatT boxSize(size_t l) {
+    return gSize * pow(2, maxBit - l);
+  }
+
+  pt getMin() {
+    return pMin;
+  }
+
+  floatT levelSize(size_t l) {
+    return pointers[l]->size() - 1;
+  }
+
   sequence<gridVertex> level(size_t l) {
-    sequence<gridVertex> out(pointers[l].size()-1);
-    parallel_for(0, pointers[l].size()-1,
+    sequence<gridVertex> out(pointers[l]->size()-1);
+    parallel_for(0, pointers[l]->size()-1,
 		 [&](size_t i){
-		   out[i] = P[pointers[l][i]];
-		 });
+			      out[i] = P[pointers[l]->at(i)];
+			    });
     return out;
   }
 
   gridVertex at(size_t l, size_t i) {
-    return P[pointers[l][i]];
+    return P[pointers[l]->at(i)];
   }
 
   gridVertex at(size_t i) {
     return P[i];
+  }
+
+  ~gridTree3d() {
+    //todo
   }
 
   gridTree3d(slice<pt*, pt*> _P, size_t _L) {
@@ -151,13 +132,16 @@ public:
 				write_max(&extrema[4], _P[i][2], std::less<floatT>());
 				write_min(&extrema[5], _P[i][2], std::less<floatT>());
 			      });
-    floatT gSize = max(extrema[4]-extrema[5],
-		       max((extrema[2]-extrema[3]),(extrema[1]-extrema[0]))) / maxRange;
+    gSize = max(extrema[4]-extrema[5],
+		max((extrema[2]-extrema[3]),(extrema[1]-extrema[0]))) / maxRange;
+    cout << extrema[4]-extrema[5] << endl;
+    cout << extrema[2]-extrema[3] << endl;
+    cout << extrema[1]-extrema[0] << endl;
 
-    pt pMin;
     pMin[0] = extrema[1];
     pMin[1] = extrema[3];
     pMin[2] = extrema[5];
+    cout << "untranslated-pmin = " << pMin << endl;
 
     cout << "grid-size = " << gSize << endl;
 
@@ -165,7 +149,7 @@ public:
     parallel_for(0, P.size(), [&](size_t i){
 				P[i] = gridVertex(_P[i].coords());
 				P[i].attribute = gridAtt3d();
-				P[i].attribute.id = computeId(_P[i], pMin, gSize);
+				P[i].attribute.computeId(_P[i], pMin, gSize);
 			      });
 
     parlay::sort_inplace(make_slice(P), [&](gridVertex const& a, gridVertex const& b){
@@ -174,24 +158,24 @@ public:
     sequence<size_t> flag(P.size()+1);
 
     // The the coarser L levels
-    pointers = (sequence<size_t>*) malloc(sizeof(sequence<size_t>)*L);
+    pointers = (sequence<size_t>**) malloc(sizeof(sequence<size_t>*)*L);
     for (int l=0; l<L; ++l) {
       flag[0] = 1;
       parallel_for(1, P.size(), [&](size_t i){
-				  if (getLevel(P[i], l) != getLevel(P[i-1], l)) {
+				  if (P[i].attribute.getLevel(l) != P[i-1].attribute.getLevel(l)) {
 				    flag[i] = 1;
 				  } else flag[i] = 0;
 				});
-      flag[P.size()] = parlay::scan_inplace(flag.cut(0, flag.size()-1));
-
-      pointers[l] = sequence<size_t>(flag[P.size()]+1);
+      size_t numGrids = parlay::scan_inplace(flag.cut(0, P.size()));
+      flag[P.size()] = numGrids;
+      pointers[l] = new sequence<size_t>(numGrids+1);
       parallel_for(0, P.size(), [&](size_t i){
 				  if (flag[i] != flag[i+1]) {
-				    pointers[l][flag[i]] = i;
+				    pointers[l]->at(flag[i]) = i;
 				  }
 				});
-      pointers[l][flag[P.size()]] = P.size();
-      cout << "lvl " << l << " = " << flag[P.size()] << endl;
+      pointers[l]->at(numGrids) = P.size();
+      cout << "lvl " << l << " = " << numGrids << endl;
     }
 
   }
@@ -199,6 +183,7 @@ public:
 
 template <class vertexT>
 struct linkedFacet3d {
+  static constexpr typename pargeo::fpoint<3>::floatT numericKnob = 1e-5;
 
 #ifdef SERIAL
   typedef vector<vertexT> seqT;
@@ -258,7 +243,7 @@ struct linkedFacet3d {
 
 #ifdef SERIAL
     for (size_t i=0; i<size(); ++i) {
-      auto m2 = at(i).attribute.signedVolume(a, b, c, at(i));
+      auto m2 = pargeo::signedVolumeX6(a, b, c, at(i));
       if (m2 > m) {
 	m = m2;
 	apex = at(i);
@@ -267,15 +252,15 @@ struct linkedFacet3d {
 #else
     apex = parlay::max_element(seeList->cut(0, seeList->size()),
 			       [&](vertexT aa, vertexT bb) {
-				 return aa.attribute.signedVolume(a, b, c, aa) <
-				   bb.attribute.signedVolume(a, b, c, bb);
+				 return pargeo::signedVolumeX6(a, b, c, aa) <
+				   pargeo::signedVolumeX6(a, b, c, bb);
 			       });
 #endif
     return apex;
   }
 
   linkedFacet3d(vertexT _a, vertexT _b, vertexT _c): a(_a), b(_b), c(_c) {
-    if (pargeo::determinant3by3(a, b, c) > _a.attribute.numericKnob)//numericKnob)
+    if (pargeo::determinant3by3(a, b, c) > _a.attribute.numericKnob)
       swap(b, c);
 
     seeList = new seqT();
@@ -290,7 +275,6 @@ struct linkedFacet3d {
   ~linkedFacet3d() {
     delete seeList;
   }
-
 };
 
 template<class vertexT>
@@ -302,3 +286,51 @@ static std::ostream& operator<<(std::ostream& os, const linkedFacet3d<vertexT>& 
 #endif
   return os;
 }
+
+class gridOrigin {
+  using facetT = linkedFacet3d<gridVertex>;
+  using vertexT = gridVertex;
+  using floatT = typename pargeo::fpoint<3>::floatT;
+  static constexpr floatT numericKnob = 1e-5;
+
+  vertexT o; // translation origin
+
+  vertexT pMin; // translated pmin of the grid
+
+  floatT gridSize; // gridSize of the level being processed
+
+public:
+  void setGridSize(floatT _gridSize) {
+    gridSize = _gridSize;
+  }
+
+  template<class pt>
+  void setMin(pt _pMin) {
+    pMin = vertexT(_pMin.coords());
+    pMin = pMin - o; // translate the pmin by origin (same as other points in the hull)
+  }
+
+  inline vertexT get() {return o;};
+
+  gridOrigin() {}
+
+  template<class pt>
+  gridOrigin(pt _o) {
+    o = vertexT(_o.coords());
+  }
+
+  inline bool visible(facetT* f, vertexT p) {
+    if (pargeo::signedVolumeX6(f->a, p, f->area) > numericKnob)
+      return true;
+    else
+      return false;
+  }
+
+  inline bool visibleNoDup(facetT* f, vertexT p) {
+    if (pargeo::signedVolumeX6(f->a, p, f->area) > numericKnob)
+      return true && f->a != p && f->b != p && f->c != p;
+    else
+      return false;
+  }
+
+};

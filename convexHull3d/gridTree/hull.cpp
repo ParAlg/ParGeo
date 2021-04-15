@@ -24,7 +24,9 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
 
   auto tree = gridTree3d<pointT>(make_slice(P), 10);
 
-  sequence<gridVertex> Q = tree.level(4);
+  size_t l = 4;
+
+  sequence<gridVertex> Q = tree.level(l);
 
   // ofstream myfile;
   // myfile.open("hull.txt", std::ofstream::trunc);
@@ -36,9 +38,11 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
   cout << Q.size() << endl;
 
   // Create a coarse simplex
-  auto linkedHull = new _hull<linkedFacet3d<gridVertex>, gridVertex>(make_slice(Q));
+  auto linkedHull = new _hull<linkedFacet3d<gridVertex>, gridVertex, gridOrigin>(make_slice(Q));
+  linkedHull->origin.setMin(tree.getMin());
+  linkedHull->origin.setGridSize(tree.boxSize(l));
 
-  incrementHull3dSerial<linkedFacet3d<gridVertex>, gridVertex>(linkedHull);
+  incrementHull3dSerial<linkedFacet3d<gridVertex>, gridVertex, gridOrigin>(linkedHull);
 
   auto out = sequence<facetT>();
   linkedHull->getHull<pointT>(out);
