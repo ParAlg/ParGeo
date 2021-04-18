@@ -56,4 +56,3 @@ parlay::sequence<pargeo::edge> pargeo::betaSkeleton(parlay::sequence<pargeo::poi
 }
 
 template parlay::sequence<pargeo::edge> pargeo::betaSkeleton<2>(parlay::sequence<pargeo::point<2>> &, double);
-template parlay::sequence<pargeo::edge> pargeo::betaSkeleton<3>(parlay::sequence<pargeo::point<3>> &, double);

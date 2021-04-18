@@ -25,17 +25,15 @@ void timeGraph(parlay::sequence<pargeo::point<dim>> &P, int rounds, char const *
 int main(int argc, char* argv[]) {
   commandLine P(argc,argv,"[-o <outFile>] [-r <rounds>] <inFile>");
   char* iFile = P.getArgument(0);
-  // size_t k = P.getOptionIntValue("-k",2);
   char* oFile = P.getOptionValue("-o");
   int rounds = P.getOptionIntValue("-r",1);
 
-  int dim = readDimensionFromFile(iFile);//todo make cheaper
+  int dim = readHeader(iFile);
 
   if (dim == 2) {
     parlay::sequence<pargeo::point<2>> Points = readPointsFromFile<pargeo::point<2>>(iFile);
     timeGraph<2>(Points, rounds, oFile);
-  } else if (dim == 3) {
-    parlay::sequence<pargeo::point<3>> Points = readPointsFromFile<pargeo::point<3>>(iFile);
-    timeGraph<3>(Points, rounds, oFile);
+  } else {
+    throw std::runtime_error("unsupported dimensionality");
   }
 }

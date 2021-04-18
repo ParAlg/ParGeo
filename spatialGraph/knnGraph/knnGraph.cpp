@@ -32,3 +32,7 @@ parlay::sequence<pargeo::edge> pargeo::knnGraph(parlay::sequence<pargeo::point<d
 
 template parlay::sequence<pargeo::edge> pargeo::knnGraph<2>(parlay::sequence<pargeo::point<2>> &, size_t);
 template parlay::sequence<pargeo::edge> pargeo::knnGraph<3>(parlay::sequence<pargeo::point<3>> &, size_t);
+template parlay::sequence<pargeo::edge> pargeo::knnGraph<4>(parlay::sequence<pargeo::point<4>> &, size_t);
+template parlay::sequence<pargeo::edge> pargeo::knnGraph<5>(parlay::sequence<pargeo::point<5>> &, size_t);
+template parlay::sequence<pargeo::edge> pargeo::knnGraph<6>(parlay::sequence<pargeo::point<6>> &, size_t);
+template parlay::sequence<pargeo::edge> pargeo::knnGraph<7>(parlay::sequence<pargeo::point<7>> &, size_t);

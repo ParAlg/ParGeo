@@ -121,4 +121,3 @@ parlay::sequence<pargeo::edge> pargeo::gabrielGraph(parlay::sequence<pargeo::poi
 }
 
 template parlay::sequence<pargeo::edge> pargeo::gabrielGraph<2>(parlay::sequence<pargeo::point<2>> &);
-template parlay::sequence<pargeo::edge> pargeo::gabrielGraph<3>(parlay::sequence<pargeo::point<3>> &);

@@ -38,13 +38,44 @@ namespace benchIO {
   using parlay::tabulate;
   using parlay::make_slice;
 
-  auto is_space = [] (char c) {
+  auto is_newline = [] (char c) {
     switch (c)  {
     case '\r': 
-    case '\t': 
-    case '\n': 
-    case 0:
+    case '\n': return true;
+    default : return false;
+    }
+  };
+
+  auto is_delim = [] (char c) {
+    switch (c)  {
+    case '\t':
+    case ';':
+    case ',':
     case ' ' : return true;
+    default : return false;
+    }
+  };
+
+  auto is_space = [] (char c) {
+    return is_newline(c) || is_delim(c) || c==0;
+  };
+
+  auto is_number = [] (char c) {
+    switch (c)  {
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+    case '.':
+    case '+':
+    case '-':
+    case 'e' : return true;
     default : return false;
     }
   };
@@ -182,8 +213,8 @@ namespace benchIO {
   parlay::sequence<char> readStringFromFile(char const *fileName) {
     ifstream file (fileName, ios::in | ios::binary | ios::ate);
     if (!file.is_open()) {
-      std::cout << "Unable to open file: " << fileName << std::endl;
-      abort();
+      std::cout << "filename: " << fileName << std::endl;
+      throw std::runtime_error("Unable to open file");
     }
     long end = file.tellg();
     file.seekg (0, ios::beg);

@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
   char* oFile = P.getOptionValue("-o");
   int rounds = P.getOptionIntValue("-r",1);
 
-  int dim = readDimensionFromFile(iFile);//todo make cheaper
+  int dim = readHeader(iFile);
 
   if (dim == 2) {
     parlay::sequence<pargeo::point<2>> Points = readPointsFromFile<pargeo::point<2>>(iFile);
@@ -38,5 +38,20 @@ int main(int argc, char* argv[]) {
   } else if (dim == 3) {
     parlay::sequence<pargeo::point<3>> Points = readPointsFromFile<pargeo::point<3>>(iFile);
     timeKnn<3>(Points, k, rounds, oFile);
+  } else if (dim == 4) {
+    parlay::sequence<pargeo::point<4>> Points = readPointsFromFile<pargeo::point<4>>(iFile);
+    timeKnn<4>(Points, k, rounds, oFile);
+  } else if (dim == 5) {
+    parlay::sequence<pargeo::point<5>> Points = readPointsFromFile<pargeo::point<5>>(iFile);
+    timeKnn<5>(Points, k, rounds, oFile);
+  } else if (dim == 6) {
+    parlay::sequence<pargeo::point<6>> Points = readPointsFromFile<pargeo::point<6>>(iFile);
+    timeKnn<6>(Points, k, rounds, oFile);
+  } else if (dim == 7) {
+    parlay::sequence<pargeo::point<7>> Points = readPointsFromFile<pargeo::point<7>>(iFile);
+    timeKnn<7>(Points, k, rounds, oFile);
+  } else {
+    cout << "dim = " << dim << endl;
+    throw std::runtime_error("dimension not supported");
   }
 }

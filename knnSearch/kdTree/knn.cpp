@@ -22,3 +22,7 @@ parlay::sequence<size_t> pargeo::knn(parlay::sequence<pargeo::point<dim>> &P, si
 
 template parlay::sequence<size_t> pargeo::knn<2>(parlay::sequence<pargeo::point<2>> &, size_t);
 template parlay::sequence<size_t> pargeo::knn<3>(parlay::sequence<pargeo::point<3>> &, size_t);
+template parlay::sequence<size_t> pargeo::knn<4>(parlay::sequence<pargeo::point<4>> &, size_t);
+template parlay::sequence<size_t> pargeo::knn<5>(parlay::sequence<pargeo::point<5>> &, size_t);
+template parlay::sequence<size_t> pargeo::knn<6>(parlay::sequence<pargeo::point<6>> &, size_t);
+template parlay::sequence<size_t> pargeo::knn<7>(parlay::sequence<pargeo::point<7>> &, size_t);

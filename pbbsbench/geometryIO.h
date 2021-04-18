@@ -26,46 +26,43 @@
 #include "geometry.h"
 #include "IO.h"
 
-//using namespace geometry;
 using namespace benchIO;
 
-  template <class coord>
-  inline int xToStringLen(point2d<coord> a) { 
-    return xToStringLen(a.x) + xToStringLen(a.y) + 1;
-  }
+template <class coord>
+inline int xToStringLen(point2d<coord> a) {
+  return xToStringLen(a.x) + xToStringLen(a.y) + 1;
+}
 
-  template <class coord>
-  inline void xToString(char* s, point2d<coord> a) { 
-    int l = xToStringLen(a.x);
-    xToString(s, a.x);
-    s[l] = ' ';
-    xToString(s+l+1, a.y);
-  }
+template <class coord>
+inline void xToString(char* s, point2d<coord> a) {
+  int l = xToStringLen(a.x);
+  xToString(s, a.x);
+  s[l] = ' ';
+  xToString(s+l+1, a.y);
+}
 
-  template <class coord>
-  inline int xToStringLen(point3d<coord> a) { 
-    return xToStringLen(a.x) + xToStringLen(a.y) + xToStringLen(a.z) + 2;
-  }
+template <class coord>
+inline int xToStringLen(point3d<coord> a) {
+  return xToStringLen(a.x) + xToStringLen(a.y) + xToStringLen(a.z) + 2;
+}
 
-  template <class coord>
-  inline void xToString(char* s, point3d<coord> a) { 
-    int lx = xToStringLen(a.x);
-    int ly = xToStringLen(a.y);
-    xToString(s, a.x);
-    s[lx] = ' ';
-    xToString(s+lx+1, a.y);
-    s[lx+ly+1] = ' ';
-    xToString(s+lx+ly+2, a.z);
-  }
+template <class coord>
+inline void xToString(char* s, point3d<coord> a) {
+  int lx = xToStringLen(a.x);
+  int ly = xToStringLen(a.y);
+  xToString(s, a.x);
+  s[lx] = ' ';
+  xToString(s+lx+1, a.y);
+  s[lx+ly+1] = ' ';
+  xToString(s+lx+ly+2, a.z);
+}
 
 namespace benchIO {
   using namespace std;
 
-  // string HeaderPoint2d = "pbbs_sequencePoint2d";
-  // string HeaderPoint3d = "pbbs_sequencePoint3d";
   string HeaderTriangles = "pbbs_triangles";
 
-  string pointHeader(int dim) {
+  string pbbsHeader(int dim) {
     if (dim < 2 || dim > 9) {
       cout << "Error, unsupported dimension " << dim << ", abort." << endl;
       abort();
@@ -73,30 +70,64 @@ namespace benchIO {
     return "pbbs_sequencePoint" + to_string(dim) + "d";
   }
 
-  inline int readDimensionFromFile(char* fname) {
-    parlay::sequence<char> S = readStringFromFile(fname);
-    parlay::sequence<char*> W = stringToWords(S);
-    return (int)(W[0][18])-48;
+  bool isGenericHeader(std::string line) {
+    for (auto c: line) {
+      if (!is_number(c) && !is_delim(c)) return true;
+    }
+    return false;
+  }
+
+  int countEntry(std::string line) {
+    while (is_delim(line.back()) ||
+	   is_space(line.back()) ||
+	   is_newline(line.back())) {
+      line.pop_back();
+    }
+
+    int count = 0;
+    for (auto c: line) {
+      if (is_delim(c)) count ++;
+    }
+    return count + 1;
+  }
+
+  // returns dim
+  int readHeader(char* fileName) {
+    ifstream file (fileName);
+    if (!file.is_open())
+      throw std::runtime_error("Unable to open file");
+
+    std::string line1; std::getline(file, line1);
+    if (isGenericHeader(line1)) {
+      std::string line2; std::getline(file, line2);
+      return countEntry(line2);
+    } else {
+      return countEntry(line1);
+    }
+  }
+
+  // todo deprecate
+  int readDimensionFromFile(char* fileName) {
+    cout << "warning: using deprecated function readDimensionFromFile" << endl;
+    return readHeader(fileName);
   }
 
   template <class pointT>
   int writePointsToFile(parlay::sequence<pointT> const &P, char const *fname) {
-    //string Header = (pointT::dim == 2) ? HeaderPoint2d : HeaderPoint3d;
-    string Header = pointHeader(pointT::dim);
+    string Header = pbbsHeader(pointT::dim);
     int r = writeSeqToFile(Header, P, fname);
     return r;
   }
 
   template <class pointT, class Seq>
   parlay::sequence<pointT> parsePoints(Seq W) {
-    //using coord = typename Point::coord;
     using coord = double;
     int d = pointT::dim;
     size_t n = W.size()/d;
     auto a = parlay::tabulate(d * n, [&] (size_t i) -> coord {
-	return atof(W[i]);});
+				       return atof(W[i]);});
     auto points = parlay::tabulate(n, [&] (size_t i) -> pointT {
-	return pointT(a.cut(d*i,d*(i + 1)));});
+					return pointT(a.cut(d*i,d*(i + 1)));});
     return points;
   }
 
@@ -105,11 +136,13 @@ namespace benchIO {
     parlay::sequence<char> S = readStringFromFile(fname);
     parlay::sequence<char*> W = stringToWords(S);
     int d = pointT::dim;
-    if (W.size() == 0 || W[0] != pointHeader(d)) {
-      cout << "readPointsFromFile wrong file type" << endl;
-      abort();
-    }
-    return parsePoints<pointT>(W.cut(1,W.size()));
+    if (W.size() == 0)
+      throw std::runtime_error("readPointsFromFile empty file");
+
+    if (isGenericHeader(W[0]))
+      return parsePoints<pointT>(W.cut(1,W.size()));
+    else
+      return parsePoints<pointT>(W.cut(0,W.size()));
   }
 
   template <class pointT>

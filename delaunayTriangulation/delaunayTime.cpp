@@ -38,10 +38,6 @@ using namespace pbbsbench;
 
 void timeDelaunay(parlay::sequence<pointT> &pts, int rounds, char* outFile) {
   triangles<pointT> R;
-  // time_loop(rounds, 1.0,
-  // 	    [&] () {R.P.clear(); R.T.clear();},
-  // 	    [&] () {R = delaunay(pts);},
-  // 	    [&] () {});
   for(int i=0; i<rounds; ++i) {
     R = delaunay(pts);
   }

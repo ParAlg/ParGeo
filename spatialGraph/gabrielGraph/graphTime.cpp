@@ -28,13 +28,12 @@ int main(int argc, char* argv[]) {
   char* oFile = P.getOptionValue("-o");
   int rounds = P.getOptionIntValue("-r",1);
 
-  int dim = readDimensionFromFile(iFile);//todo make cheaper
+  int dim = readHeader(iFile);
 
   if (dim == 2) {
     parlay::sequence<pargeo::point<2>> Points = readPointsFromFile<pargeo::point<2>>(iFile);
     timeGraph<2>(Points, rounds, oFile);
-  } else if (dim == 3) {
-    parlay::sequence<pargeo::point<3>> Points = readPointsFromFile<pargeo::point<3>>(iFile);
-    timeGraph<3>(Points, rounds, oFile);
+  } else {
+    throw std::runtime_error("unsupported dimensionality");
   }
 }
