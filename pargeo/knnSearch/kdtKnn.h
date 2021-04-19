@@ -62,8 +62,8 @@ namespace knnBuf {
     elem<T> keepK() {
       if (ptr < k) throw std::runtime_error("Error, kbuffer not enough k.");
       ptr = k;
-      std::nth_element(buf.begin(), buf.begin()+k, buf.end());
-      return buf[k];
+      std::nth_element(buf.begin(), buf.begin()+k-1, buf.end());
+      return buf[k-1];
     }
 
     void insert(elem<T> t_elem) {
