@@ -4,10 +4,10 @@ from datetime import datetime
 from matplotlib import pyplot as plt
 from matplotlib.collections import LineCollection
 
-from geograph import delaunay_graph
-from geograph import gabriel_graph
-from geograph import knn_graph
-from geograph import beta_skeleton
+from pypargeo import DelaunayGraph
+from pypargeo import GabrielGraph
+from pypargeo import KnnGraph
+from pypargeo import BetaSkeleton
 
 start_time = None
 
@@ -38,12 +38,12 @@ def test(points, name, gen, savePlot = False, k = -1):
     fig.savefig(name+".png")
 
 points = np.random.random((100, 2))
-test(points, "rand-delaunay-100", delaunay_graph, True)
-test(points, "rand-gabriel-100", gabriel_graph, True)
-test(points, "rand-knn1-100", knn_graph, True, 1)
-test(points, "rand-knn2-100", knn_graph, True, 2)
-test(points, "rand-knn10-100", knn_graph, True, 10)
-test(points, "beta-skeleton0.5-100", beta_skeleton, True, 0.5)
-test(points, "beta-skeleton1-100", beta_skeleton, True, 1)
-test(points, "beta-skeleton2-100", beta_skeleton, True, 2)
-test(points, "beta-skeleton5-100", beta_skeleton, True, 5)
+test(points, "rand-delaunay-100", DelaunayGraph, True)
+test(points, "rand-gabriel-100", GabrielGraph, True)
+test(points, "rand-knn1-100", KnnGraph, True, 1)
+test(points, "rand-knn2-100", KnnGraph, True, 2)
+test(points, "rand-knn10-100", KnnGraph, True, 10)
+test(points, "beta-skeleton0.5-100", BetaSkeleton, True, 0.5)
+test(points, "beta-skeleton1-100", BetaSkeleton, True, 1)
+test(points, "beta-skeleton2-100", BetaSkeleton, True, 2)
+test(points, "beta-skeleton5-100", BetaSkeleton, True, 5)

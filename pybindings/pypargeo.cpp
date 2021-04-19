@@ -1,21 +1,36 @@
-#ifndef SILENT
-#define VERBOSE
-#endif
-
-#ifdef VERBOSE
-#include "common/get_time.h"
-#endif
-
+//#include "common/get_time.h"
 #include "spatialGraph.h"
+#include <string>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
 
 namespace py = pybind11;
 
-py::array_t<size_t> py_delaunay(py::array_t<double, py::array::c_style | py::array::forcecast> array)
-{
+/*
+  Basic wrapper functions
+*/
 
+template<class T, class Seq>
+py::array_t<T> wrap_array_2d(Seq& result_vec) {
+  ssize_t ndim = 2;
+  std::vector<ssize_t> shape = { (ssize_t) result_vec.size(), 2 };
+  std::vector<ssize_t> strides = { sizeof(size_t) * 2 , sizeof(size_t) };
+
+  return py::array(py::buffer_info(result_vec.data(),                       /* data as contiguous array  */
+				   sizeof(size_t),                          /* size of one scalar        */
+				   py::format_descriptor<T>::format(),      /* data type                 */
+				   2,                                       /* number of dimensions      */
+				   shape,                                   /* shape of the matrix       */
+				   strides                                  /* strides for each axis     */
+				   ));
+}
+
+/*
+  Spatial graph generation wrappers
+*/
+
+py::array_t<size_t> py_delaunayGraph(py::array_t<double, py::array::c_style | py::array::forcecast> array) {
   if (array.ndim() != 2)
     throw std::runtime_error("Input should be 2-D NumPy array");
 
@@ -23,51 +38,20 @@ py::array_t<size_t> py_delaunay(py::array_t<double, py::array::c_style | py::arr
     throw std::runtime_error("sizeof(pargeo::point<2>) != 16, check point.h");
 
   int dim = array.shape()[1];
-
   size_t n = array.size() / dim;
 
-#ifdef VERBOSE
-  timer t;
-#endif
-
   if (dim == 2) {
-#ifdef VERBOSE
-    t.start();
-#endif
+
     parlay::sequence<pargeo::point<2>> array_vec(n);
     std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
-#ifdef VERBOSE
-    std::cout << "::copy-in-time = " << t.get_next() << std::endl;
-#endif
-
     parlay::sequence<pargeo::edge> result_vec = pargeo::delaunayGraph<2>(array_vec);
+    return wrap_array_2d<size_t>(result_vec);
 
-#ifdef VERBOSE
-    std::cout << "::compute-time = " << t.get_next() << std::endl;
-#endif
-
-    ssize_t ndim = 2;
-    std::vector<ssize_t> shape = { (ssize_t) result_vec.size(), 2 };
-    std::vector<ssize_t> strides = { sizeof(size_t) * 2 , sizeof(size_t) };
-
-    // return a 2d numpy array
-    return py::array(py::buffer_info(result_vec.data(),                       /* data as contiguous array  */
-				     sizeof(size_t),                          /* size of one scalar        */
-				     py::format_descriptor<size_t>::format(), /* data type                 */
-				     2,                                       /* number of dimensions      */
-				     shape,                                   /* shape of the matrix       */
-				     strides                                  /* strides for each axis     */
-				     ));
-
-  } else {
+  } else
     throw std::runtime_error("Only supports 2d points.");
-  }
-
 }
 
-py::array_t<size_t> py_gabriel(py::array_t<double, py::array::c_style | py::array::forcecast> array)
-{
-
+py::array_t<size_t> py_gabrielGraph(py::array_t<double, py::array::c_style | py::array::forcecast> array) {
   if (array.ndim() != 2)
     throw std::runtime_error("Input should be 2-D NumPy array");
 
@@ -75,51 +59,20 @@ py::array_t<size_t> py_gabriel(py::array_t<double, py::array::c_style | py::arra
     throw std::runtime_error("sizeof(pargeo::point<2>) != 16, check point.h");
 
   int dim = array.shape()[1];
-
   size_t n = array.size() / dim;
 
-#ifdef VERBOSE
-  timer t;
-#endif
-
   if (dim == 2) {
-#ifdef VERBOSE
-    t.start();
-#endif
+
     parlay::sequence<pargeo::point<2>> array_vec(n);
     std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
-#ifdef VERBOSE
-    std::cout << "::copy-in-time = " << t.get_next() << std::endl;
-#endif
-
     parlay::sequence<pargeo::edge> result_vec = pargeo::gabrielGraph<2>(array_vec);
+    return wrap_array_2d<size_t>(result_vec);
 
-#ifdef VERBOSE
-    std::cout << "::compute-time = " << t.get_next() << std::endl;
-#endif
-
-    ssize_t ndim = 2;
-    std::vector<ssize_t> shape = { (ssize_t)result_vec.size(), 2 };
-    std::vector<ssize_t> strides = { sizeof(size_t) * 2 , sizeof(size_t) };
-
-    // return a 2d numpy array
-    return py::array(py::buffer_info(result_vec.data(),                       /* data as contiguous array  */
-				     sizeof(size_t),                          /* size of one scalar        */
-				     py::format_descriptor<size_t>::format(), /* data type                 */
-				     2,                                       /* number of dimensions      */
-				     shape,                                   /* shape of the matrix       */
-				     strides                                  /* strides for each axis     */
-				     ));
-
-  } else {
+  } else
     throw std::runtime_error("Only supports 2d points.");
-  }
-
 }
 
-py::array_t<size_t> py_skeleton(py::array_t<double, py::array::c_style | py::array::forcecast> array, double beta)
-{
-
+py::array_t<size_t> py_skeleton(py::array_t<double, py::array::c_style | py::array::forcecast> array, double beta) {
   if (array.ndim() != 2)
     throw std::runtime_error("Input should be 2-D NumPy array");
 
@@ -127,51 +80,20 @@ py::array_t<size_t> py_skeleton(py::array_t<double, py::array::c_style | py::arr
     throw std::runtime_error("sizeof(pargeo::point<2>) != 16, check point.h");
 
   int dim = array.shape()[1];
-
   size_t n = array.size() / dim;
 
-#ifdef VERBOSE
-  timer t;
-#endif
-
   if (dim == 2) {
-#ifdef VERBOSE
-    t.start();
-#endif
+
     parlay::sequence<pargeo::point<2>> array_vec(n);
     std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
-#ifdef VERBOSE
-    std::cout << "::copy-in-time = " << t.get_next() << std::endl;
-#endif
-
     parlay::sequence<pargeo::edge> result_vec = pargeo::betaSkeleton<2>(array_vec, beta);
+    return wrap_array_2d<size_t>(result_vec);
 
-#ifdef VERBOSE
-    std::cout << "::compute-time = " << t.get_next() << std::endl;
-#endif
-
-    ssize_t ndim = 2;
-    std::vector<ssize_t> shape = { (ssize_t)result_vec.size(), 2 };
-    std::vector<ssize_t> strides = { sizeof(size_t) * 2 , sizeof(size_t) };
-
-    // return a 2d numpy array
-    return py::array(py::buffer_info(result_vec.data(),                       /* data as contiguous array  */
-				     sizeof(size_t),                          /* size of one scalar        */
-				     py::format_descriptor<size_t>::format(), /* data type                 */
-				     2,                                       /* number of dimensions      */
-				     shape,                                   /* shape of the matrix       */
-				     strides                                  /* strides for each axis     */
-				     ));
-
-  } else {
+  } else
     throw std::runtime_error("Only supports 2d points.");
-  }
-
 }
 
-py::array_t<size_t> py_knngraph(py::array_t<double, py::array::c_style | py::array::forcecast> array, size_t k)
-{
-
+py::array_t<size_t> py_knnGraph(py::array_t<double, py::array::c_style | py::array::forcecast> array, size_t k) {
   if (array.ndim() != 2)
     throw std::runtime_error("Input should be 2-D NumPy array");
 
@@ -179,55 +101,28 @@ py::array_t<size_t> py_knngraph(py::array_t<double, py::array::c_style | py::arr
     throw std::runtime_error("sizeof(pargeo::point<2>) != 16, check point.h");
 
   int dim = array.shape()[1];
-
   size_t n = array.size() / dim;
 
-#ifdef VERBOSE
-  timer t;
-#endif
-
   if (dim == 2) {
-#ifdef VERBOSE
-    t.start();
-#endif
+
     parlay::sequence<pargeo::point<2>> array_vec(n);
     std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
-#ifdef VERBOSE
-    std::cout << "::copy-in-time = " << t.get_next() << std::endl;
-#endif
-
     parlay::sequence<pargeo::edge> result_vec = pargeo::knnGraph<2>(array_vec, k);
+    return wrap_array_2d<size_t>(result_vec);
 
-#ifdef VERBOSE
-    std::cout << "::compute-time = " << t.get_next() << std::endl;
-#endif
-
-    ssize_t ndim = 2;
-    std::vector<ssize_t> shape = { (ssize_t)result_vec.size(), 2 };
-    std::vector<ssize_t> strides = { sizeof(size_t) * 2 , sizeof(size_t) };
-
-    // return a 2d numpy array
-    return py::array(py::buffer_info(result_vec.data(),                       /* data as contiguous array  */
-				     sizeof(size_t),                          /* size of one scalar        */
-				     py::format_descriptor<size_t>::format(), /* data type                 */
-				     2,                                       /* number of dimensions      */
-				     shape,                                   /* shape of the matrix       */
-				     strides                                  /* strides for each axis     */
-				     ));
-  } else {
+  } else
     throw std::runtime_error("Only supports 2d points.");
-  }
 }
 
 PYBIND11_MODULE(pypargeo, m)
 {
-  m.doc() = "Generates spatial graphs for a point data set in R^2.";
+  m.doc() = "Pargeo: library for parallel computational geometry.";
 
-  m.def("knn_graph", &py_knngraph, "Input: 2d-numpy array containing n points in R^2; parameter k. Output: array E of size n*k, where E[i] and E[i+1] forall i are point indices represents a directed edge of the directed-knn graph.");
+  m.def("KnnGraph", &py_knnGraph, "Input: 2d-numpy array containing n points in R^2; parameter k. Output: array E of size n*k, where E[i] and E[i+1] forall i are point indices represents a directed edge of the directed-knn graph.");
 
-  m.def("delaunay_graph", &py_delaunay, "Input: 2d-numpy array containing n points in R^2. Output: array E of edges, where E[i] and E[i+1] forall i are point indices that represents an undirected edge of the delaunay graph.");
+  m.def("DelaunayGraph", &py_delaunayGraph, "Input: 2d-numpy array containing n points in R^2. Output: array E of edges, where E[i] and E[i+1] forall i are point indices that represents an undirected edge of the delaunay graph.");
 
-  m.def("gabriel_graph", &py_gabriel, "Input: 2d-numpy array containing n points in R^2. Output: array E of size n*2, where E[i] and E[i+1] forall i are point indices that represents an undirected edge of the Gabriel graph.");
+  m.def("GabrielGraph", &py_gabrielGraph, "Input: 2d-numpy array containing n points in R^2. Output: array E of size n*2, where E[i] and E[i+1] forall i are point indices that represents an undirected edge of the Gabriel graph.");
 
-  m.def("beta_skeleton", &py_skeleton, "Input: 2d-numpy array containing n points in R^2. Output: array E of size n*2, where E[i] and E[i+1] forall i are point indices that represents an undirected edge of the beta skeleton graph.");
+  m.def("BetaSkeleton", &py_skeleton, "Input: 2d-numpy array containing n points in R^2. Output: array E of size n*2, where E[i] and E[i+1] forall i are point indices that represents an undirected edge of the beta skeleton graph.");
 }
