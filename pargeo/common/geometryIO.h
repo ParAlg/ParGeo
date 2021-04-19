@@ -92,7 +92,7 @@ namespace benchIO {
   }
 
   // returns dim
-  int readHeader(char* fileName) {
+  int readHeader(const char* fileName) {
     ifstream file (fileName);
     if (!file.is_open())
       throw std::runtime_error("Unable to open file");
@@ -107,7 +107,7 @@ namespace benchIO {
   }
 
   // todo deprecate
-  int readDimensionFromFile(char* fileName) {
+  int readDimensionFromFile(char* const fileName) {
     cout << "warning: using deprecated function readDimensionFromFile" << endl;
     return readHeader(fileName);
   }
