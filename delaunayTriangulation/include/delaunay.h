@@ -4,9 +4,9 @@
 
 namespace pbbsbench {
 
-using coord = double;
-using pointT = point2d<coord>;
+  using coord = double;
+  using pointT = point2d<coord>;
 
-triangles<pointT> delaunay(parlay::sequence<pointT>& P);
+  triangles<pointT> delaunay(parlay::sequence<pointT>& P);
 
 }

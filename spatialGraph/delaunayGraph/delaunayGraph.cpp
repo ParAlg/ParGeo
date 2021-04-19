@@ -6,7 +6,7 @@
 #include "common/geometry.h"
 #include "common/get_time.h"
 #include "spatialGraph.h"
-#include "incremental/delaunay.h"
+#include "delaunay.h"
 
 template<int dim>
 parlay::sequence<pargeo::edge> pargeo::delaunayGraph(parlay::sequence<pargeo::point<dim>> &P) {

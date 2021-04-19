@@ -2,7 +2,7 @@
 #include "parlay/parallel.h"
 #include "parlay/primitives.h"
 #include "geometry/point.h"
-#include "kdtKnn.h"
+#include "knnSearch/kdtKnn.h"
 #include "spatialGraph.h"
 
 using namespace std;

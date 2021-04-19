@@ -219,7 +219,7 @@ py::array_t<size_t> py_knngraph(py::array_t<double, py::array::c_style | py::arr
   }
 }
 
-PYBIND11_MODULE(geograph, m)
+PYBIND11_MODULE(pypargeo, m)
 {
   m.doc() = "Generates spatial graphs for a point data set in R^2.";
 
