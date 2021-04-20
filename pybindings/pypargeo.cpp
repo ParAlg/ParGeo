@@ -1,4 +1,3 @@
-//#include "common/get_time.h"
 #include "spatialGraph.h"
 #include "common/geometryIO.h"
 #include <string>
@@ -14,12 +13,11 @@ namespace py = pybind11;
 
 template<class T, class Seq>
 py::array_t<T> wrap_array_2d(Seq& result_vec, ssize_t width = 2) {
-  ssize_t ndim = 2;
   std::vector<ssize_t> shape = { (ssize_t) result_vec.size(), (ssize_t) width };
-  std::vector<ssize_t> strides = { (ssize_t) sizeof(size_t) * (ssize_t) width , (ssize_t) sizeof(size_t) };
+  std::vector<ssize_t> strides = { (ssize_t) sizeof(T) * (ssize_t) width, (ssize_t) sizeof(T) };
 
   return py::array(py::buffer_info(result_vec.data(),                       /* data as contiguous array  */
-				   sizeof(size_t),                          /* size of one scalar        */
+				   sizeof(T),                               /* size of one scalar        */
 				   py::format_descriptor<T>::format(),      /* data type                 */
 				   2,                                       /* number of dimensions      */
 				   shape,                                   /* shape of the matrix       */
@@ -59,7 +57,9 @@ py::array_t<double> py_loadPoints(std::string& fileName) {
   Spatial graph generation wrappers
 */
 
-py::array_t<size_t> py_delaunayGraph(py::array_t<double, py::array::c_style | py::array::forcecast> array) {
+static constexpr double weightScaleFactor = 1;
+
+py::array_t<unsigned int> py_delaunayGraph(py::array_t<double, py::array::c_style | py::array::forcecast> array, bool weighted=false) {
   if (array.ndim() != 2)
     throw std::runtime_error("Input should be 2-D NumPy array");
 
@@ -74,13 +74,26 @@ py::array_t<size_t> py_delaunayGraph(py::array_t<double, py::array::c_style | py
     parlay::sequence<pargeo::point<2>> array_vec(n);
     std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
     parlay::sequence<pargeo::edge> result_vec = pargeo::delaunayGraph<2>(array_vec);
-    return wrap_array_2d<size_t>(result_vec);
+
+    if (!weighted) {
+      return wrap_array_2d<unsigned int>(result_vec, 2);
+    } else {
+      struct we { unsigned int u, v, weight; };
+      parlay::sequence<we> E(result_vec.size());
+      parlay::parallel_for(0, result_vec.size(),
+			   [&](size_t i){
+			     E[i].u = result_vec[i].u;
+			     E[i].v = result_vec[i].v;
+			     E[i].weight = (unsigned int) weightScaleFactor*array_vec[E[i].u].dist(array_vec[E[i].v]);
+			   });
+      return wrap_array_2d<unsigned int>(E, 3);
+    }
 
   } else
     throw std::runtime_error("Only supports 2d points.");
 }
 
-py::array_t<size_t> py_gabrielGraph(py::array_t<double, py::array::c_style | py::array::forcecast> array) {
+py::array_t<size_t> py_gabrielGraph(py::array_t<double, py::array::c_style | py::array::forcecast> array, bool weighted=false) {
   if (array.ndim() != 2)
     throw std::runtime_error("Input should be 2-D NumPy array");
 
@@ -95,13 +108,25 @@ py::array_t<size_t> py_gabrielGraph(py::array_t<double, py::array::c_style | py:
     parlay::sequence<pargeo::point<2>> array_vec(n);
     std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
     parlay::sequence<pargeo::edge> result_vec = pargeo::gabrielGraph<2>(array_vec);
-    return wrap_array_2d<size_t>(result_vec);
 
+    if (!weighted) {
+      return wrap_array_2d<size_t>(result_vec);
+    } else {
+      struct we { unsigned int u, v, weight; };
+      parlay::sequence<we> E(result_vec.size());
+      parlay::parallel_for(0, result_vec.size(),
+			   [&](size_t i){
+			     E[i].u = result_vec[i].u;
+			     E[i].v = result_vec[i].v;
+			     E[i].weight = (unsigned int) weightScaleFactor*array_vec[E[i].u].dist(array_vec[E[i].v]);
+			   });
+      return wrap_array_2d<unsigned int>(E, 3);
+    }
   } else
     throw std::runtime_error("Only supports 2d points.");
 }
 
-py::array_t<size_t> py_skeleton(py::array_t<double, py::array::c_style | py::array::forcecast> array, double beta) {
+py::array_t<size_t> py_skeleton(py::array_t<double, py::array::c_style | py::array::forcecast> array, double beta, bool weighted) {
   if (array.ndim() != 2)
     throw std::runtime_error("Input should be 2-D NumPy array");
 
@@ -116,13 +141,45 @@ py::array_t<size_t> py_skeleton(py::array_t<double, py::array::c_style | py::arr
     parlay::sequence<pargeo::point<2>> array_vec(n);
     std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
     parlay::sequence<pargeo::edge> result_vec = pargeo::betaSkeleton<2>(array_vec, beta);
-    return wrap_array_2d<size_t>(result_vec);
 
+    if (!weighted) {
+      return wrap_array_2d<size_t>(result_vec);
+    } else {
+      struct we { unsigned int u, v, weight; };
+      parlay::sequence<we> E(result_vec.size());
+      parlay::parallel_for(0, result_vec.size(),
+			   [&](size_t i){
+			     E[i].u = result_vec[i].u;
+			     E[i].v = result_vec[i].v;
+			     E[i].weight = (unsigned int) weightScaleFactor*array_vec[E[i].u].dist(array_vec[E[i].v]);
+			   });
+      return wrap_array_2d<unsigned int>(E, 3);
+    }
   } else
     throw std::runtime_error("Only supports 2d points.");
 }
 
-py::array_t<size_t> py_knnGraph(py::array_t<double, py::array::c_style | py::array::forcecast> array, size_t k) {
+template <int dim>
+inline py::array_t<size_t> py_knnHelper(parlay::sequence<pargeo::point<dim>> &array_vec, size_t k, bool weighted) {
+  parlay::sequence<pargeo::dirEdge> result_vec = pargeo::knnGraph<dim>(array_vec, k);
+
+  if (!weighted) {
+    return wrap_array_2d<unsigned int>(result_vec, 2);
+  } else {
+    struct we { unsigned int u, v, weight; };
+    parlay::sequence<we> E(result_vec.size());
+    parlay::parallel_for(0, result_vec.size(),
+			 [&](size_t i){
+			   E[i].u = result_vec[i].u;
+			   E[i].v = result_vec[i].v;
+			   E[i].weight = (unsigned int) weightScaleFactor*
+			     array_vec[E[i].u].dist(array_vec[E[i].v]);
+			 });
+    return wrap_array_2d<unsigned int>(E, 3);
+  }
+}
+
+py::array_t<size_t> py_knnGraph(py::array_t<double, py::array::c_style | py::array::forcecast> array, size_t k, bool weighted=false) {
   if (array.ndim() != 2)
     throw std::runtime_error("Input should be 2-D NumPy array");
 
@@ -131,51 +188,34 @@ py::array_t<size_t> py_knnGraph(py::array_t<double, py::array::c_style | py::arr
 
   int dim = array.shape()[1];
   size_t n = array.size() / dim;
+  parlay::sequence<pargeo::dirEdge> result_vec;
 
   if (dim == 2) {
-
     parlay::sequence<pargeo::point<2>> array_vec(n);
     std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
-    parlay::sequence<pargeo::dirEdge> result_vec = pargeo::knnGraph<2>(array_vec, k);
-    return wrap_array_2d<size_t>(result_vec);
-
+    return py_knnHelper<2>(array_vec, k, weighted);
   } else if (dim == 3) {
-
     parlay::sequence<pargeo::point<3>> array_vec(n);
     std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
-    parlay::sequence<pargeo::dirEdge> result_vec = pargeo::knnGraph<3>(array_vec, k);
-    return wrap_array_2d<size_t>(result_vec);
-
+    return py_knnHelper<3>(array_vec, k, weighted);
   } else if (dim == 4) {
-
     parlay::sequence<pargeo::point<4>> array_vec(n);
     std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
-    parlay::sequence<pargeo::dirEdge> result_vec = pargeo::knnGraph<4>(array_vec, k);
-    return wrap_array_2d<size_t>(result_vec);
-
+    return py_knnHelper<4>(array_vec, k, weighted);
   } else if (dim == 5) {
-
     parlay::sequence<pargeo::point<5>> array_vec(n);
     std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
-    parlay::sequence<pargeo::dirEdge> result_vec = pargeo::knnGraph<5>(array_vec, k);
-    return wrap_array_2d<size_t>(result_vec);
-
+    return py_knnHelper<5>(array_vec, k, weighted);
   } else if (dim == 6) {
-
     parlay::sequence<pargeo::point<6>> array_vec(n);
     std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
-    parlay::sequence<pargeo::dirEdge> result_vec = pargeo::knnGraph<6>(array_vec, k);
-    return wrap_array_2d<size_t>(result_vec);
-
+    return py_knnHelper<6>(array_vec, k, weighted);
   } else if (dim == 7) {
-
     parlay::sequence<pargeo::point<7>> array_vec(n);
     std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
-    parlay::sequence<pargeo::dirEdge> result_vec = pargeo::knnGraph<7>(array_vec, k);
-    return wrap_array_2d<size_t>(result_vec);
-
+    return py_knnHelper<7>(array_vec, k, weighted);
   } else
-    throw std::runtime_error("Only supports 2-7d points.");
+    throw std::runtime_error("Only dimensions 2-7 are supported");
 }
 
 PYBIND11_MODULE(pypargeo, m)

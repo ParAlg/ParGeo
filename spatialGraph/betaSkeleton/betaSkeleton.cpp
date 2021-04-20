@@ -1,4 +1,5 @@
 #include <algorithm>
+
 #include <tuple>
 #include "parlay/parallel.h"
 #include "parlay/primitives.h"
@@ -25,7 +26,7 @@ parlay::sequence<pargeo::edge> pargeo::betaSkeleton(parlay::sequence<pargeo::poi
   cout << "beta = " << beta << endl;
   timer t; t.start();
 #endif
-  sequence<pargeo::edge> dedges = pargeo::delaunayGraph<dim>(P);
+  sequence<edge> dedges = pargeo::delaunayGraph<dim>(P);
 #ifndef SILENT
   cout << "#delaunay-edges = " << dedges.size() << endl;
   cout << "delaunay-time = " << t.get_next() << endl;
@@ -48,6 +49,7 @@ parlay::sequence<pargeo::edge> pargeo::betaSkeleton(parlay::sequence<pargeo::poi
 				     return !tree->nonEmptyLune(c1, r, c2, r, &P[e.u], &P[e.v]);
 				   }
 				 });
+
 #ifndef SILENT
   cout << "edge-pruning-time = " << t.stop() << endl;
   cout << "#edges = " << skeleton.size() << endl;

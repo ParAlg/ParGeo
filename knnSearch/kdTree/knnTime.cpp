@@ -5,7 +5,7 @@
 #include "common/get_time.h"
 #include "common/geometryIO.h"
 #include "common/parse_command_line.h"
-#include "knnSearch/kdtKnn.h"
+#include "geometry/kdtKnn.h"
 
 using namespace std;
 using namespace benchIO;

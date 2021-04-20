@@ -106,12 +106,6 @@ parlay::sequence<pargeo::edge> pargeo::gabrielGraph(parlay::sequence<pargeo::poi
 			}
   		      });
 
-  // parallel_for(0, edges2.size(), [&](size_t i) {
-  // 				  auto e = edges2[i];
-  // 				  cout << "(" << e.u << "," << e.v << ")" << " ";
-  // 				});
-  // cout << endl;
-
 #ifndef SILENT
   cout << "graph-gen-time = " << t.stop() << endl;
   cout << "#-triangles = " << nt << endl;

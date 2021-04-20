@@ -2,7 +2,7 @@
 #include "parlay/parallel.h"
 #include "parlay/primitives.h"
 #include "geometry/point.h"
-#include "knnSearch/kdtKnn.h"
+#include "geometry/kdtKnn.h"
 #include "spatialGraph.h"
 
 using namespace std;
@@ -18,12 +18,14 @@ parlay::sequence<pargeo::dirEdge> pargeo::knnGraph(parlay::sequence<pargeo::poin
   parlay::sequence<size_t> nnIdx = kdtKnn::kdtKnn<dim, pargeo::point<dim>>(P, k+1);
 
   // Convert to edge list
-  auto edges = parlay::sequence<pargeo::dirEdge>(k * P.size());
+  auto edges = parlay::sequence<dirEdge>(k * P.size());
   parallel_for(0, P.size(), [&](size_t i) {
 			      size_t jj = 0;
 			      for(size_t j=0; j<k+1; ++j) {
-				if (nnIdx[i*(k+1)+j] != i)
-				  edges[i*k + jj++] = dirEdge(i, nnIdx[i*(k+1)+j]);
+				if (nnIdx[i*(k+1)+j] != i) {
+				  edges[i*k + jj] = dirEdge(i, nnIdx[i*(k+1)+j]);
+				  jj++;
+				}
 			      }
 			    });
 

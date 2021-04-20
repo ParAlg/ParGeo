@@ -36,13 +36,12 @@ parlay::sequence<pargeo::edge> pargeo::delaunayGraph(parlay::sequence<pargeo::po
 
   size_t n = P.size();
   size_t nt = Tri.numTriangles();
-  sequence<pargeo::edge> edges(nt*3+1);
+  sequence<edge> edges(nt*3+1);
   edges[nt*3] = edge();
 
   // Process a triangle
   auto processTri = [&](tri &T, size_t idx) {
 		      for(int i=0; i<3; ++i) {
-			size_t x = T[i];
 			size_t u = T[(i+1)%3];
 			size_t v = T[(i+2)%3];
 
@@ -75,7 +74,7 @@ parlay::sequence<pargeo::edge> pargeo::delaunayGraph(parlay::sequence<pargeo::po
 				    flag[i] = 0;
 				});
 
-  sequence<pargeo::edge> edges2 = pack(edges, flag);
+  sequence<edge> edges2 = pack(edges, flag);
 
 #ifndef SILENT
   cout << "graph-gen-time = " << t.stop() << endl;
