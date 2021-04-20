@@ -136,42 +136,42 @@ py::array_t<size_t> py_knnGraph(py::array_t<double, py::array::c_style | py::arr
 
     parlay::sequence<pargeo::point<2>> array_vec(n);
     std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
-    parlay::sequence<pargeo::edge> result_vec = pargeo::knnGraph<2>(array_vec, k);
+    parlay::sequence<pargeo::dirEdge> result_vec = pargeo::knnGraph<2>(array_vec, k);
     return wrap_array_2d<size_t>(result_vec);
 
   } else if (dim == 3) {
 
     parlay::sequence<pargeo::point<3>> array_vec(n);
     std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
-    parlay::sequence<pargeo::edge> result_vec = pargeo::knnGraph<3>(array_vec, k);
+    parlay::sequence<pargeo::dirEdge> result_vec = pargeo::knnGraph<3>(array_vec, k);
     return wrap_array_2d<size_t>(result_vec);
 
   } else if (dim == 4) {
 
     parlay::sequence<pargeo::point<4>> array_vec(n);
     std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
-    parlay::sequence<pargeo::edge> result_vec = pargeo::knnGraph<4>(array_vec, k);
+    parlay::sequence<pargeo::dirEdge> result_vec = pargeo::knnGraph<4>(array_vec, k);
     return wrap_array_2d<size_t>(result_vec);
 
   } else if (dim == 5) {
 
     parlay::sequence<pargeo::point<5>> array_vec(n);
     std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
-    parlay::sequence<pargeo::edge> result_vec = pargeo::knnGraph<5>(array_vec, k);
+    parlay::sequence<pargeo::dirEdge> result_vec = pargeo::knnGraph<5>(array_vec, k);
     return wrap_array_2d<size_t>(result_vec);
 
   } else if (dim == 6) {
 
     parlay::sequence<pargeo::point<6>> array_vec(n);
     std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
-    parlay::sequence<pargeo::edge> result_vec = pargeo::knnGraph<6>(array_vec, k);
+    parlay::sequence<pargeo::dirEdge> result_vec = pargeo::knnGraph<6>(array_vec, k);
     return wrap_array_2d<size_t>(result_vec);
 
   } else if (dim == 7) {
 
     parlay::sequence<pargeo::point<7>> array_vec(n);
     std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
-    parlay::sequence<pargeo::edge> result_vec = pargeo::knnGraph<7>(array_vec, k);
+    parlay::sequence<pargeo::dirEdge> result_vec = pargeo::knnGraph<7>(array_vec, k);
     return wrap_array_2d<size_t>(result_vec);
 
   } else

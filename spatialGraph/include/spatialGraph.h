@@ -7,11 +7,12 @@
 namespace pargeo {
 
 namespace sgInternal {
+  template<bool directed>
   struct _edge {
     size_t u,v;
 
     _edge(size_t _u, size_t _v): u(_u), v(_v) {
-      if (u > v) std::swap(u,v);
+      if (!directed && u > v) std::swap(u,v);
     }
 
     _edge(): u(-1), v(-1) { }
@@ -29,10 +30,11 @@ namespace sgInternal {
 
 }
 
-using edge = sgInternal::_edge;
+using edge = sgInternal::_edge<false>;
+using dirEdge = sgInternal::_edge<true>;
 
 template<int dim>
-parlay::sequence<edge> knnGraph(parlay::sequence<pargeo::point<dim>> &S, size_t k);
+parlay::sequence<dirEdge> knnGraph(parlay::sequence<pargeo::point<dim>> &S, size_t k);
 
 template<int dim>
 parlay::sequence<edge> delaunayGraph(parlay::sequence<pargeo::point<dim>> &S);

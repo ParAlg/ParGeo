@@ -8,7 +8,7 @@
 using namespace std;
 
 template<int dim>
-parlay::sequence<pargeo::edge> pargeo::knnGraph(parlay::sequence<pargeo::point<dim>> &P, size_t k) {
+parlay::sequence<pargeo::dirEdge> pargeo::knnGraph(parlay::sequence<pargeo::point<dim>> &P, size_t k) {
   using namespace parlay;
 
   if (k < 1 || k > P.size()-1)
@@ -18,21 +18,21 @@ parlay::sequence<pargeo::edge> pargeo::knnGraph(parlay::sequence<pargeo::point<d
   parlay::sequence<size_t> nnIdx = kdtKnn::kdtKnn<dim, pargeo::point<dim>>(P, k+1);
 
   // Convert to edge list
-  auto edges = parlay::sequence<pargeo::edge>(k * P.size());
+  auto edges = parlay::sequence<pargeo::dirEdge>(k * P.size());
   parallel_for(0, P.size(), [&](size_t i) {
 			      size_t jj = 0;
 			      for(size_t j=0; j<k+1; ++j) {
 				if (nnIdx[i*(k+1)+j] != i)
-				  edges[i*k + jj++] = edge(i, nnIdx[i*(k+1)+j]);
+				  edges[i*k + jj++] = dirEdge(i, nnIdx[i*(k+1)+j]);
 			      }
 			    });
 
   return edges;
 }
 
-template parlay::sequence<pargeo::edge> pargeo::knnGraph<2>(parlay::sequence<pargeo::point<2>> &, size_t);
-template parlay::sequence<pargeo::edge> pargeo::knnGraph<3>(parlay::sequence<pargeo::point<3>> &, size_t);
-template parlay::sequence<pargeo::edge> pargeo::knnGraph<4>(parlay::sequence<pargeo::point<4>> &, size_t);
-template parlay::sequence<pargeo::edge> pargeo::knnGraph<5>(parlay::sequence<pargeo::point<5>> &, size_t);
-template parlay::sequence<pargeo::edge> pargeo::knnGraph<6>(parlay::sequence<pargeo::point<6>> &, size_t);
-template parlay::sequence<pargeo::edge> pargeo::knnGraph<7>(parlay::sequence<pargeo::point<7>> &, size_t);
+template parlay::sequence<pargeo::dirEdge> pargeo::knnGraph<2>(parlay::sequence<pargeo::point<2>> &, size_t);
+template parlay::sequence<pargeo::dirEdge> pargeo::knnGraph<3>(parlay::sequence<pargeo::point<3>> &, size_t);
+template parlay::sequence<pargeo::dirEdge> pargeo::knnGraph<4>(parlay::sequence<pargeo::point<4>> &, size_t);
+template parlay::sequence<pargeo::dirEdge> pargeo::knnGraph<5>(parlay::sequence<pargeo::point<5>> &, size_t);
+template parlay::sequence<pargeo::dirEdge> pargeo::knnGraph<6>(parlay::sequence<pargeo::point<6>> &, size_t);
+template parlay::sequence<pargeo::dirEdge> pargeo::knnGraph<7>(parlay::sequence<pargeo::point<7>> &, size_t);
