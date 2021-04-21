@@ -2,11 +2,10 @@
 #include <tuple>
 #include "parlay/parallel.h"
 #include "parlay/primitives.h"
-#include "geometry/point.h"
-#include "common/geometry.h"
-#include "common/get_time.h"
-#include "spatialGraph.h"
-#include "delaunay.h"
+#include "pargeo/point.h"
+#include "pargeo/getTime.h"
+#include "spatialGraph/spatialGraph.h"
+#include "delaunayTriangulation/delaunay.h"
 
 template<int dim>
 parlay::sequence<pargeo::edge> pargeo::gabrielGraph(parlay::sequence<pargeo::point<dim>> &P) {

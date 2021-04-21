@@ -1,9 +1,8 @@
 #pragma once
 
-#include "geometry/point.h"
-#include "parlay/primitives.h" // ?
 #include "parlay/sequence.h"
-#include "geometry/edge.h"
+#include "pargeo/edge.h"
+#include "pargeo/point.h"
 
 namespace pargeo {
 

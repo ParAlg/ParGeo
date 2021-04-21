@@ -24,7 +24,7 @@
 #include <algorithm>
 #include "parlay/parallel.h"
 #include "parlay/primitives.h"
-#include "common/geometry.h"
+#include "delaunayTriangulation/geometry.h"
 #include "oct_tree.h"
 
 namespace pbbsbench {

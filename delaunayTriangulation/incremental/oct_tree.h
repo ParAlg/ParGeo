@@ -23,8 +23,8 @@
 #include <algorithm>
 #include "parlay/parallel.h"
 #include "parlay/primitives.h"
-#include "common/geometry.h"
-#include "common/get_time.h"
+#include "delaunayTriangulation/geometry.h"
+#include "pargeo/getTime.h"
 
 namespace pbbsbench {
 

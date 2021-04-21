@@ -23,12 +23,12 @@
 #include <vector>
 #include "parlay/primitives.h"
 #include "parlay/random.h"
-#include "common/geometry.h"
-#include "common/get_time.h"
-#include "common/topology.h"
-#include "common/atomics.h"
+#include "pargeo/atomics.h"
+#include "pargeo/getTime.h"
+#include "delaunayTriangulation/geometry.h"
+#include "delaunayTriangulation/delaunay.h"
+#include "topology.h"
 #include "neighbors.h"
-#include "delaunay.h"
 
 namespace pbbsbench {
 

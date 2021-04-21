@@ -1,11 +1,11 @@
 #include <iostream>
 #include <algorithm>
 #include "parlay/parallel.h"
-#include "geometry/point.h"
-#include "common/get_time.h"
-#include "common/geometryIO.h"
-#include "common/parse_command_line.h"
-#include "geometry/kdtKnn.h"
+#include "pargeo/point.h"
+#include "pargeo/kdtKnn.h"
+#include "pargeo/getTime.h"
+#include "pargeo/geometryIO.h"
+#include "pargeo/parseCommandLine.h"
 
 using namespace std;
 using namespace benchIO;

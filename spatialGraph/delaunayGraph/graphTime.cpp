@@ -1,12 +1,12 @@
 #include <iostream>
 #include <algorithm>
 #include "parlay/parallel.h"
-#include "geometry/point.h"
-#include "common/get_time.h"
-#include "common/geometryIO.h"
-#include "common/graphIO.h"
-#include "common/parse_command_line.h"
-#include "spatialGraph.h"
+#include "pargeo/point.h"
+#include "pargeo/getTime.h"
+#include "pargeo/geometryIO.h"
+#include "pargeo/graphIO.h"
+#include "pargeo/parseCommandLine.h"
+#include "spatialGraph/spatialGraph.h"
 
 using namespace std;
 using namespace pargeo;

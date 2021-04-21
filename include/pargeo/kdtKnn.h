@@ -26,7 +26,7 @@
 #include <algorithm> // nth_element
 #include "parlay/parallel.h"
 #include "parlay/sequence.h"
-#include "geometry/point.h"
+#include "point.h"
 
 namespace pargeo {
 

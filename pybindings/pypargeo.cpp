@@ -1,5 +1,5 @@
-#include "spatialGraph.h"
-#include "common/geometryIO.h"
+#include "spatialGraph/spatialGraph.h"
+#include "pargeo/geometryIO.h"
 #include <string>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -12,7 +12,7 @@ namespace py = pybind11;
 */
 
 template<class T, class Seq>
-py::array_t<T> wrap_array_2d(Seq& result_vec, ssize_t width = 2) {
+py::array_t<T> wrap_array_2d(Seq& result_vec, ssize_t width) {
   std::vector<ssize_t> shape = { (ssize_t) result_vec.size(), (ssize_t) width };
   std::vector<ssize_t> strides = { (ssize_t) sizeof(T) * (ssize_t) width, (ssize_t) sizeof(T) };
 
@@ -57,7 +57,7 @@ py::array_t<double> py_loadPoints(std::string& fileName) {
   Spatial graph generation wrappers
 */
 
-static constexpr double weightScaleFactor = 1;
+static constexpr double weightScaleFactor = 1; // todo
 
 py::array_t<unsigned int> py_delaunayGraph(py::array_t<double, py::array::c_style | py::array::forcecast> array, bool weighted=false) {
   if (array.ndim() != 2)
@@ -110,7 +110,7 @@ py::array_t<size_t> py_gabrielGraph(py::array_t<double, py::array::c_style | py:
     parlay::sequence<pargeo::edge> result_vec = pargeo::gabrielGraph<2>(array_vec);
 
     if (!weighted) {
-      return wrap_array_2d<unsigned int>(result_vec);
+      return wrap_array_2d<unsigned int>(result_vec, 2);
     } else {
       struct we { unsigned int u, v, weight; };
       parlay::sequence<we> E(result_vec.size());
@@ -143,7 +143,7 @@ py::array_t<size_t> py_skeleton(py::array_t<double, py::array::c_style | py::arr
     parlay::sequence<pargeo::edge> result_vec = pargeo::betaSkeleton<2>(array_vec, beta);
 
     if (!weighted) {
-      return wrap_array_2d<unsigned int>(result_vec);
+      return wrap_array_2d<unsigned int>(result_vec, 2);
     } else {
       struct we { unsigned int u, v, weight; };
       parlay::sequence<we> E(result_vec.size());
@@ -222,13 +222,27 @@ PYBIND11_MODULE(pypargeo, m)
 {
   m.doc() = "Pargeo: library for parallel computational geometry.";
 
-  m.def("loadPoints", &py_loadPoints, "Load points based on file path.");
+  m.def("loadPoints",
+	&py_loadPoints,
+	"Load points based on file path.");
 
-  m.def("KnnGraph", &py_knnGraph, "Input: 2d-numpy array containing n points in R^2; parameter k. Output: array E of size n*k, where E[i] and E[i+1] forall i are point indices represents a directed edge of the directed-knn graph.", py::arg("array"), py::arg("k"), py::arg("weighted")=false);
+  m.def("KnnGraph",
+	&py_knnGraph,
+	"Input: 2d-numpy array containing n points in R^2; parameter k. Output: array E of size n*k, where E[i] and E[i+1] forall i are point indices represents a directed edge of the directed-knn graph.",
+	py::arg("array"), py::arg("k"), py::arg("weighted")=false);
 
-  m.def("DelaunayGraph", &py_delaunayGraph, "Input: 2d-numpy array containing n points in R^2. Output: array E of edges, where E[i] and E[i+1] forall i are point indices that represents an undirected edge of the delaunay graph.", py::arg("array"), py::arg("weighted")=false);
+  m.def("DelaunayGraph",
+	&py_delaunayGraph,
+	"Input: 2d-numpy array containing n points in R^2. Output: array E of edges, where E[i] and E[i+1] forall i are point indices that represents an undirected edge of the delaunay graph.",
+	py::arg("array"), py::arg("weighted")=false);
 
-  m.def("GabrielGraph", &py_gabrielGraph, "Input: 2d-numpy array containing n points in R^2. Output: array E of size n*2, where E[i] and E[i+1] forall i are point indices that represents an undirected edge of the Gabriel graph.", py::arg("array"), py::arg("weighted")=false);
+  m.def("GabrielGraph",
+	&py_gabrielGraph,
+	"Input: 2d-numpy array containing n points in R^2. Output: array E of size n*2, where E[i] and E[i+1] forall i are point indices that represents an undirected edge of the Gabriel graph.",
+	py::arg("array"), py::arg("weighted")=false);
 
-  m.def("BetaSkeleton", &py_skeleton, "Input: 2d-numpy array containing n points in R^2. Output: array E of size n*2, where E[i] and E[i+1] forall i are point indices that represents an undirected edge of the beta skeleton graph.", py::arg("array"), py::arg("beta"), py::arg("weighted")=false);
+  m.def("BetaSkeleton",
+	&py_skeleton,
+	"Input: 2d-numpy array containing n points in R^2. Output: array E of size n*2, where E[i] and E[i+1] forall i are point indices that represents an undirected edge of the beta skeleton graph.",
+	py::arg("array"), py::arg("beta"), py::arg("weighted")=false);
 }

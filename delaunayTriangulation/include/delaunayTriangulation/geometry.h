@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <math.h>
 #include <iomanip>
-#include "../parlay/parallel.h"
-#include "../parlay/primitives.h"
+#include "parlay/parallel.h"
+#include "parlay/primitives.h"
 using namespace std;
 
 // *************************************************************
@@ -455,4 +455,3 @@ inline point2d<coord> triangleCircumcenter(point2d<coord> a, point2d<coord> b, p
   vector2d<coord> v22 = v2 * v1.dot(v1);
   return a + vector2d<coord>(v22.y - v11.y, v11.x - v22.x)/(2.0 * v1.cross(v2));
 }
-

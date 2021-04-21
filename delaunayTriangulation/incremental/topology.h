@@ -24,7 +24,7 @@
 #define _TOPOLOGY_INCLUDED
 
 #include <iostream>
-#include "geometry.h"
+#include "delaunayTriangulation/geometry.h"
 
 using namespace std;
 

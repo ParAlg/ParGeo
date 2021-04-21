@@ -22,11 +22,12 @@
 
 #include <iostream>
 #include <algorithm>
-#include "common/geometry.h"
-#include "common/geometryIO.h"
-#include "common/parse_command_line.h"
+#include "pargeo/geometryIO.h"
+#include "pargeo/parseCommandLine.h"
+#include "delaunayTriangulation/geometry.h"
+#include "delaunayTriangulation/triangleIO.h"
+#include "delaunayTriangulation/delaunay.h"
 #include "parlay/primitives.h"
-#include "delaunay.h"
 
 using namespace std;
 using namespace benchIO;

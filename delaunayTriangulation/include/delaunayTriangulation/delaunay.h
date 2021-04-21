@@ -1,5 +1,5 @@
 // The inteface for delaunay triangulation
-#include "common/geometry.h"
+#include "geometry.h"
 #include "parlay/primitives.h"
 
 namespace pbbsbench {

@@ -1,9 +1,9 @@
 #include <algorithm>
 #include "parlay/parallel.h"
 #include "parlay/primitives.h"
-#include "geometry/point.h"
-#include "geometry/kdtKnn.h"
-#include "spatialGraph.h"
+#include "pargeo/point.h"
+#include "pargeo/kdtKnn.h"
+#include "spatialGraph/spatialGraph.h"
 
 using namespace std;
 
