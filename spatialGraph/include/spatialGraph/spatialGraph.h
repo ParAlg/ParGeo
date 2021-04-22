@@ -6,8 +6,8 @@
 
 namespace pargeo {
 
-using edge = pargeo::_edge<false, unsigned int>;
-using dirEdge = pargeo::_edge<true, unsigned int>;
+using edge = pargeo::_edge<false, size_t>;
+using dirEdge = pargeo::_edge<true, size_t>;
 
 template<int dim>
 parlay::sequence<pargeo::dirEdge> knnGraph(parlay::sequence<pargeo::point<dim>> &S, size_t k);
