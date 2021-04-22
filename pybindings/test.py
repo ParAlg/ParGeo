@@ -16,7 +16,7 @@ from pypargeo import WghBetaSkeleton
 
 start_time = None
 
-def test(points, name, graphGen, savePlot = False, k = -1):
+def test(points, name, graphGen, savePlot = False, k = -1, eps = -1):
   dim = 2
   print("\n" + name)
 
@@ -24,7 +24,10 @@ def test(points, name, graphGen, savePlot = False, k = -1):
   if k < 0:
     edges = graphGen(points)
   else:
-    edges = graphGen(points, k)
+    if eps > 0:
+      edges = graphGen(points, k, eps)
+    else:
+      edges = graphGen(points, k)
   end_time = datetime.now()
   print("graph-gen-time: {}".format(end_time - start_time))
   print("#-edges =", len(edges))
@@ -50,8 +53,10 @@ test(points, "rand-gabriel-100", GabrielGraph, True)
 test(points, "rand-wgh-gabriel-100", WghGabrielGraph, True)
 test(points, "rand-knn1-100", KnnGraph, True, 1)
 test(points, "rand-knn2-100", KnnGraph, True, 2)
-test(points, "rand-wgh-knn2-100", WghKnnGraph, True, 2)
+test(points, "rand-knn2-100", KnnGraph, True, 2)
 test(points, "rand-knn10-100", KnnGraph, True, 10)
+test(points, "rand-wgh-knn10-100", WghKnnGraph, True, 10)
+test(points, "rand-wgh-eps-knn10-100", WghKnnGraph, True, 10, 0.2)
 test(points, "beta-skeleton0.5-100", BetaSkeleton, True, 0.5)
 test(points, "beta-skeleton1-100", BetaSkeleton, True, 1)
 test(points, "beta-wgh-skeleton1-100", WghBetaSkeleton, True, 1)
