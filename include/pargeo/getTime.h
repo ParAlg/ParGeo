@@ -1,3 +1,5 @@
+// This file is part of pbbsbench
+
 #pragma once
 
 #include <stdlib.h>
@@ -5,6 +7,8 @@
 #include <iomanip>
 #include <iostream>
 #include <string>
+
+namespace pargeo {
 
 struct timer {
   double total_time;
@@ -83,3 +87,5 @@ struct timer {
 static timer _tm;
 #define startTime() _tm.start();
 #define nextTime(_string) _tm.next(_string);
+
+}

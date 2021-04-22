@@ -1,9 +1,8 @@
-// Part of PBBSBench
+// This file is part of pbbsbench
 
-#ifndef ATOMICS_H
-#define ATOMICS_H
+#pragma once
 
-namespace pbbs {
+namespace pargeo {
 
   template <typename ET>
   inline bool atomic_compare_and_swap(ET* a, ET oldval, ET newval) {
@@ -81,6 +80,5 @@ namespace pbbs {
     while (less(c,b) && !(r=std::atomic_compare_exchange_strong(a, &c, b)));
     return r;
   }
-}
 
-#endif
+} // End namespace pargeo

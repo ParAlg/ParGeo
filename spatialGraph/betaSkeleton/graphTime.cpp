@@ -3,13 +3,15 @@
 #include "parlay/parallel.h"
 #include "pargeo/point.h"
 #include "pargeo/getTime.h"
-#include "pargeo/geometryIO.h"
+#include "pargeo/pointIO.h"
 #include "pargeo/graphIO.h"
 #include "pargeo/parseCommandLine.h"
 #include "spatialGraph/spatialGraph.h"
 
 using namespace std;
 using namespace pargeo;
+using namespace pargeo::pointIO;
+using namespace pargeo::graphIO;
 
 template<int dim>
 void timeGraph(parlay::sequence<pargeo::point<dim>> &P, double b, int rounds, char const *outFile) {

@@ -23,13 +23,12 @@
 #pragma once
 #include "parlay/parallel.h"
 #include "parlay/primitives.h"
-//#include "geometry.h"
 #include "IO.h"
 
-using namespace benchIO;
-
-namespace benchIO {
+namespace pargeo {
+namespace pointIO {
   using namespace std;
+  using namespace pargeo::IO;
 
   string pbbsHeader(int dim) {
     if (dim < 2 || dim > 9) {
@@ -113,5 +112,6 @@ namespace benchIO {
     else
       return parsePoints<pointT>(W.cut(0,W.size()));
   }
-};
 
+} // End namespace pointIO
+} // End namespace pargeo

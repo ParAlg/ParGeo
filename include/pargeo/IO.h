@@ -30,9 +30,10 @@
 #include "../parlay/primitives.h"
 #include "../parlay/parallel.h"
 #include "../parlay/io.h"
-//#include "../parlay/internal/get_time.h"
 
-namespace benchIO {
+namespace pargeo {
+namespace IO {
+
   using namespace std;
   using parlay::sequence;
   using parlay::tabulate;
@@ -237,7 +238,7 @@ namespace benchIO {
     // auto S = parlay::chars_from_file(fileName);
     auto S = parlay::file_map(fileName);
     // t.next("file map");
-    auto r =  parlay::tokens(S, benchIO::is_space);
+    auto r =  parlay::tokens(S, is_space);
     // t.next("tokens");
     return r;
   }
@@ -255,5 +256,5 @@ namespace benchIO {
 	return parlay::chars_to_long(W[i+1]);});
     return A;
   }
-};
-
+} // End namespace IO
+} // End namespace pargeo

@@ -4,12 +4,12 @@
 #include "pargeo/point.h"
 #include "pargeo/kdtKnn.h"
 #include "pargeo/getTime.h"
-#include "pargeo/geometryIO.h"
+#include "pargeo/pointIO.h"
 #include "pargeo/parseCommandLine.h"
 
 using namespace std;
-using namespace benchIO;
 using namespace pargeo;
+using namespace pargeo::pointIO;
 
 template<int dim>
 void timeKnn(parlay::sequence<pargeo::point<dim>> &P, size_t k, int rounds, char const *outFile) {

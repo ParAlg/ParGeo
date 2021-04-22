@@ -27,6 +27,8 @@
 #include <string>
 #include <cstring>
 
+namespace pargeo {
+
 struct commandLine {
   int argc;
   char** argv;
@@ -115,3 +117,4 @@ struct commandLine {
 
 };
 
+} // End namespace pargeo

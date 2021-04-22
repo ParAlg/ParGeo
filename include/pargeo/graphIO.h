@@ -9,6 +9,7 @@
 #include "../parlay/parallel.h"
 #include "../parlay/io.h"
 
+namespace pargeo {
 namespace graphIO {
   using namespace std;
   using parlay::sequence;
@@ -96,3 +97,4 @@ namespace graphIO {
   }
 
 } // End namespace graphIO
+} // End namespace pargeo

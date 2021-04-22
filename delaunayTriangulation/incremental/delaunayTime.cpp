@@ -22,15 +22,15 @@
 
 #include <iostream>
 #include <algorithm>
-#include "pargeo/geometryIO.h"
+#include "pargeo/pointIO.h"
 #include "pargeo/parseCommandLine.h"
 #include "delaunayTriangulation/geometry.h"
-#include "delaunayTriangulation/triangleIO.h"
 #include "delaunayTriangulation/delaunay.h"
 #include "parlay/primitives.h"
 
 using namespace std;
-using namespace benchIO;
+using namespace pargeo;
+using namespace pargeo::pointIO;
 using namespace pbbsbench;
 
 // *************************************************************
@@ -43,11 +43,12 @@ void timeDelaunay(parlay::sequence<pointT> &pts, int rounds, char* outFile) {
     R = delaunay(pts);
   }
   cout << endl;
-  if (outFile != NULL) writeTrianglesToFile(R, outFile);
+  //if (outFile != NULL) writeTrianglesToFile(R, outFile);
 }
 
 int main(int argc, char* argv[]) {
-  commandLine P(argc,argv,"[-o <outFile>] [-r <rounds>] <inFile>");
+  commandLine P(argc,argv,"[-r <rounds>] <inFile>");
+  //commandLine P(argc,argv,"[-o <outFile>] [-r <rounds>] <inFile>");
   char* iFile = P.getArgument(0);
   char* oFile = P.getOptionValue("-o");
   int rounds = P.getOptionIntValue("-r",1);
