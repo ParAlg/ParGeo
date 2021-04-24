@@ -1,5 +1,6 @@
 #include "spatialGraph/spatialGraph.h"
 #include "pargeo/pointIO.h"
+#include "pargeo/graphIO.h"
 #include <string>
 #include <limits>
 #include <pybind11/pybind11.h>
@@ -7,6 +8,7 @@
 #include <pybind11/numpy.h>
 
 namespace py = pybind11;
+using namespace pargeo::graphIO;
 using namespace pargeo::pointIO;
 
 /*
@@ -65,6 +67,29 @@ py::array_t<T> castWghEdgeList(Edg& E, Pts& P, T eps=-1) {
 /*
   IO functions
 */
+
+/* to SNAP format on disk */
+void py_writeEdges(std::string& fileName, py::array_t<float, py::array::c_style | py::array::forcecast> array) {
+  // todo check the type of array
+
+  int dim = array.shape()[1]; // number of entries per line
+  size_t n = array.size() / dim;
+
+  if (dim == 3) {
+    cout << n << endl;
+    cout << dim << endl;
+    struct edge {float u, v, weight;};
+    parlay::sequence<edge> array_vec(n);
+    std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(float));
+    writeWghEdgeSeqToFile<edge>(array_vec, fileName.c_str());
+  } else if (dim == 2) {
+    struct edge {size_t u, v;};
+    parlay::sequence<edge> array_vec(n);
+    std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(size_t));
+    writeEdgeSeqToFile<edge>(array_vec, fileName.c_str());
+  } else
+    throw std::runtime_error("invalid python edge array, can't save to disk");
+}
 
 py::array_t<double> py_loadPoints(std::string& fileName) {
   int dim = readHeader(fileName.c_str());
@@ -297,7 +322,12 @@ py::array_t<float> py_wghKnnGraph(py::array_t<double, py::array::c_style | py::a
 
 PYBIND11_MODULE(pypargeo, m)
 {
-  m.doc() = "Pargeo: library for parallel computational geometry.";
+  m.doc() = "Pargeo: a library for parallel computational geometry.";
+
+  m.def("writeEdges",
+	&py_writeEdges,
+	"Save edge list in SNAP format to the file path.",
+	py::arg("fileName"), py::arg("array"));
 
   m.def("loadPoints",
 	&py_loadPoints,
