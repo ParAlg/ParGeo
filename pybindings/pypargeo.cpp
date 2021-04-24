@@ -68,8 +68,24 @@ py::array_t<T> castWghEdgeList(Edg& E, Pts& P, T eps=-1) {
   IO functions
 */
 
+/* to unweighted SNAP format on disk */
+void py_writeEdges(std::string& fileName, py::array_t<size_t, py::array::c_style | py::array::forcecast> array) {
+  // todo check the type of array
+
+  int dim = array.shape()[1]; // number of entries per line
+  size_t n = array.size() / dim;
+
+  if (dim == 2) {
+    struct edge {size_t u, v;};
+    parlay::sequence<edge> array_vec(n);
+    std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(size_t));
+    writeEdgeSeqToFile<edge>(array_vec, fileName.c_str());
+  } else
+    throw std::runtime_error("Invalid unweighted edge array, can't save to disk.");
+}
+
 /* to SNAP format on disk */
-void py_writeEdges(std::string& fileName, py::array_t<float, py::array::c_style | py::array::forcecast> array) {
+void py_writeWghEdges(std::string& fileName, py::array_t<float, py::array::c_style | py::array::forcecast> array) {
   // todo check the type of array
 
   int dim = array.shape()[1]; // number of entries per line
@@ -82,13 +98,8 @@ void py_writeEdges(std::string& fileName, py::array_t<float, py::array::c_style 
     parlay::sequence<edge> array_vec(n);
     std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(float));
     writeWghEdgeSeqToFile<edge>(array_vec, fileName.c_str());
-  } else if (dim == 2) {
-    struct edge {size_t u, v;};
-    parlay::sequence<edge> array_vec(n);
-    std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(size_t));
-    writeEdgeSeqToFile<edge>(array_vec, fileName.c_str());
   } else
-    throw std::runtime_error("invalid python edge array, can't save to disk");
+    throw std::runtime_error("Invalid weighted python edge array, can't save to disk.");
 }
 
 py::array_t<double> py_loadPoints(std::string& fileName) {
@@ -326,7 +337,12 @@ PYBIND11_MODULE(pypargeo, m)
 
   m.def("writeEdges",
 	&py_writeEdges,
-	"Save edge list in SNAP format to the file path.",
+	"Save unweighted edge list in SNAP format to the file path.",
+	py::arg("fileName"), py::arg("array"));
+
+  m.def("writeWghEdges",
+	&py_writeWghEdges,
+	"Save weighted edge list in SNAP format to the file path.",
 	py::arg("fileName"), py::arg("array"));
 
   m.def("loadPoints",
