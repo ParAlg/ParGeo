@@ -92,8 +92,6 @@ void py_writeWghEdges(std::string& fileName, py::array_t<float, py::array::c_sty
   size_t n = array.size() / dim;
 
   if (dim == 3) {
-    cout << n << endl;
-    cout << dim << endl;
     struct edge {float u, v, weight;};
     parlay::sequence<edge> array_vec(n);
     std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(float));
