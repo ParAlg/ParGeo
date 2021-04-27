@@ -31,10 +31,10 @@ struct gridAtt3d {
     return x;
   }
 
-  void computeId(pargeo::fpoint<3> p, pargeo::fpoint<3> pMin, floatT gSize) {
-    size_t x = floor( (p[0] - pMin[0]) / gSize );
-    size_t y = floor( (p[1] - pMin[1]) / gSize );
-    size_t z = floor( (p[2] - pMin[2]) / gSize );
+  void computeId(pargeo::fpoint<3> p, pargeo::fpoint<3> pMin, floatT boxSize) {
+    size_t x = floor( (p[0] - pMin[0]) / boxSize );
+    size_t y = floor( (p[1] - pMin[1]) / boxSize );
+    size_t z = floor( (p[2] - pMin[2]) / boxSize );
 
     x = shift(x);
     y = shift(y);
@@ -42,16 +42,15 @@ struct gridAtt3d {
     id = x | (y << 1) | (z << 2);
   }
 
-  // Level 0 is the coarsest level
-  inline size_t getLevel(size_t l) {
-    // the highest 16 bits are empty
-    // starting taking 3-bit numbers
+  inline size_t gridId(size_t l) {
+    // The highest 16 bits are empty, each level is 3-bits
+    // <<16 then MSB is the coarsest level 0
     return id >> (48 - (l+1)*3);
   }
 
   gridAtt3d() {}
 
-  size_t id; // grid id
+  size_t id; // level and grid id
 
   size_t i; // index, todo check if needed
 
@@ -67,8 +66,8 @@ static std::ostream& operator<<(std::ostream& os, const gridVertex& v) {
 template<class pt>
 class gridTree3d {
   using floatT = gridVertex::floatT;
-  static constexpr size_t maxRange = 65535;
-  static constexpr size_t maxBit = 16;
+  static constexpr size_t maxRange = 65535; // must match gridVertex.maxRange
+  static constexpr size_t maxBit = 16; // 2**maxBit = maxRange
 
   sequence<gridVertex> P;
 
@@ -76,11 +75,12 @@ class gridTree3d {
 
   size_t L;
 
-  floatT gSize;
+  floatT bSize;
 
   pt pMin;
 
   floatT maxSpan;
+
 public:
 
   sequence<size_t>* levelIdx(size_t l) {
@@ -88,7 +88,7 @@ public:
   }
 
   floatT boxSize(size_t l) {
-    return gSize * pow(2, maxBit - l);
+    return bSize * pow(2, maxBit - l);
   }
 
   floatT span() {
@@ -100,28 +100,42 @@ public:
   }
 
   floatT levelSize(size_t l) {
-    return pointers[l]->size() - 1;
+    if (l >= 0 && l < L) {
+      return pointers[l]->size() - 1;
+    } else if (l == L) {
+      return P.size();
+    } else {
+      throw std::runtime_error("Invalid level for level size");
+    }
   }
 
   sequence<gridVertex> level(size_t l) {
-    sequence<gridVertex> out(pointers[l]->size()-1);
-    parallel_for(0, pointers[l]->size()-1,
-		 [&](size_t i){
-			      out[i] = P[pointers[l]->at(i)];
-			    });
-    return out;
+    if (l >= 0 && l < L) {
+      sequence<gridVertex> out(pointers[l]->size()-1);
+      parallel_for(0, pointers[l]->size()-1,
+		   [&](size_t i){
+				out[i] = P[pointers[l]->at(i)];
+			      });
+      return out;
+    } else {
+      throw std::runtime_error("Invalid level for level access");
+    }
   }
 
   gridVertex at(size_t l, size_t i) {
-    return P[pointers[l]->at(i)];
-  }
-
-  gridVertex at(size_t i) {
-    return P[i];
+    if (l >= 0 && l < L) {
+      return at(l+1, pointers[l]->at(i));
+    } else if (l == L) {
+      return P[i];
+    } else {
+      throw std::runtime_error("Invalid level for point access");
+    }
   }
 
   ~gridTree3d() {
-    //todo
+    for (size_t l=0; l<L; ++l)
+      delete pointers[l];
+    free(pointers);
   }
 
   gridTree3d(slice<pt*, pt*> _P, size_t _L) {
@@ -143,20 +157,20 @@ public:
     maxSpan = max(extrema[4]-extrema[5],
 		  max((extrema[2]-extrema[3]),(extrema[1]-extrema[0])));
     size_t _maxRange = maxRange;
-    gSize = 1.01 * maxSpan / maxRange;
+    bSize = 1.01 * maxSpan / maxRange;
 
     pMin[0] = extrema[1];
     pMin[1] = extrema[3];
     pMin[2] = extrema[5];
     cout << "untranslated-pmin = " << pMin << endl;
 
-    cout << "grid-size = " << gSize << endl;
+    cout << "grid-size = " << bSize << endl;
 
     P = sequence<gridVertex>(_P.size());
     parallel_for(0, P.size(), [&](size_t i){
 				P[i] = gridVertex(_P[i].coords());
 				P[i].attribute = gridAtt3d();
-				P[i].attribute.computeId(_P[i], pMin, gSize);
+				P[i].attribute.computeId(_P[i], pMin, bSize);
 			      });
 
     parlay::sort_inplace(make_slice(P), [&](gridVertex const& a, gridVertex const& b){
@@ -164,25 +178,25 @@ public:
 
     sequence<size_t> flag(P.size()+1);
 
-    // The the coarser L levels
+    // Build the coarser L levels, from the finest to the coarsest (L-1 to 0)
     pointers = (sequence<size_t>**) malloc(sizeof(sequence<size_t>*)*L);
-    for (int l=0; l<L; ++l) {
+    for (int l=L-1; l>=0; --l) {
       flag[0] = 1;
-      parallel_for(1, P.size(), [&](size_t i){
-				  if (P[i].attribute.getLevel(l) != P[i-1].attribute.getLevel(l)) {
-				    flag[i] = 1;
-				  } else flag[i] = 0;
-				});
-      size_t numGrids = parlay::scan_inplace(flag.cut(0, P.size()));
-      flag[P.size()] = numGrids;
+      parallel_for(1, levelSize(l+1), [&](size_t i){
+					if (at(l+1, i).attribute.gridId(l) !=
+					    at(l+1, i-1).attribute.gridId(l)) {
+					  flag[i] = 1;
+					} else flag[i] = 0;
+				      });
+      size_t numGrids = parlay::scan_inplace(flag.cut(0, levelSize(l+1)));
+      flag[levelSize(l+1)] = numGrids;
       pointers[l] = new sequence<size_t>(numGrids+1);
-      parallel_for(0, P.size(), [&](size_t i){
+      parallel_for(0, levelSize(l+1), [&](size_t i){
 				  if (flag[i] != flag[i+1]) {
 				    pointers[l]->at(flag[i]) = i;
 				  }
 				});
       pointers[l]->at(numGrids) = P.size();
-      cout << "lvl " << l << " = " << numGrids << endl;
     }
 
   }
