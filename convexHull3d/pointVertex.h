@@ -25,6 +25,8 @@ static std::ostream& operator<<(std::ostream& os, const pointVertex& v) {
   return os;
 }
 
+class pointOrigin;
+
 template <class vertexT>
 struct linkedFacet3d {
   //using vertexT = vertex3d;
@@ -67,29 +69,34 @@ struct linkedFacet3d {
 
   seqT *seeList;
 
-  void reassign(seqT *_seeList) {
+  void reassign(seqT *_seeList, pointOrigin* o) {
     delete seeList;
     seeList = _seeList;
   }
 
-  vertexT& at(size_t i) { return seeList->at(i); }
 
-  size_t size() { return seeList->size(); }
+  size_t numVisiblePts() { return seeList->size(); }
+
+  vertexT& visiblePts(size_t i) { return seeList->at(i); }
+
+  size_t numPts() { return seeList->size(); }
+
+  vertexT& pts(size_t i) { return seeList->at(i); }
 
   void clear() { seeList->clear(); }
 
-  void push_back(vertexT v) { seeList->push_back(v); }
+  void push_back(vertexT v, pointOrigin* o) { seeList->push_back(v); }
 
   vertexT furthest() {
     auto apex = vertexT();
     typename vertexT::floatT m = apex.attribute.numericKnob;
 
 #ifdef SERIAL
-    for (size_t i=0; i<size(); ++i) {
-      auto m2 = pargeo::signedVolumeX6(a, b, c, at(i));
+    for (size_t i=0; i<numVisiblePts(); ++i) {
+      auto m2 = pargeo::signedVolumeX6(a, b, c, visiblePts(i));
       if (m2 > m) {
 	m = m2;
-	apex = at(i);
+	apex = visiblePts(i);
       }
     }
 #else
@@ -140,6 +147,8 @@ class pointOrigin {
 
 public:
 
+  void setOrigin(vertexT _o) { o = _o; }
+
   inline vertexT get() {return o;};
 
   pointOrigin() {}
@@ -150,15 +159,12 @@ public:
   }
 
   inline bool visible(facetT* f, vertexT p) {
-    if (pargeo::signedVolumeX6(f->a, p, f->area) > numericKnob)
-      return true;
-    else
-      return false;
+    return pargeo::signedVolumeX6(f->a, p, f->area) > numericKnob;
   }
 
-  inline bool visibleNoDup(facetT* f, vertexT p) {
+  inline bool keep(facetT* f, vertexT p) {
     if (pargeo::signedVolumeX6(f->a, p, f->area) > numericKnob)
-      return true && f->a != p && f->b != p && f->c != p;
+      return f->a != p && f->b != p && f->c != p;
     else
       return false;
   }

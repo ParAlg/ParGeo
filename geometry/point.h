@@ -30,6 +30,10 @@ namespace pargeo {
 
     _point(_tData* p) { for (int i=0; i<_dim; ++i) x[i]=p[i]; }
 
+    _point(_tData* p, _tAtt _attribute): attribute(_attribute) {
+      for (int i=0; i<_dim; ++i) x[i]=p[i];
+    }
+
     _point(_point* p): attribute(p->attribute) { for (int i=0; i<_dim; ++i) x[i]=p->x[i]; }
 
     template<class _tIn>
@@ -43,22 +47,22 @@ namespace pargeo {
     _point operator+(_point op2) {
       _tData xx[_dim];
       for (int i=0; i<_dim; ++i) xx[i] = x[i]+op2.x[i];
-      return _point(xx);}
+      return _point(xx, attribute);}
 
     _point operator-(_point op2) {
       _tData xx[_dim];
       for (int i=0; i<_dim; ++i) xx[i] = x[i]-op2.x[i];
-      return _point(xx);}
+      return _point(xx, attribute);}
 
     _point operator*(_tData dv) {
       _tData xx[_dim];
       for (int i=0; i<_dim; ++i) xx[i] = x[i]*dv;
-      return _point(xx);}
+      return _point(xx, attribute);}
 
     _point operator/(_tData dv) {
       _tData xx[_dim];
       for (int i=0; i<_dim; ++i) xx[i] = x[i]/dv;
-      return _point(xx);}
+      return _point(xx, attribute);}
 
     _tData& operator[](int i) {return x[i];}
 

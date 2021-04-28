@@ -26,21 +26,24 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
   timer t;
   t.start();
 
-  size_t l = 7;
+  size_t L = 7;
+  size_t l = 3;
 
-  auto tree = gridTree3d<pointT>(make_slice(P), l+1);
+  auto tree = gridTree3d<pointT>(make_slice(P), L);
   cout << "build-grid-time = " << t.get_next() << endl;
 
   sequence<gridVertex> Q = tree.level(l);
 
   cout << "extract-level-time = " << t.get_next() << endl;
 
-  // ofstream myfile;
-  // myfile.open("hull.txt", std::ofstream::trunc);
-  // for (auto q: Q) {
-  //   myfile << q[0] << " " << q[1] << " " << q[2] << endl;
-  // }
-  // myfile.close();
+  {
+    ofstream myfile;
+    myfile.open("point.txt", std::ofstream::trunc);
+    for (auto q: Q) {
+      myfile << q[0] << " " << q[1] << " " << q[2] << endl;
+    }
+    myfile.close();
+  }
 
   cout << "level-size = " << tree.levelSize(l) << endl;
   cout << "box-size = " << tree.boxSize(l) << endl;
@@ -48,9 +51,10 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
   cout << "approx-factor = " << sqrt(3)*tree.boxSize(l)/tree.span() << endl;
 
   // Create a coarse simplex
-  auto linkedHull = new _hull<linkedFacet3d<gridVertex>, gridVertex, gridOrigin>(make_slice(Q));
-  linkedHull->origin.setMin(tree.getMin());
-  linkedHull->origin.setGridSize(tree.boxSize(l));
+  auto origin = gridOrigin();
+  origin.setMin(tree.getMin());
+  origin.setBoxSize(tree.boxSize(l));
+  auto linkedHull = new _hull<linkedFacet3d<gridVertex>, gridVertex, gridOrigin>(make_slice(Q), origin);
 
   incrementHull3dSerial<linkedFacet3d<gridVertex>, gridVertex, gridOrigin>(linkedHull);
 
@@ -58,6 +62,36 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
 
   auto out = sequence<facetT>();
   linkedHull->getHull<pointT>(out);
+  auto hullPts = linkedHull->getHullPts<pointT>();
+
+  auto pts = linkedHull->getHullVertices(); //todo remove
+  cout << "hull1-size = " << pts.size() << endl;
+
+  auto keep = sequence<size_t>(tree.levelSize(l)+1, 0);
+  parallel_for(0, pts.size(),
+	   [&](size_t i) {
+	     keep[pts[i].attribute.i] = 1;
+	   });
+  auto refined = tree.refine(l, keep); // includes the hull points
+  cout << "refined-pts = " << refined.size() << endl;
+
+  {
+    ofstream myfile;
+    myfile.open("hull.txt", std::ofstream::trunc);
+    for (auto q: hullPts) {
+      myfile << q[0] << " " << q[1] << " " << q[2] << endl;
+    }
+    myfile.close();
+  }
+
+  {
+    ofstream myfile;
+    myfile.open("other.txt", std::ofstream::trunc);
+    for (auto q: refined) {
+      myfile << q[0] << " " << q[1] << " " << q[2] << endl;
+    }
+    myfile.close();
+  }
 
   cout << out.size() << endl;
 

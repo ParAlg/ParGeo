@@ -1,5 +1,8 @@
 #pragma
 
+#include <iostream>
+#include <fstream>
+#include <tuple>
 #include <bitset>
 #include "parlay/sequence.h"
 #include "geometry/point.h"
@@ -48,11 +51,13 @@ struct gridAtt3d {
     return id >> (48 - (l+1)*3);
   }
 
+  void assignIdx(size_t _i) { i = _i; }
+
   gridAtt3d() {}
 
-  size_t id; // level and grid id
+  size_t id; // multi-level grid id
 
-  size_t i; // index, todo check if needed
+  size_t i; // index in the level
 
   linkedFacet3d<gridVertex> *seeFacet;
 };
@@ -88,7 +93,7 @@ public:
   }
 
   floatT boxSize(size_t l) {
-    return bSize * pow(2, maxBit - l);
+    return bSize * pow(2, maxBit - l - 1);
   }
 
   floatT span() {
@@ -114,8 +119,37 @@ public:
       sequence<gridVertex> out(pointers[l]->size()-1);
       parallel_for(0, pointers[l]->size()-1,
 		   [&](size_t i){
-				out[i] = P[pointers[l]->at(i)];
+				out[i] = at(l,i);
+				out[i].attribute.assignIdx(i); // Idx in the level
 			      });
+      return out;
+    } else {
+      throw std::runtime_error("Invalid level for level access");
+    }
+  }
+
+  sequence<gridVertex> refine(size_t l, sequence<size_t>& keep) {
+    if (l >= 0 && l < L && levelSize(l)+1 == keep.size()) {
+      size_t ls = keep.size()-1;
+      parallel_for(0, ls, [&](size_t i){
+			    if (keep[i] > 0) {
+			      keep[i] = pointers[l]->at(i+1) - pointers[l]->at(i);
+			    } else
+			      keep[i] = 0;
+			  });
+      size_t m = parlay::scan_inplace(keep);
+      keep[ls] = m;
+      sequence<gridVertex> out(m);
+      parallel_for(0, ls, [&](size_t i){
+			    if (keep[i] != keep[i+1]) {
+			      size_t numPts = pointers[l]->at(i+1) - pointers[l]->at(i);;
+			      for (size_t j=0; j<numPts; ++j) {
+				size_t nextLvlIdx = pointers[l]->at(i) + j;
+				out[keep[i] + j] = at(l+1, nextLvlIdx);
+				out[keep[i] + j].attribute.assignIdx(nextLvlIdx);
+			      }
+			    }
+			  });
       return out;
     } else {
       throw std::runtime_error("Invalid level for level access");
@@ -159,10 +193,10 @@ public:
     size_t _maxRange = maxRange;
     bSize = 1.01 * maxSpan / maxRange;
 
+    // untranslated
     pMin[0] = extrema[1];
     pMin[1] = extrema[3];
     pMin[2] = extrema[5];
-    cout << "untranslated-pmin = " << pMin << endl;
 
     cout << "grid-size = " << bSize << endl;
 
@@ -171,6 +205,7 @@ public:
 				P[i] = gridVertex(_P[i].coords());
 				P[i].attribute = gridAtt3d();
 				P[i].attribute.computeId(_P[i], pMin, bSize);
+				P[i].attribute.assignIdx(i);
 			      });
 
     parlay::sort_inplace(make_slice(P), [&](gridVertex const& a, gridVertex const& b){
@@ -196,11 +231,14 @@ public:
 				    pointers[l]->at(flag[i]) = i;
 				  }
 				});
-      pointers[l]->at(numGrids) = P.size();
+      pointers[l]->at(numGrids) = levelSize(l+1);
+      cout << "constructed level " << l << " of size " << numGrids << endl;
     }
 
   }
 };
+
+class gridOrigin;
 
 template <class vertexT>
 struct linkedFacet3d {
@@ -244,19 +282,61 @@ struct linkedFacet3d {
 #endif
 
   seqT *seeList;
+  seqT *keepList;
 
-  void reassign(seqT *_seeList) {
+  void reassign(seqT *_seeList, gridOrigin* o) {
     delete seeList;
-    seeList = _seeList;
+    delete keepList;
+#ifdef SERIAL
+    seeList = new seqT();
+    keepList = new seqT();
+    for (size_t i=0; i<_seeList->size(); ++i) {
+      auto v = _seeList->at(i);
+      if (o->visible(this, v) && a != v && b != v && c != v)
+	seeList->push_back(v);
+      else
+	keepList->push_back(v);
+    }
+#else
+    //todo parallelize
+    seeList = new seqT();
+    keepList = new seqT();
+    for (size_t i=0; i<_seeList->size(); ++i) {
+      auto v = _seeList->at(i);
+      if (o->visible(this, v) && a != v && b != v && c != v)
+	seeList->push_back(v);
+      else
+	keepList->push_back(v);
+    }
+#endif
+    delete _seeList;
   }
 
-  vertexT& at(size_t i) { return seeList->at(i); }
+  void push_back(vertexT v, gridOrigin* o) {
+    if (o->visible(this, v) && a != v && b != v && c != v)
+      seeList->push_back(v);
+    else
+      keepList->push_back(v);
+  }
 
-  size_t size() { return seeList->size(); }
+  // Accesses the visible points (boxes)
+  size_t numVisiblePts() { return seeList->size(); }
+  inline vertexT& visiblePts(size_t i) { return seeList->at(i); }
 
-  void clear() { seeList->clear(); }
+  // Access both the visible and intersecting (boxes)
+  inline size_t numPts() { return seeList->size() + keepList->size(); }
+  vertexT& pts(size_t i) {
+    if (i < seeList->size()) {
+      return seeList->at(i);
+    } else {
+      return keepList->at(i - seeList->size());
+    }
+  }
 
-  void push_back(vertexT v) { seeList->push_back(v); }
+  void clear() {
+    seeList->clear();
+    keepList->clear();
+  }
 
   vertexT furthest() {
     auto apex = vertexT();
@@ -285,6 +365,7 @@ struct linkedFacet3d {
       swap(b, c);
 
     seeList = new seqT();
+    keepList = new seqT();
 
 #ifndef SERIAL
     reservation = -1; // (unsigned)
@@ -295,6 +376,7 @@ struct linkedFacet3d {
 
   ~linkedFacet3d() {
     delete seeList;
+    delete keepList;
   }
 };
 
@@ -311,23 +393,29 @@ static std::ostream& operator<<(std::ostream& os, const linkedFacet3d<vertexT>& 
 class gridOrigin {
   using facetT = linkedFacet3d<gridVertex>;
   using vertexT = gridVertex;
-  using floatT = typename pargeo::fpoint<3>::floatT;
+  using pt = pargeo::fpoint<3>;
+  using floatT = typename pt::floatT;
   static constexpr floatT numericKnob = 1e-5;
 
   vertexT o; // translation origin
 
   vertexT pMin; // translated pmin of the grid
 
-  floatT gridSize; // gridSize of the level being processed
+  floatT bSize; // gridSize of the level being processed
 
 public:
-  void setGridSize(floatT _gridSize) {
-    gridSize = _gridSize;
+  void setBoxSize(floatT _boxSize) {
+    bSize = _boxSize;
   }
 
   template<class pt>
   void setMin(pt _pMin) {
     pMin = vertexT(_pMin.coords());
+  }
+
+  template<class pt>
+  void setOrigin(pt _o) {
+    o = vertexT(_o.coords());
     pMin = pMin - o; // translate the pmin by origin (same as other points in the hull)
   }
 
@@ -337,21 +425,49 @@ public:
 
   template<class pt>
   gridOrigin(pt _o) {
-    o = vertexT(_o.coords());
+    setOrigin(_o);
   }
 
+  // Point visibility test
   inline bool visible(facetT* f, vertexT p) {
-    if (pargeo::signedVolumeX6(f->a, p, f->area) > numericKnob)
-      return true;
-    else
-      return false;
+    return pargeo::signedVolumeX6(f->a, p, f->area) > numericKnob;
   }
 
-  inline bool visibleNoDup(facetT* f, vertexT p) {
-    if (pargeo::signedVolumeX6(f->a, p, f->area) > numericKnob)
-      return true && f->a != p && f->b != p && f->c != p;
-    else
-      return false;
+  inline void writeCorners(vertexT p, ofstream& os) {
+    vertexT vt0;
+    vt0[0] = floor( (p[0]) / bSize ) * bSize;
+    vt0[1] = floor( (p[1]) / bSize ) * bSize;
+    vt0[2] = floor( (p[2]) / bSize ) * bSize;
+
+    for (size_t i=0; i<8; ++i) {
+      vertexT vt = vt0;
+      // plot 10 points in between
+      vt[0] += (i & 1) * bSize;
+      vt[1] += ((i>>1) & 1) * bSize;
+      vt[2] += ((i>>2) & 1) * bSize;
+      os << vt[0] << " " << vt[1] << " " << vt[2] << endl;
+    }
   }
 
+  inline bool anyCornerVisible(facetT* f, vertexT p) {
+    vertexT vt0;
+    vt0[0] = floor( (p[0]) / bSize ) * bSize;
+    vt0[1] = floor( (p[1]) / bSize ) * bSize;
+    vt0[2] = floor( (p[2]) / bSize ) * bSize;
+
+    for (size_t i=0; i<8; ++i) {
+      vertexT vt = vt0;
+      vt[0] += (i & 1) * bSize;
+      vt[1] += ((i>>1) & 1) * bSize;
+      vt[2] += ((i>>2) & 1) * bSize;
+      if (visible(f, vt))
+	return true;
+    }
+    return false;
+  }
+
+  // This function returns true of any of the box corner of p is visible
+  inline bool keep(facetT* f, vertexT p) {
+    return anyCornerVisible(f, p);
+  }
 };

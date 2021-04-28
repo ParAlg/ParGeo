@@ -235,7 +235,8 @@ public:
 
   void setStart(facetT* _H) {H = _H;}
 
-  _hull(slice<vertexT*, vertexT*> P) {
+  _hull(slice<vertexT*, vertexT*> P, originT _origin) {
+    origin = _origin;
 
     // Maximize triangle area based on fixed xMin and xMax
     size_t X[6]; // extrema
@@ -279,12 +280,12 @@ public:
   
     hSize = 4;
 
-    origin = originT((P[c1] + P[c2] + P[c3] + P[c4])/4);
+    origin.setOrigin((P[c1] + P[c2] + P[c3] + P[c4])/4);
 
     // Initialize points with visible facet link
     auto Q = typename facetT::seqT(P.size());
     parallel_for(0, P.size(), [&](size_t i) {
-				Q[i] = P[i] - origin.get();
+				Q[i] = P[i] - origin.get();//translation
 			      });
 
     // Make initial facets
@@ -307,18 +308,18 @@ public:
     if (Q.size() < 1000 || serial) {
 
       for(size_t i=0; i<P.size(); i++) {
-	if (origin.visibleNoDup(f0, Q[i])) {
+	if (origin.keep(f0, Q[i])) {
 	  Q[i].attribute.seeFacet = f0;
-	  f0->push_back(Q[i]);
-	} else if (origin.visibleNoDup(f1, Q[i])) {
+	  f0->push_back(Q[i], &origin);
+	} else if (origin.keep(f1, Q[i])) {
 	  Q[i].attribute.seeFacet = f1;
-	  f1->push_back(Q[i]);
-	} else if (origin.visibleNoDup(f2, Q[i])) {
+	  f1->push_back(Q[i], &origin);
+	} else if (origin.keep(f2, Q[i])) {
 	  Q[i].attribute.seeFacet = f2;
-	  f2->push_back(Q[i]);
-	} else if (origin.visibleNoDup(f3, Q[i])) {
+	  f2->push_back(Q[i], &origin);
+	} else if (origin.keep(f3, Q[i])) {
 	  Q[i].attribute.seeFacet = f3;
-	  f3->push_back(Q[i]);
+	  f3->push_back(Q[i], &origin);
 	} else {
 	  Q[i].attribute.seeFacet = nullptr;
 	}
@@ -328,13 +329,13 @@ public:
 
       auto flag = sequence<int>(P.size());
       parallel_for(0, P.size(), [&](size_t i) {
-				  if (origin.visibleNoDup(f0, Q[i])) {
+				  if (origin.keep(f0, Q[i])) {
 				    flag[i] = 0; Q[i].attribute.seeFacet = f0;
-				  } else if (origin.visibleNoDup(f1, Q[i])) {
+				  } else if (origin.keep(f1, Q[i])) {
 				    flag[i] = 1; Q[i].attribute.seeFacet = f1;
-				  } else if (origin.visibleNoDup(f2, Q[i])) {
+				  } else if (origin.keep(f2, Q[i])) {
 				    flag[i] = 2; Q[i].attribute.seeFacet = f2;
-				  } else if (origin.visibleNoDup(f3, Q[i])) {
+				  } else if (origin.keep(f3, Q[i])) {
 				    flag[i] = 3; Q[i].attribute.seeFacet = f3;
 				  } else {
 				    flag[i] = 4; Q[i].attribute.seeFacet = nullptr;
@@ -343,18 +344,18 @@ public:
 
       auto chunks = split_k(5, &Q, flag);
 
-      f0->reassign(chunks[0]);
-      f1->reassign(chunks[1]);
-      f2->reassign(chunks[2]);
-      f3->reassign(chunks[3]);
+      f0->reassign(chunks[0], &origin);
+      f1->reassign(chunks[1], &origin);
+      f2->reassign(chunks[2], &origin);
+      f3->reassign(chunks[3], &origin);
     }
 
 #ifdef VERBOSE
     cout << "initial-hull:" << endl;
-    cout << " facet 0, area = " << f0->area.length()/2 << " #pts = " << f0->size() << endl;
-    cout << " facet 1, area = " << f1->area.length()/2 << " #pts = " << f1->size() << endl;
-    cout << " facet 2, area = " << f2->area.length()/2 << " #pts = " << f2->size() << endl;
-    cout << " facet 3, area = " << f3->area.length()/2 << " #pts = " << f3->size() << endl;
+    cout << " facet 0, area = " << f0->area.length()/2 << " #pts = " << f0->numPts() << endl;
+    cout << " facet 1, area = " << f1->area.length()/2 << " #pts = " << f1->numPts() << endl;
+    cout << " facet 2, area = " << f2->area.length()/2 << " #pts = " << f2->numPts() << endl;
+    cout << " facet 3, area = " << f3->area.length()/2 << " #pts = " << f3->numPts() << endl;
     cout << " volume = " << abs((f0->a-Q[c4]).dot(f0->area)/6) << endl;
 #endif
 
@@ -368,8 +369,8 @@ public:
     vertexT apex = vertexT();
     auto fVisit = [&](_edge e) {return true;};
     auto fDo = [&](_edge e) {
-		 if (e.ff->size() > 0)
-		   apex = e.ff->at(0);};
+		 if (e.ff->numVisiblePts() > 0)
+		   apex = e.ff->visiblePts(0);};
     auto fStop = [&]() {
 		   if (!apex.isEmpty()) return true;
 		   else return false;};
@@ -383,8 +384,8 @@ public:
 
     auto fVisit = [&](_edge e) {return true;};
     auto fDo = [&](_edge e) {
-		 if (e.ff->size() > 0) {
-		   auto apex = e.ff->at(0);
+		 if (e.ff->numVisiblePts() > 0) {
+		   auto apex = e.ff->visiblePts(0);
 		   if (!apex.isEmpty()) apexes.push_back(apex);
 		 }
 	       };
@@ -395,12 +396,12 @@ public:
 
   facetT* facetWalk() {
     facetT* f = H;
-    size_t fSize = f->size();
+    size_t fSize = f->numVisiblePts();
 
     auto fVisit = [&](_edge e) {return true;};
     auto fDo = [&](_edge e) {
-		 if (e.ff->size() > fSize) {
-		   fSize = e.ff->size();
+		 if (e.ff->numVisiblePts() > fSize) {
+		   fSize = e.ff->numVisiblePts();
 		   f = e.ff;
 		 }
 	       };
@@ -416,7 +417,7 @@ public:
 
     auto fVisit = [&](_edge e) {return true;};
     auto fDo = [&](_edge e) {
-		 if (e.ff->size() > 0) apex = e.ff->furthest();
+		 if (e.ff->numVisiblePts() > 0) apex = e.ff->furthest();
 	       };
     auto fStop = [&]() { return !apex.isEmpty(); };
     dfsFacet(f ? f : H, fVisit, fDo, fStop);
@@ -429,7 +430,7 @@ public:
 
     auto fVisit = [&](_edge e) {return true;};
     auto fDo = [&](_edge e) {
-		 if (e.ff->size() > 0) {
+		 if (e.ff->numVisiblePts() > 0) {
 		   auto apex = e.ff->furthest();
 		   if (!apex.isEmpty()) apexes.push_back(apex);
 		 }
@@ -586,16 +587,16 @@ public:
 
     size_t fn = 0;
     for(int j=0; j<nf; ++j) {
-      fn += facetsBeneath[j]->size();
+      fn += facetsBeneath[j]->numPts();
     }
 #ifdef SERIAL
     for(int i=0; i<nf; ++i) { // Old facet loop
-      for(size_t j=0; j<facetsBeneath[i]->size(); ++j) { // Point loop
-	facetsBeneath[i]->at(j).attribute.seeFacet = nullptr;
+      for(size_t j=0; j<facetsBeneath[i]->numPts(); ++j) { // Point loop
+	facetsBeneath[i]->pts(j).attribute.seeFacet = nullptr;
 	for (int k=0; k<nnf; ++k) { // New facet loop
-	  if (origin.visibleNoDup(newFacets[k], facetsBeneath[i]->at(j))) {
-	    facetsBeneath[i]->at(j).attribute.seeFacet = newFacets[k];
-	    newFacets[k]->push_back(facetsBeneath[i]->at(j));
+	  if (origin.keep(newFacets[k], facetsBeneath[i]->pts(j))) {
+	    facetsBeneath[i]->pts(j).attribute.seeFacet = newFacets[k];
+	    newFacets[k]->push_back(facetsBeneath[i]->pts(j), &origin);
 	    break;
 	  }
 	}
@@ -604,12 +605,12 @@ public:
 #else
     if (fn < 1000) {
       for(int i=0; i<nf; ++i) { // Old facet loop
-	for(size_t j=0; j<facetsBeneath[i]->size(); ++j) { // Point loop
-	  facetsBeneath[i]->at(j).attribute.seeFacet = nullptr;
+	for(size_t j=0; j<facetsBeneath[i]->numPts(); ++j) { // Point loop
+	  facetsBeneath[i]->pts(j).attribute.seeFacet = nullptr;
 	  for (int k=0; k<nnf; ++k) { // New facet loop
-	    if (origin.visibleNoDup(newFacets[k], facetsBeneath[i]->at(j))) {
-	      facetsBeneath[i]->at(j).attribute.seeFacet = newFacets[k];
-	      newFacets[k]->push_back(facetsBeneath[i]->at(j));
+	    if (origin.keep(newFacets[k], facetsBeneath[i]->pts(j))) {
+	      facetsBeneath[i]->pts(j).attribute.seeFacet = newFacets[k];
+	      newFacets[k]->push_back(facetsBeneath[i]->pts(j), &origin);
 	      break;
 	    }
 	  }
@@ -619,9 +620,9 @@ public:
       auto tmpBuffer = typename facetT::seqT(fn);
       fn = 0;
       for(int j=0; j<nf; ++j) {
-	parallel_for(0, facetsBeneath[j]->size(),
-		     [&](size_t x){tmpBuffer[fn+x] = facetsBeneath[j]->at(x);});
-	fn += facetsBeneath[j]->size();
+	parallel_for(0, facetsBeneath[j]->numPts(),
+		     [&](size_t x){tmpBuffer[fn+x] = facetsBeneath[j]->pts(x);});
+	fn += facetsBeneath[j]->numPts();
       }
 
       auto flag = sequence<int>(fn);
@@ -629,7 +630,7 @@ public:
 			    flag[i] = nnf;
 			    tmpBuffer[i].attribute.seeFacet = nullptr;
 			    for (int j=0; j<nnf; ++j) {
-			      if (origin.visibleNoDup(newFacets[j], tmpBuffer[i])) {
+			      if (origin.keep(newFacets[j], tmpBuffer[i])) {
 				flag[i] = j;
 				tmpBuffer[i].attribute.seeFacet = newFacets[j];
 				break;
@@ -639,7 +640,7 @@ public:
 
       auto chunks = split_k(nnf+1, &tmpBuffer, flag);
       for (int j=0; j<nnf; ++j) {
-	newFacets[j]->reassign(chunks[j]);
+	newFacets[j]->reassign(chunks[j], &origin);
       }
     }
 #endif // Serial
@@ -671,7 +672,7 @@ public:
 		   cout << "Erroneous hull size = " << hullSizeDfs(e.ff) << endl;
 		   abort();
 		 }
-		 if (!checker) cout << *e.ff << ":" << e.ff->size() << " ";
+		 if (!checker) cout << *e.ff << ":" << e.ff->numVisiblePts() << " ";
 	       };
     auto fStop = [&]() { return false;};
 
@@ -721,6 +722,26 @@ public:
 		 out.emplace_back(pt((e.ff->a+origin.get()).coords()));
 		 out.emplace_back(pt((e.ff->b+origin.get()).coords()));
 		 out.emplace_back(pt((e.ff->c+origin.get()).coords()));
+	       };
+    auto fStop = [&]() { return false;};
+
+    dfsFacet(H, fVisit, fDo, fStop);
+    parlay::sort_inplace(out);
+    return parlay::unique(out);
+  }
+
+  // Get all kinds of vertices
+  sequence<vertexT> getHullVertices() {
+    sequence<vertexT> out;
+    auto fVisit = [&](_edge e) { return true;};
+    auto fDo = [&](_edge e) {
+		 auto f = e.ff;
+		 // out.push_back(f->a+origin.get());
+		 // out.push_back(f->b+origin.get());
+		 // out.push_back(f->c+origin.get());
+		 for (auto itr = f->keepList->begin(); itr != f->keepList->end(); itr++) {
+		   out.push_back(*itr + origin.get());
+		 }
 	       };
     auto fStop = [&]() { return false;};
 
