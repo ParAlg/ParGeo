@@ -71,8 +71,6 @@ static std::ostream& operator<<(std::ostream& os, const gridVertex& v) {
 template<class pt>
 class gridTree3d {
   using floatT = gridVertex::floatT;
-  static constexpr size_t maxRange = 65535; // must match gridVertex.maxRange
-  static constexpr size_t maxBit = 16; // 2**maxBit = maxRange
 
   sequence<gridVertex> P;
 
@@ -87,13 +85,33 @@ class gridTree3d {
   floatT maxSpan;
 
 public:
+  static constexpr size_t maxRange = 65535; // must match gridVertex.maxRange
+  static constexpr size_t maxBit = 16; // 2**maxBit = maxRange
+
+  size_t numLevels() { return L; }
+
+  gridVertex at(size_t l, size_t i) {
+    if (l >= 0 && l < L) {
+      return at(l+1, pointers[l]->at(i));
+    } else if (l == L) {
+      return P[i];
+    } else {
+      throw std::runtime_error("Invalid level for point access");
+    }
+  }
 
   sequence<size_t>* levelIdx(size_t l) {
     return pointers[l];
   }
 
   floatT boxSize(size_t l) {
-    return bSize * pow(2, maxBit - l - 1);
+    if (l >= 0 && l < L) {
+      return bSize * pow(2, maxBit - l - 1);
+    } else if (l == L) {
+      return 0;
+    } else {
+      throw std::runtime_error("Invalid level for box size");
+    }
   }
 
   floatT span() {
@@ -115,7 +133,7 @@ public:
   }
 
   sequence<gridVertex> level(size_t l) {
-    if (l >= 0 && l < L) {
+    if (l >= 0 && l <= L) {
       sequence<gridVertex> out(pointers[l]->size()-1);
       parallel_for(0, pointers[l]->size()-1,
 		   [&](size_t i){
@@ -129,7 +147,7 @@ public:
   }
 
   sequence<gridVertex> refine(size_t l, sequence<size_t>& keep) {
-    if (l >= 0 && l < L && levelSize(l)+1 == keep.size()) {
+    if (l >= 0 && l <= L && levelSize(l)+1 == keep.size()) {
       size_t ls = keep.size()-1;
       parallel_for(0, ls, [&](size_t i){
 			    if (keep[i] > 0) {
@@ -137,12 +155,13 @@ public:
 			    } else
 			      keep[i] = 0;
 			  });
-      size_t m = parlay::scan_inplace(keep);
+      size_t m = parlay::scan_inplace(keep.cut(0, ls));
       keep[ls] = m;
+
       sequence<gridVertex> out(m);
       parallel_for(0, ls, [&](size_t i){
 			    if (keep[i] != keep[i+1]) {
-			      size_t numPts = pointers[l]->at(i+1) - pointers[l]->at(i);;
+			      size_t numPts = keep[i+1] - keep[i];
 			      for (size_t j=0; j<numPts; ++j) {
 				size_t nextLvlIdx = pointers[l]->at(i) + j;
 				out[keep[i] + j] = at(l+1, nextLvlIdx);
@@ -156,24 +175,14 @@ public:
     }
   }
 
-  gridVertex at(size_t l, size_t i) {
-    if (l >= 0 && l < L) {
-      return at(l+1, pointers[l]->at(i));
-    } else if (l == L) {
-      return P[i];
-    } else {
-      throw std::runtime_error("Invalid level for point access");
-    }
-  }
-
   ~gridTree3d() {
     for (size_t l=0; l<L; ++l)
       delete pointers[l];
     free(pointers);
   }
 
-  gridTree3d(slice<pt*, pt*> _P, size_t _L) {
-    L = _L;
+  gridTree3d(slice<pt*, pt*> _P) {
+    L = maxBit;
 
     std::atomic<floatT> extrema[6];
     for (int i=0; i<3; ++i) {
@@ -343,15 +352,15 @@ struct linkedFacet3d {
     typename vertexT::floatT m = apex.attribute.numericKnob;
 
 #ifdef SERIAL
-    for (size_t i=0; i<size(); ++i) {
-      auto m2 = pargeo::signedVolumeX6(a, b, c, at(i));
+    for (size_t i=0; i<numVisiblePts(); ++i) {
+      auto m2 = pargeo::signedVolumeX6(a, b, c, visiblePts(i));
       if (m2 > m) {
 	m = m2;
-	apex = at(i);
+	apex = visiblePts(i);
       }
     }
 #else
-    apex = parlay::max_element(seeList->cut(0, seeList->size()),
+    apex = parlay::max_element(seeList->cut(0, numVisiblePts()),
 			       [&](vertexT aa, vertexT bb) {
 				 return pargeo::signedVolumeX6(a, b, c, aa) <
 				   pargeo::signedVolumeX6(a, b, c, bb);
