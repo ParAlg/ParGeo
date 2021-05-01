@@ -3,7 +3,7 @@
 #ifndef ATOMICS_H
 #define ATOMICS_H
 
-namespace pbbs {
+namespace pbbsbench {
 
   template <typename ET>
   inline bool atomic_compare_and_swap(ET* a, ET oldval, ET newval) {

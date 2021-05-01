@@ -33,10 +33,10 @@
 #include <tuple>
 #include "parlay/sequence.h"
 #include "parlay/hash_table.h"
+#include "parlayAddon.h"
 #include "geometry/point.h"
 #include "geometry/algebra.h"
 #include "common/get_time.h"
-#include "split.h"
 
 using namespace std;
 using namespace parlay;
@@ -235,8 +235,100 @@ public:
 
   void setStart(facetT* _H) {H = _H;}
 
-  _hull(slice<vertexT*, vertexT*> P, originT _origin) {
-    origin = _origin;
+  facetT* constructorSerial(slice<vertexT*, vertexT*> P) {
+
+    // Maximize triangle area based on fixed xMin and xMax
+    size_t X[6];
+    auto xx = minmax_element_serial(P, [&](vertexT i, vertexT j) {return i[0]<j[0];});
+    X[0] = xx.first - &P[0]; X[1] = xx.second - &P[0];
+    auto yy = minmax_element_serial(P, [&](vertexT i, vertexT j) {return i[1]<j[1];});
+    X[2] = yy.first - &P[0]; X[3] = yy.second - &P[0];
+    auto zz = minmax_element_serial(P, [&](vertexT i, vertexT j) {return i[2]<j[2];});
+    X[4] = zz.first - &P[0]; X[5] = zz.second - &P[0];
+
+    size_t xMin, xMax;
+    if (P[X[1]][0]-P[X[0]][0] > P[X[3]][1]-P[X[2]][1] && P[X[1]][0]-P[X[0]][0] > P[X[5]][2]-P[X[4]][2]) {
+      xMin = X[0]; xMax = X[1];
+    } else if (P[X[3]][1]-P[X[2]][1] > P[X[1]][0]-P[X[0]][0] && P[X[3]][1]-P[X[2]][1] > P[X[5]][2]-P[X[4]][2]) {
+      xMin = X[2]; xMax = X[3];
+    } else {
+      xMin = X[4]; xMax = X[5];
+    }
+
+    vertexT x1 = P[xMin];
+    vertexT x2 = P[xMax];
+
+    auto y = max_element_serial(P, [&](vertexT i, vertexT j) {
+			      return crossProduct3d(x1-i, x2-i).length() <
+				crossProduct3d(x1-j, x2-j).length();
+			    });
+    size_t yApex = y - &P[0];
+    vertexT y1 = P[yApex];
+
+    // Maximize simplex volume
+    vertexT area = crossProduct3d(x1-y1, x2-y1);
+    auto z = max_element(P, [&](vertexT i, vertexT j) {
+			      return abs((y1-i).dot(area)) < abs((y1-j).dot(area));
+			    });
+    size_t zApex = z - &P[0];
+
+    size_t c1 = xMin;
+    size_t c2 = xMax;
+    size_t c3 = yApex;
+    size_t c4 = zApex;
+
+    hSize = 4;
+
+    origin.setOrigin((P[c1] + P[c2] + P[c3] + P[c4])/4);
+
+    // Initialize points with visible facet link
+    auto Q = typename facetT::seqT(P.size());
+
+    for (size_t i=0; i<P.size(); ++i)
+      Q[i] = P[i] - origin.get(); // translation
+
+    // Make initial facets
+    auto f0 = new facetT(Q[c1], Q[c2], Q[c3]);
+    auto f1 = new facetT(Q[c1], Q[c2], Q[c4]);
+    auto f2 = new facetT(Q[c3], Q[c4], Q[c2]);
+    auto f3 = new facetT(Q[c3], Q[c4], Q[c1]);
+
+    linkFacet(f0, f1, f2, f3);
+    linkFacet(f1, f0, f2, f3);
+    linkFacet(f2, f1, f0, f3);
+    linkFacet(f3, f1, f2, f0);
+
+    for(size_t i=0; i<P.size(); i++) {
+      if (origin.keep(f0, Q[i])) {
+	Q[i].attribute.seeFacet = f0;
+	f0->push_back(Q[i], &origin);
+      } else if (origin.keep(f1, Q[i])) {
+	Q[i].attribute.seeFacet = f1;
+	f1->push_back(Q[i], &origin);
+      } else if (origin.keep(f2, Q[i])) {
+	Q[i].attribute.seeFacet = f2;
+	f2->push_back(Q[i], &origin);
+      } else if (origin.keep(f3, Q[i])) {
+	Q[i].attribute.seeFacet = f3;
+	f3->push_back(Q[i], &origin);
+      } else {
+	Q[i].attribute.seeFacet = nullptr;
+      }
+    }
+
+#ifdef VERBOSE
+    cout << "initial-hull:" << endl;
+    cout << " facet 0, area = " << f0->area.length()/2 << " #pts = " << f0->numPts() << endl;
+    cout << " facet 1, area = " << f1->area.length()/2 << " #pts = " << f1->numPts() << endl;
+    cout << " facet 2, area = " << f2->area.length()/2 << " #pts = " << f2->numPts() << endl;
+    cout << " facet 3, area = " << f3->area.length()/2 << " #pts = " << f3->numPts() << endl;
+    cout << " volume = " << abs((f0->a-Q[c4]).dot(f0->area)/6) << endl;
+#endif
+
+    return f0;
+  }
+
+  facetT* constructorParallel(slice<vertexT*, vertexT*> P) {
 
     // Maximize triangle area based on fixed xMin and xMax
     size_t X[6]; // extrema
@@ -299,56 +391,27 @@ public:
     linkFacet(f2, f1, f0, f3);
     linkFacet(f3, f1, f2, f0);
 
-#ifdef SERIAL
-    bool serial = true;
-#else
-    bool serial = false;
-#endif
+    auto flag = sequence<int>(P.size());
+    parallel_for(0, P.size(), [&](size_t i) {
+				if (origin.keep(f0, Q[i])) {
+				  flag[i] = 0; Q[i].attribute.seeFacet = f0;
+				} else if (origin.keep(f1, Q[i])) {
+				  flag[i] = 1; Q[i].attribute.seeFacet = f1;
+				} else if (origin.keep(f2, Q[i])) {
+				  flag[i] = 2; Q[i].attribute.seeFacet = f2;
+				} else if (origin.keep(f3, Q[i])) {
+				  flag[i] = 3; Q[i].attribute.seeFacet = f3;
+				} else {
+				  flag[i] = 4; Q[i].attribute.seeFacet = nullptr;
+				}
+			      });
 
-    if (Q.size() < 1000 || serial) {
+    auto chunks = split_k(5, &Q, flag); //todo move
 
-      for(size_t i=0; i<P.size(); i++) {
-	if (origin.keep(f0, Q[i])) {
-	  Q[i].attribute.seeFacet = f0;
-	  f0->push_back(Q[i], &origin);
-	} else if (origin.keep(f1, Q[i])) {
-	  Q[i].attribute.seeFacet = f1;
-	  f1->push_back(Q[i], &origin);
-	} else if (origin.keep(f2, Q[i])) {
-	  Q[i].attribute.seeFacet = f2;
-	  f2->push_back(Q[i], &origin);
-	} else if (origin.keep(f3, Q[i])) {
-	  Q[i].attribute.seeFacet = f3;
-	  f3->push_back(Q[i], &origin);
-	} else {
-	  Q[i].attribute.seeFacet = nullptr;
-	}
-      }
-
-    } else {
-
-      auto flag = sequence<int>(P.size());
-      parallel_for(0, P.size(), [&](size_t i) {
-				  if (origin.keep(f0, Q[i])) {
-				    flag[i] = 0; Q[i].attribute.seeFacet = f0;
-				  } else if (origin.keep(f1, Q[i])) {
-				    flag[i] = 1; Q[i].attribute.seeFacet = f1;
-				  } else if (origin.keep(f2, Q[i])) {
-				    flag[i] = 2; Q[i].attribute.seeFacet = f2;
-				  } else if (origin.keep(f3, Q[i])) {
-				    flag[i] = 3; Q[i].attribute.seeFacet = f3;
-				  } else {
-				    flag[i] = 4; Q[i].attribute.seeFacet = nullptr;
-				  }
-				});
-
-      auto chunks = split_k(5, &Q, flag);
-
-      f0->reassign(chunks[0], &origin);
-      f1->reassign(chunks[1], &origin);
-      f2->reassign(chunks[2], &origin);
-      f3->reassign(chunks[3], &origin);
-    }
+    f0->reassign(chunks[0], &origin);
+    f1->reassign(chunks[1], &origin);
+    f2->reassign(chunks[2], &origin);
+    f3->reassign(chunks[3], &origin);
 
 #ifdef VERBOSE
     cout << "initial-hull:" << endl;
@@ -359,7 +422,12 @@ public:
     cout << " volume = " << abs((f0->a-Q[c4]).dot(f0->area)/6) << endl;
 #endif
 
-    H = f0;
+    return f0;
+  }
+
+  _hull(slice<vertexT*, vertexT*> P, originT _origin, bool serial): origin(_origin) {
+    if (serial) H = constructorSerial(P);
+    else H = constructorParallel(P);
   }
 
   /* Choose a random outside vertex visible to some facet
@@ -412,12 +480,24 @@ public:
 
   /* Choose the furthest outside vertex visible to a facet f
    */
-  vertexT furthestApex(facetT *f=nullptr) {
+  vertexT furthestApexSerial(facetT *f=nullptr) {
     vertexT apex = vertexT();
 
     auto fVisit = [&](_edge e) {return true;};
     auto fDo = [&](_edge e) {
-		 if (e.ff->numVisiblePts() > 0) apex = e.ff->furthest();
+		 if (e.ff->numVisiblePts() > 0) apex = e.ff->furthestSerial();
+	       };
+    auto fStop = [&]() { return !apex.isEmpty(); };
+    dfsFacet(f ? f : H, fVisit, fDo, fStop);
+    return apex;
+  }
+
+  vertexT furthestApexParallel(facetT *f=nullptr) {
+    vertexT apex = vertexT();
+
+    auto fVisit = [&](_edge e) {return true;};
+    auto fDo = [&](_edge e) {
+		 if (e.ff->numVisiblePts() > 0) apex = e.ff->furthestParallel();
 	       };
     auto fStop = [&]() { return !apex.isEmpty(); };
     dfsFacet(f ? f : H, fVisit, fDo, fStop);
@@ -431,7 +511,7 @@ public:
     auto fVisit = [&](_edge e) {return true;};
     auto fDo = [&](_edge e) {
 		 if (e.ff->numVisiblePts() > 0) {
-		   auto apex = e.ff->furthest();
+		   auto apex = e.ff->furthestParallel();
 		   if (!apex.isEmpty()) apexes.push_back(apex);
 		 }
 	       };
@@ -483,9 +563,8 @@ public:
     dfsEdge(apex.attribute.seeFacet, fVisit, fDo, fStop);
     return make_tuple(frontier, facets);
   }
+#ifdef RESERVE
 
-#ifndef SERIAL
-  
   /* Compute a frontier of edges in the clockwise order
       and facets to delete
 
@@ -573,9 +652,35 @@ public:
     dfsFacet(H, fVisit, fDo, fStop);
     return ok;
   }
-#endif // SERIAL
+#endif // RESERVE
 
-  void redistribute(slice<facetT**, facetT**> facetsBeneath,
+  void redistributeSerial(slice<facetT**, facetT**> facetsBeneath,
+			  slice<facetT**, facetT**> newFacets) {
+
+    hSize += newFacets.size() - facetsBeneath.size();
+
+    // Redistribute the outside points
+
+    int nf = facetsBeneath.size();
+    int nnf = newFacets.size();
+
+    size_t fn = 0;
+    for(int j=0; j<nf; ++j) {
+      fn += facetsBeneath[j]->numPts();
+    }
+
+    for(int i=0; i<nf; ++i) { // Old facet loop
+      for(size_t j=0; j<facetsBeneath[i]->numPts(); ++j) { // Point loop
+	facetsBeneath[i]->pts(j).attribute.seeFacet = nullptr;
+	for (int k=0; k<nnf; ++k) { // New facet loop
+	  if (origin.keep(newFacets[k], facetsBeneath[i]->pts(j))) {
+	    facetsBeneath[i]->pts(j).attribute.seeFacet = newFacets[k];
+	    newFacets[k]->push_back(facetsBeneath[i]->pts(j), &origin);
+	    break;
+	  }}}}
+  }
+
+  void redistributeParallel(slice<facetT**, facetT**> facetsBeneath,
 		    slice<facetT**, facetT**> newFacets) {
 
     parlay::write_add(&hSize, newFacets.size() - facetsBeneath.size());
@@ -589,63 +694,35 @@ public:
     for(int j=0; j<nf; ++j) {
       fn += facetsBeneath[j]->numPts();
     }
-#ifdef SERIAL
-    for(int i=0; i<nf; ++i) { // Old facet loop
-      for(size_t j=0; j<facetsBeneath[i]->numPts(); ++j) { // Point loop
-	facetsBeneath[i]->pts(j).attribute.seeFacet = nullptr;
-	for (int k=0; k<nnf; ++k) { // New facet loop
-	  if (origin.keep(newFacets[k], facetsBeneath[i]->pts(j))) {
-	    facetsBeneath[i]->pts(j).attribute.seeFacet = newFacets[k];
-	    newFacets[k]->push_back(facetsBeneath[i]->pts(j), &origin);
-	    break;
-	  }
-	}
-      }
-    }
-#else
-    if (fn < 1000) {
-      for(int i=0; i<nf; ++i) { // Old facet loop
-	for(size_t j=0; j<facetsBeneath[i]->numPts(); ++j) { // Point loop
-	  facetsBeneath[i]->pts(j).attribute.seeFacet = nullptr;
-	  for (int k=0; k<nnf; ++k) { // New facet loop
-	    if (origin.keep(newFacets[k], facetsBeneath[i]->pts(j))) {
-	      facetsBeneath[i]->pts(j).attribute.seeFacet = newFacets[k];
-	      newFacets[k]->push_back(facetsBeneath[i]->pts(j), &origin);
-	      break;
-	    }
-	  }
-	}
-      }
-    } else {
-      auto tmpBuffer = typename facetT::seqT(fn);
-      fn = 0;
-      for(int j=0; j<nf; ++j) {
-	parallel_for(0, facetsBeneath[j]->numPts(),
-		     [&](size_t x){tmpBuffer[fn+x] = facetsBeneath[j]->pts(x);});
-	fn += facetsBeneath[j]->numPts();
-      }
 
-      auto flag = sequence<int>(fn);
-      parallel_for(0, fn, [&](size_t i) {
-			    flag[i] = nnf;
-			    tmpBuffer[i].attribute.seeFacet = nullptr;
-			    for (int j=0; j<nnf; ++j) {
-			      if (origin.keep(newFacets[j], tmpBuffer[i])) {
-				flag[i] = j;
-				tmpBuffer[i].attribute.seeFacet = newFacets[j];
-				break;
-			      }
+    auto tmpBuffer = typename facetT::seqT(fn);
+    fn = 0;
+    for(int j=0; j<nf; ++j) {
+      parallel_for(0, facetsBeneath[j]->numPts(),
+		   [&](size_t x){tmpBuffer[fn+x] = facetsBeneath[j]->pts(x);});
+      fn += facetsBeneath[j]->numPts();
+    }
+
+    auto flag = sequence<int>(fn);
+    parallel_for(0, fn, [&](size_t i) {
+			  flag[i] = nnf;
+			  tmpBuffer[i].attribute.seeFacet = nullptr;
+			  for (int j=0; j<nnf; ++j) {
+			    if (origin.keep(newFacets[j], tmpBuffer[i])) {
+			      flag[i] = j;
+			      tmpBuffer[i].attribute.seeFacet = newFacets[j];
+			      break;
 			    }
-			  });
+			  }
+			});
 
-      auto chunks = split_k(nnf+1, &tmpBuffer, flag);
-      for (int j=0; j<nnf; ++j) {
-	newFacets[j]->reassign(chunks[j], &origin);
-      }
+    auto chunks = split_k(nnf+1, &tmpBuffer, flag);
+    for (int j=0; j<nnf; ++j) {
+      newFacets[j]->reassign(chunks[j], &origin);
     }
-#endif // Serial
+
   }
-  
+
   std::atomic<size_t>& hullSize() {
     return hSize;
   }

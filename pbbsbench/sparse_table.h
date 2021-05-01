@@ -31,7 +31,7 @@
 #include "../parlay/parallel.h"
 #include "atomics.h"
 
-namespace pbbs {
+namespace pbbsbench {
 
   template <class K, class V, class KeyHash>
     class sparse_table {

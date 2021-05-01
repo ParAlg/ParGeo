@@ -26,7 +26,7 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
 
   // Create an initial simplex
   auto origin = pointOrigin();
-  auto linkedHull = new _hull<linkedFacet3d<pointVertex>, pointVertex, pointOrigin>(make_slice(Q), origin);
+  auto linkedHull = new _hull<linkedFacet3d<pointVertex>, pointVertex, pointOrigin>(make_slice(Q), origin, false);
 
   incrementHull3d<linkedFacet3d<pointVertex>, pointVertex, pointOrigin>(linkedHull, numProc);
 

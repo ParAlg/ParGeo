@@ -35,7 +35,6 @@
 #include "geometry/point.h"
 #include "common/get_time.h"
 #include "hull.h"
-#include "split.h"
 #include "hullTopology.h"
 
 using namespace parlay;
@@ -44,51 +43,59 @@ using namespace parlay::internal;
 template<class linkedFacet3d, class vertex3d, class origin3d>
 void incrementHull3dSerial(_hull<linkedFacet3d, vertex3d, origin3d> *context) {
 
-  timer t;// t.start();
-
+#ifndef SILENT
+  timer t;
   size_t errors = 0;
   size_t round = 0;
   double apexTime = 0;
   double frontierTime = 0;
   double createTime = 0;
   double splitTime = 0;
+#endif
 
   while (true) {
-    t.start();
 
+#ifndef SILENT
+    t.start();
+#endif
   loopStart:
-    // Serial
 
 #ifdef WRITE
     context->writeHull();
 #endif
 
     //vertex3d apex = context->randomApex();
-    vertex3d apex = context->furthestApex();
+    vertex3d apex = context->furthestApexSerial();
 
 #ifdef VERBOSE
     cout << ">>>>>>>>>" << endl;
     //context->printHull();
     cout << "apex chosen = " << apex.attribute.i << endl;
 #endif
+#ifndef SILENT
     apexTime += t.get_next();
+#endif
 
     if (apex.isEmpty()) break;
-
+#ifndef SILENT
     round ++;
-
+#endif
     auto frontier = context->computeFrontier(apex);
     auto frontierEdges = get<0>(frontier);
     auto facetsBeneath = get<1>(frontier);
 
+#ifndef SILENT
     frontierTime += t.get_next();
+#endif
 
     for(size_t i=0; i<frontierEdges->size(); ++i) {
       auto nv = frontierEdges->at((i+1)%frontierEdges->size());
       auto cv = frontierEdges->at(i);
       if (cv.b != nv.a) {
 	apex.attribute.seeFacet->clear();
+#ifndef SILENT
 	errors ++;
+#endif
 	goto loopStart;
       }
     }
@@ -137,13 +144,13 @@ void incrementHull3dSerial(_hull<linkedFacet3d, vertex3d, origin3d> *context) {
     }
 
     context->setStart(newFacets[0]);
-
+#ifndef SILENT
     createTime += t.get_next();
-
-    context->redistribute(facetsBeneath->cut(0, facetsBeneath->size()), make_slice(newFacets));
-
+#endif
+    context->redistributeSerial(facetsBeneath->cut(0, facetsBeneath->size()), make_slice(newFacets));
+#ifndef SILENT
     splitTime += t.stop();
-
+#endif
     // Delete existing facets
     for(int j=0; j<facetsBeneath->size(); ++j)
       delete facetsBeneath->at(j);
@@ -169,10 +176,9 @@ void incrementHull3dSerial(_hull<linkedFacet3d, vertex3d, origin3d> *context) {
 #ifdef WRITE
   context->writeHull();
 #endif
-
 }
 
-#ifndef SERIAL
+#ifdef RESERVE
 
 template<class linkedFacet3d, class vertex3d, class origin3d>
 void incrementHull3d(_hull<linkedFacet3d, vertex3d, origin3d> *context, size_t numProc = 0) {
@@ -180,32 +186,37 @@ void incrementHull3d(_hull<linkedFacet3d, vertex3d, origin3d> *context, size_t n
   if (numProc == 0)
     numProc = parlay::num_workers();
 
+#ifndef SILENT
   timer t;
-
   size_t round = 0;
   size_t serRound = 0;
   timer tr;
   double serTime = 0;
   double parTime = 0;
-
   double apexTime = 0;
   double frontierTime = 0;
   double splitTime = 0;
+#endif
 
   while (true) {
+#ifndef SILENT
     round ++;
-
+#endif
     if (context->hullSize() < 64) {
 
+#ifndef SILENT
       serRound ++;
       tr.start();
       t.start();
+#endif
 
     loopStart:
       linkedFacet3d* f0 = context->hullSize() < 512 ? context->facetWalk() : nullptr;
-      vertex3d apex = context->furthestApex(f0);
+      vertex3d apex = context->furthestApexParallel(f0);
 
+#ifndef SILENT
       apexTime += t.get_next();
+#endif
 
       if (apex.isEmpty()) break;
 
@@ -213,7 +224,9 @@ void incrementHull3d(_hull<linkedFacet3d, vertex3d, origin3d> *context, size_t n
       auto frontierEdges = get<0>(frontier);
       auto facetsBeneath = get<1>(frontier);
 
+#ifndef SILENT
       frontierTime += t.get_next();
+#endif
 
       // Check for frontier error, usually caused by numerical errors in rare cases
       for(size_t i=0; i<frontierEdges->size(); ++i) {
@@ -244,31 +257,33 @@ void incrementHull3d(_hull<linkedFacet3d, vertex3d, origin3d> *context, size_t n
 
       context->setStart(newFacets[0]);
 
-      context->redistribute(facetsBeneath->cut(0, facetsBeneath->size()), make_slice(newFacets));
-
+      context->redistributeParallel(facetsBeneath->cut(0, facetsBeneath->size()), make_slice(newFacets));
+#ifndef SILENT
       splitTime += t.stop();
-
+#endif
       // Delete existing facets
       for(int j=0; j<facetsBeneath->size(); ++j)
 	delete facetsBeneath->at(j);
 
       delete frontierEdges;
       delete facetsBeneath;
-
+#ifndef SILENT
       serTime += tr.stop();
-    } else {
+#endif
+    } else { // serial vs parallel if
+#ifndef SILENT
       tr.start();
       t.start();
-
+#endif
       // todo points chosen are close, which is bad
       sequence<vertex3d> apexes0 = context->furthestApexes(numProc); // todo tune
       //sequence<vertex3d> apexes0 = cg->randomApexes(context->hullSize()); // todo tune
 #ifdef VERBOSE
       size_t np = apexes0.size();
 #endif
-
+#ifndef SILENT
       apexTime += t.get_next();
-
+#endif
       if (apexes0.size() <= 0) break;
 
       size_t numApex0 = apexes0.size();
@@ -284,9 +299,9 @@ void incrementHull3d(_hull<linkedFacet3d, vertex3d, origin3d> *context, size_t n
 				 FE0[a] = frontierEdges;
 				 FB0[a] = facetsBeneath;
 			       });
-
+#ifndef SILENT
       frontierTime += t.get_next();
-
+#endif
       // Check reservation for success, then reset reservation
       // Also check for numerical errors, set to unsuccessful if detected
       sequence<bool> success(numApex0);
@@ -344,7 +359,7 @@ void incrementHull3d(_hull<linkedFacet3d, vertex3d, origin3d> *context, size_t n
 
 				   context->setStart(newFacets[0]); // todo data race
 
-				   context->redistribute(FB[a]->cut(0, FB[a]->size()), make_slice(newFacets));
+				   context->redistributeSerial(FB[a]->cut(0, FB[a]->size()), make_slice(newFacets));
 
 				   increase[a] = FE[a]->size() - FB[a]->size();
 			       });
@@ -354,8 +369,9 @@ void incrementHull3d(_hull<linkedFacet3d, vertex3d, origin3d> *context, size_t n
       //   cout << "not reset " << endl; abort();
       // }
 
+#ifndef SILENT
       splitTime += t.stop();
-
+#endif
       // Clean up
       parallel_for(0, numApex0, [&](size_t a) {
 				 if (success[a]) {
@@ -368,7 +384,9 @@ void incrementHull3d(_hull<linkedFacet3d, vertex3d, origin3d> *context, size_t n
 				 delete FB0[a];
 			       });
 
+#ifndef SILENT
       parTime += tr.stop();
+#endif
     } // End serial/parallel if
 
   }
@@ -389,4 +407,4 @@ void incrementHull3d(_hull<linkedFacet3d, vertex3d, origin3d> *context, size_t n
 #endif
 }
 
-#endif
+#endif // RESERVE

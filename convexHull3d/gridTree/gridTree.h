@@ -253,11 +253,11 @@ template <class vertexT>
 struct linkedFacet3d {
   static constexpr typename pargeo::fpoint<3>::floatT numericKnob = 1e-5;
 
-#ifdef SERIAL
-  typedef vector<vertexT> seqT;
-#else
+  //#ifdef SERIAL
+  //typedef vector<vertexT> seqT;
+  //#else
   typedef sequence<vertexT> seqT;
-#endif
+  //#endif
 
   vertexT a, b, c;
   linkedFacet3d *abFacet;
@@ -277,7 +277,7 @@ struct linkedFacet3d {
     return false;
   }
 
-#ifndef SERIAL
+#ifdef RESERVE
   // Stores the minimum memory address of the seeFacet of the reserving vertices
   std::atomic<size_t> reservation;
 
@@ -296,17 +296,7 @@ struct linkedFacet3d {
   void reassign(seqT *_seeList, gridOrigin* o) {
     delete seeList;
     delete keepList;
-#ifdef SERIAL
-    seeList = new seqT();
-    keepList = new seqT();
-    for (size_t i=0; i<_seeList->size(); ++i) {
-      auto v = _seeList->at(i);
-      if (o->visible(this, v) && a != v && b != v && c != v)
-	seeList->push_back(v);
-      else
-	keepList->push_back(v);
-    }
-#else
+
     //todo parallelize
     seeList = new seqT();
     keepList = new seqT();
@@ -317,7 +307,7 @@ struct linkedFacet3d {
       else
 	keepList->push_back(v);
     }
-#endif
+
     delete _seeList;
   }
 
@@ -347,11 +337,10 @@ struct linkedFacet3d {
     keepList->clear();
   }
 
-  vertexT furthest() {
+  vertexT furthestSerial() {
     auto apex = vertexT();
     typename vertexT::floatT m = apex.attribute.numericKnob;
 
-#ifdef SERIAL
     for (size_t i=0; i<numVisiblePts(); ++i) {
       auto m2 = pargeo::signedVolumeX6(a, b, c, visiblePts(i));
       if (m2 > m) {
@@ -359,13 +348,18 @@ struct linkedFacet3d {
 	apex = visiblePts(i);
       }
     }
-#else
+    return apex;
+  }
+
+  vertexT furthestParallel() {
+    auto apex = vertexT();
+    typename vertexT::floatT m = apex.attribute.numericKnob;
+
     apex = parlay::max_element(seeList->cut(0, numVisiblePts()),
 			       [&](vertexT aa, vertexT bb) {
 				 return pargeo::signedVolumeX6(a, b, c, aa) <
 				   pargeo::signedVolumeX6(a, b, c, bb);
 			       });
-#endif
     return apex;
   }
 
@@ -376,7 +370,7 @@ struct linkedFacet3d {
     seeList = new seqT();
     keepList = new seqT();
 
-#ifndef SERIAL
+#ifdef RESERVE
     reservation = -1; // (unsigned)
 #endif
 
