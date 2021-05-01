@@ -23,12 +23,64 @@
 #pragma once
 
 #include <limits> // numeric_limits
+#include <algorithm> // nth_element
 #include "parlay/parallel.h"
 #include "parlay/sequence.h"
-#include "pargeo/point.h"
+#include "point.h"
 
-namespace skeletonKdt {
+namespace pargeo {
 
+namespace knnBuf {
+
+  typedef int intT;
+  typedef double floatT;
+
+  template <typename T>
+  struct elem {
+    floatT cost;// Non-negative
+    T entry;
+    elem(floatT t_cost, T t_entry) : cost(t_cost), entry(t_entry) {}
+    elem() : cost(std::numeric_limits<floatT>::max()) {}
+    bool operator<(const elem& b) const {
+      if (cost < b.cost) return true;
+      return false;}
+  };
+
+  template <typename T>
+  struct buffer {
+    typedef parlay::slice<elem<T>*, elem<T>*> sliceT;
+    intT k;
+    intT ptr;
+    sliceT buf;
+
+    buffer(intT t_k, sliceT t_buf): k(t_k), ptr(0), buf(t_buf) {}
+
+    inline void reset() {ptr = 0;}
+
+    bool hasK() {return ptr >= k;}
+
+    elem<T> keepK() {
+      if (ptr < k) throw std::runtime_error("Error, kbuffer not enough k.");
+      ptr = k;
+      std::nth_element(buf.begin(), buf.begin()+k-1, buf.end());
+      return buf[k-1];
+    }
+
+    void insert(elem<T> t_elem) {
+      buf[ptr++] = t_elem;
+      if (ptr >= buf.size()) keepK();
+    }
+
+    elem<T> operator[](intT i) {
+      if (i < ptr) return buf[i];
+      else return elem<T>();
+    }
+  };
+}
+
+namespace kdtKnn {
+
+  using namespace knnBuf;
   using namespace std;
 
   template<int dim, class objT>
@@ -115,6 +167,25 @@ namespace skeletonKdt {
       }
       if (items[lPt]->at(k) < xM) lPt++;
       return lPt;
+    }
+
+    inline int boxCompare(pointT pMin1, pointT pMax1, pointT pMin2, pointT pMax2) {
+      bool exclude = false;
+      bool include = true;//1 include 2
+      for(int i=0; i<dim; ++i) {
+	if (pMax1[i]<pMin2[i] || pMin1[i]>pMax2[i]) exclude = true;
+	if (pMax1[i]<pMax2[i] || pMin1[i]>pMin2[i]) include = false;
+      }
+      if (exclude) return boxExclude;
+      else if (include) return boxInclude;
+      else return boxOverlap;
+    }
+
+    inline bool itemInBox(pointT pMin1, pointT pMax1, objT* item) {
+      for(int i=0; i<dim; ++i) {
+	if (pMax1[i]<item->at(i) || pMin1[i]>item->at(i)) return false;
+      }
+      return true;
     }
 
     intT findWidest() {
@@ -223,8 +294,9 @@ namespace skeletonKdt {
       constructSerial(space, leafSize);//todo get rid of intT n
     }
 
-    bool nonEmptyLuneHelper(pointT cMin1, pointT cMax1, pointT cMin2, pointT cMax2, objT& p1, double r1, objT& p2, double r2, objT* e1, objT* e2);
-    bool nonEmptyLune(objT& p1, double r1, objT& p2, double r2, objT* e1, objT* e2);
+    void knnRangeHelper(objT& q, pointT qMin, pointT qMax, floatT radius, buffer<objT*>& out);
+    void knnRange(objT& q, floatT radius, buffer<objT*>& out);
+    void knnHelper(objT& q, buffer<objT*>& out);
   };
 
   template<int dim, class objT>
@@ -253,74 +325,113 @@ namespace skeletonKdt {
     return root;
   }
 
-  /////////////////////////////////////////////////////////
-  // Routines specialized for beta skeleton searches in 2D
-  /////////////////////////////////////////////////////////
-
-  /*
-    - Circle 1 bounding box: cMin1, cMax1
-    - Circle 2 bounding box: cMin2, cMax2
-    - Circle 1: p1, r1
-    - Circle 2: p2, r2
-    - Edge vertices: e1, e2
-   */
   template<int dim, class objT>
-  bool kdNode<dim, objT>::nonEmptyLuneHelper(pointT cMin1, pointT cMax1, pointT cMin2, pointT cMax2, objT& p1, double r1, objT& p2, double r2, objT* e1, objT* e2) {
-    enum stateT {Include, Disjoint, Intersect};
+  void kdNode<dim, objT>::knnRangeHelper(objT& q, pointT qMin, pointT qMax, floatT radius, buffer<objT*>& out) {
+    int relation = boxCompare(qMin, qMax, getMin(), getMax());
 
-    auto boxCompare = [&](pointT pMin1, pointT pMax1, pointT pMin2, pointT pMax2) {
-      bool exclude = false;
-      bool include = true;//1 include 2
-      for(int i=0; i<dim; ++i) {
-	if (pMax1[i]<pMin2[i] || pMin1[i]>pMax2[i]) exclude = true;
-	if (pMax1[i]<pMax2[i] || pMin1[i]>pMin2[i]) include = false;
+    if(relation == boxExclude) {
+      return;
+    } else if (relation == boxInclude) {
+      for (intT i=0; i<size(); ++i) {
+	objT* p = getItem(i);
+	out.insert(elem(q.dist(*p), p));
       }
-      if (exclude) return Disjoint;
-      else if (include) return Include;
-      else return Intersect;
-    };
-
-    stateT relation1 = boxCompare(cMin1, cMax1, getMin(), getMax());
-    stateT relation2 = boxCompare(cMin2, cMax2, getMin(), getMax());
-
-    if(relation1 == Disjoint || relation2 == Disjoint) {
-      return false;
-    /* } else if (relation1 == Include && relation2 == Include) { */
-    /*   return true; */
-    } else {
-      // The box at least intersects with both circles
+    } else { // intersect
       if (isLeaf()) {
 	for (intT i=0; i < size(); ++ i) {
 	  objT* p = getItem(i);
-	  if (p == e1 || p == e2) continue; // Disregard edge end points
-	  float dist1 = p1.dist(*p);
-	  float dist2 = p2.dist(*p);
-	  if (dist1 <= r1 && dist2 <= r2)
-	    return true;
+	  float dist = q.dist(*p);
+	  if (dist <= radius) {out.insert(elem(dist, p));}
 	}
-	return false;
       } else {
-	return
-	  L()->kdNode<dim, objT>::nonEmptyLuneHelper(cMin1, cMax1, cMin2, cMax2, p1, r1, p2, r2, e1, e2) ||
-	  R()->kdNode<dim, objT>::nonEmptyLuneHelper(cMin1, cMax1, cMin2, cMax2, p1, r1, p2, r2, e1, e2);
+	L()->kdNode<dim, objT>::knnRangeHelper(q, qMin, qMax, radius, out);
+	R()->kdNode<dim, objT>::knnRangeHelper(q, qMin, qMax, radius, out);
       }
     }
   }
 
-  /* Returns whether the lune defined by circle 1 and circle is non-empty,
-     not considering he edge vertices e1 and e2
-    - Circle 1: p1, r1
-    - Circle 2: p2, r2
-    - Edge vertices: e1, e2
-  */
   template<int dim, class objT>
-  bool kdNode<dim, objT>::nonEmptyLune(objT& p1, double r1, objT& p2, double r2, objT* e1, objT* e2) {
-    pointT cMin1, cMax1, cMin2, cMax2;
-    cMin1[0] = p1[0] - r1; cMin1[1] = p1[1] - r1;
-    cMax1[0] = p1[0] + r1; cMax1[1] = p1[1] + r1;
-    cMin2[0] = p2[0] - r2; cMin2[1] = p2[1] - r2;
-    cMax2[0] = p2[0] + r2; cMax2[1] = p2[1] + r2;
-    return nonEmptyLuneHelper(cMin1, cMax1, cMin2, cMax2, p1, r1, p2, r2, e1, e2);
+  void kdNode<dim, objT>::knnRange(objT& q, floatT radius, buffer<objT*>& out) {
+    pointT qMin, qMax;
+    for (intT i=0; i<dim; i++) {
+      auto tmp = q[i]-radius;
+      qMin[i] = tmp;
+      qMax[i] = tmp+radius*2;
+    }
+    kdNode<dim, objT>::knnRangeHelper(q, qMin, qMax, radius, out);
   }
 
-} // End namespace
+  template<int dim, class objT>
+  void kdNode<dim, objT>::knnHelper(objT& q, buffer<objT*>& out) {
+    // find the leaf first
+    int relation = boxCompare(getMin(), getMax(), pointT(q.coords()), pointT(q.coords()));
+    if (relation == boxExclude) {
+      return;
+    } else {
+      if (isLeaf()) {
+	// basecase
+	for (intT i=0; i<size(); ++ i) {
+	  objT* p = getItem(i);
+	  out.insert(elem(q.dist(*p), p));}
+      } else {
+	L()->kdNode<dim, objT>::knnHelper(q, out);
+	R()->kdNode<dim, objT>::knnHelper(q, out);
+      }
+    }
+
+    if (!out.hasK()) {
+      if (siblin() == NULL) {
+	throw std::runtime_error("Error, knnHelper reached root node without enough neighbors.");
+      }
+      for (intT i=0; i<siblin()->size(); ++i) {
+	objT* p = siblin()->getItem(i);
+	out.insert(elem(q.dist(*p), p));}
+    } else { // Buffer filled to a least k
+      if (siblin() != NULL) {
+	elem tmp = out.keepK();
+	siblin()->kdNode<dim, objT>::knnRange(q, tmp.cost, out);}
+    }
+  }
+
+  template<int dim, class objT>
+  parlay::sequence<size_t> kdtKnn(parlay::sequence<pargeo::point<dim>> &queries, size_t k) {
+    kdNode<dim, pargeo::point<dim>>* tree = buildKdt<dim, pargeo::point<dim>>(queries, true);
+    auto out = parlay::sequence<elem<pargeo::point<dim>*>>(2*k*queries.size());
+    auto idx = parlay::sequence<size_t>(k*queries.size());
+    parlay::parallel_for(0, queries.size(), [&](intT i) {
+					      buffer buf = buffer<objT*>(k, out.cut(i*2*k, (i+1)*2*k));
+					      tree->knnHelper(queries[i], buf);
+					      buf.keepK();
+					      for(intT j=0; j<k; ++j) {
+						idx[i*k+j] = buf[j].entry - queries.data();
+						//cout << buf[j].cost << endl;
+					      }
+					      //cout << endl;
+					    });
+    free(tree);
+    return idx;
+  }
+
+  template<int dim, class objT>
+  parlay::sequence<size_t> bruteforceKnn(parlay::sequence<pargeo::point<dim>> &queries, size_t k) {
+    auto out = parlay::sequence<elem<pargeo::point<dim>*>>(2*k*queries.size());
+    auto idx = parlay::sequence<size_t>(k*queries.size());
+    parlay::parallel_for(0, queries.size(), [&](intT i) {
+					      objT q = queries[i];
+					      buffer buf = buffer<objT*>(k, out.cut(i*2*k, (i+1)*2*k));
+					      for(intT j=0; j<queries.size(); ++j) {
+						objT* p = &queries[j];
+						buf.insert(elem(q.dist(p), p));
+					      }
+					      buf.keepK();
+					      for(intT j=0; j<k; ++j) {
+						idx[i*k+j] = buf[j].entry - queries.data();
+						//cout << buf[j].cost << endl;
+					      }
+					      //cout << endl;
+					    });
+    return idx;
+  }
+}
+
+} // End namespace pargeo
