@@ -23,12 +23,12 @@
 #include <vector>
 #include "parlay/primitives.h"
 #include "parlay/random.h"
-#include "common/geometry.h"
-#include "common/get_time.h"
-#include "common/topology.h"
-#include "common/atomics.h"
+#include "pargeo/atomics.h"
+#include "pargeo/getTime.h"
+#include "delaunayTriangulation/geometry.h"
+#include "delaunayTriangulation/delaunay.h"
+#include "topology.h"
 #include "neighbors.h"
-#include "delaunay.h"
 
 namespace pbbsbench {
 
@@ -121,7 +121,7 @@ void reserve_for_insert(vertex_t *v, simplex_t t, Qs_t *q) {
   // will have its id written.  reserve starts out as -1
   for (size_t i = 0; i < q->vertexQ.size(); i++) {
     //cout << "trying to reserve: " << (q->vertexQ)[i]->reserve << ", " << v->id << endl;
-    pbbs::write_max(&((q->vertexQ)[i]->reserve), v->id, std::less<int>());
+    pargeo::write_max(&((q->vertexQ)[i]->reserve), v->id, std::less<int>());
   }
 }
 
@@ -304,7 +304,7 @@ void incrementally_add_points(sequence<vertex_t*> v, vertex_t* start) {
 // *************************************************************
 
 triangles<pointT> delaunay(sequence<pointT> &P) {
-  timer t("delaunay", false);
+  pargeo::timer t("delaunay", false);
   t.start();
   size_t boundary_size = 10;
   size_t n = P.size();
