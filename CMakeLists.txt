@@ -34,6 +34,8 @@ message(STATUS "CMAKE_INSTALL_PREFIX:           ${CMAKE_INSTALL_PREFIX}" )
 
 add_subdirectory(knnSearch)
 
+add_subdirectory(spatialSort)
+
 add_subdirectory(closestPair)
 
 add_subdirectory(spatialGraph)
