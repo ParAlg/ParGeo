@@ -198,7 +198,7 @@ public:
 				write_min(&extrema[5], _P[i][2], std::less<floatT>());
 			      });
     maxSpan = max(extrema[4]-extrema[5],
-		  max((extrema[2]-extrema[3]),(extrema[1]-extrema[0])));
+		  max((extrema[2]-extrema[3]),(extrema[0]-extrema[1])));
     size_t _maxRange = maxRange;
     bSize = 1.01 * maxSpan / maxRange;
 
