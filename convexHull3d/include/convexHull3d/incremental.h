@@ -37,6 +37,7 @@
 #include "hull.h"
 #include "hullTopology.h"
 
+using namespace pargeo;
 using namespace parlay;
 using namespace parlay::internal;
 
@@ -270,7 +271,9 @@ void incrementHull3d(_hull<linkedFacet3d, vertex3d, origin3d> *context, size_t n
 #ifndef SILENT
       serTime += tr.stop();
 #endif
+
     } else { // serial vs parallel if
+
 #ifndef SILENT
       tr.start();
       t.start();

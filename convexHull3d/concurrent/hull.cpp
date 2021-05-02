@@ -3,6 +3,7 @@
 #include "parlay/primitives.h"
 #include "parlay/sequence.h"
 #include "pargeo/point.h"
+#include "pargeo/zorderSort.h"
 #include "convexHull3d/pointVertex.h"
 #include "convexHull3d/hullTopology.h"
 #include "convexHull3d/incremental.h"
@@ -20,8 +21,8 @@ parlay::sequence<pointVertex> concurrentHull(parlay::sequence<pointVertex> &Q, s
 
   timer t; t.start();
 
-  // todo use spatial sort
   //sort_inplace(Q, [&](pt i, pt j){return i[0] < j[0];});
+  //zorderSortInPlace3d(Q);
 
   if (!numProc) numProc = num_workers();
 
