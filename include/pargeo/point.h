@@ -4,8 +4,8 @@
 #include <algorithm>
 #include <math.h>
 #include <iomanip>
-#include "../parlay/parallel.h"
-#include "../parlay/primitives.h"
+#include "parlay/parallel.h"
+#include "parlay/primitives.h"
 
 namespace pargeo {
   using namespace std;
