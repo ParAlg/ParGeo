@@ -35,7 +35,7 @@ namespace pargeo {
   template<typename pt>
   parlay::sequence<pt> zorderSort2d(parlay::sequence<pt>& P) {
 
-    using floatT = double;
+    using floatT = typename pt::floatT;
 
     static constexpr size_t maxRange = 65535;
     static constexpr size_t maxBit = 16; // 2**maxBit = maxRange
@@ -101,7 +101,7 @@ namespace pargeo {
   template<typename pt>
   parlay::sequence<pt> zorderSort3d(parlay::sequence<pt>& P) {
 
-    using floatT = double;
+    using floatT = typename pt::floatT;
 
     static constexpr size_t maxRange = 65535;
     static constexpr size_t maxBit = 16; // 2**maxBit = maxRange
@@ -169,5 +169,16 @@ namespace pargeo {
 				    return get<1>(pairs[i]);
 				  });
   }
+
+  template<typename pt>
+  void zorderSortInPlace2d(parlay::sequence<pt>& P) {
+    P = zorderSort2d(P);
+  }
+
+  template<typename pt>
+  void zorderSortInPlace3d(parlay::sequence<pt>& P) {
+    P = zorderSort3d(P);
+  }
+
 
 } // End namespace
