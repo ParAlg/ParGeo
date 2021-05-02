@@ -2,11 +2,13 @@
 #include "parlay/parallel.h"
 #include "parlay/primitives.h"
 #include "parlay/sequence.h"
-#include "common/geometry.h"
-#include "pointVertex.h"
-#include "hullTopology.h"
-#include "incremental.h"
-#include "hull.h"
+#include "pargeo/point.h"
+#include "convexHull3d/pointVertex.h"
+#include "convexHull3d/hullTopology.h"
+#include "convexHull3d/incremental.h"
+#include "convexHull3d/hull.h"
+
+using namespace pargeo;
 
 parlay::sequence<pointVertex> concurrentHull(parlay::sequence<pointVertex> &Q, size_t numProc = 0) {
   using namespace std;

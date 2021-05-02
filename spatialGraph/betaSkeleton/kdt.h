@@ -23,10 +23,9 @@
 #pragma once
 
 #include <limits> // numeric_limits
-//#include <algorithm> // nth_element
 #include "parlay/parallel.h"
 #include "parlay/sequence.h"
-#include "geometry/point.h"
+#include "pargeo/point.h"
 
 namespace skeletonKdt {
 

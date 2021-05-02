@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/sparse_table.h"
+#include "sparse_table.h"
 
 using namespace std;
 

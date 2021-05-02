@@ -2,11 +2,11 @@
 #include "parlay/parallel.h"
 #include "parlay/primitives.h"
 #include "parlay/sequence.h"
-#include "geometry/point.h"
-#include "common/get_time.h"
-#include "incremental.h"
-#include "hullTopology.h"
-#include "hull.h"
+#include "pargeo/point.h"
+#include "pargeo/getTime.h"
+#include "convexHull3d/incremental.h"
+#include "convexHull3d/hullTopology.h"
+#include "convexHull3d/hull.h"
 #include "gridTree.h"
 
 #include <iostream>
@@ -23,7 +23,7 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
 
   size_t n = P.size();
 
-  timer t;
+  pargeo::timer t;
   t.start();
 
   auto tree = gridTree3d<pointT>(make_slice(P));

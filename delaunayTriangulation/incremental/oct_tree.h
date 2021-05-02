@@ -23,8 +23,8 @@
 #include <algorithm>
 #include "parlay/parallel.h"
 #include "parlay/primitives.h"
-#include "common/geometry.h"
-#include "common/get_time.h"
+#include "delaunayTriangulation/geometry.h"
+#include "pargeo/getTime.h"
 
 namespace pbbsbench {
 
@@ -188,7 +188,7 @@ struct oct_tree {
   // build a tre given a sequence of pointers to points
   template <typename Seq>
   static tree_ptr build(Seq &P) {
-    timer t("oct_tree",false);
+    pargeo::timer t("oct_tree",false);
     int dims = (P[0]->pt).dimension();
     auto pts = tag_points(P);
     t.next("tag");
@@ -240,7 +240,7 @@ private:
   // consisting of the interleaved bits for the x,y,z coordinates.
   // Also sorts based the integer.
   static parlay::sequence<indexed_point> tag_points(parlay::sequence<vtx*> &V) {
-    timer t("tag",false);
+    pargeo::timer t("tag",false);
     size_t n = V.size();
     int dims = (V[0]->pt).dimension();
 

@@ -2,11 +2,10 @@
 #include <tuple>
 #include "parlay/parallel.h"
 #include "parlay/primitives.h"
-#include "geometry/point.h"
-#include "common/geometry.h"
-#include "common/get_time.h"
-#include "spatialGraph.h"
-#include "incremental/delaunay.h"
+#include "pargeo/point.h"
+#include "pargeo/getTime.h"
+#include "spatialGraph/spatialGraph.h"
+#include "delaunayTriangulation/delaunay.h"
 
 template<int dim>
 parlay::sequence<pargeo::edge> pargeo::gabrielGraph(parlay::sequence<pargeo::point<dim>> &P) {
@@ -106,12 +105,6 @@ parlay::sequence<pargeo::edge> pargeo::gabrielGraph(parlay::sequence<pargeo::poi
 			}
   		      });
 
-  // parallel_for(0, edges2.size(), [&](size_t i) {
-  // 				  auto e = edges2[i];
-  // 				  cout << "(" << e.u << "," << e.v << ")" << " ";
-  // 				});
-  // cout << endl;
-
 #ifndef SILENT
   cout << "graph-gen-time = " << t.stop() << endl;
   cout << "#-triangles = " << nt << endl;
@@ -121,4 +114,3 @@ parlay::sequence<pargeo::edge> pargeo::gabrielGraph(parlay::sequence<pargeo::poi
 }
 
 template parlay::sequence<pargeo::edge> pargeo::gabrielGraph<2>(parlay::sequence<pargeo::point<2>> &);
-template parlay::sequence<pargeo::edge> pargeo::gabrielGraph<3>(parlay::sequence<pargeo::point<3>> &);

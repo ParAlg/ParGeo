@@ -6,9 +6,9 @@
 #include "parlay/parallel.h"
 #include "parlay/primitives.h"
 #include "parlay/sequence.h"
-#include "geometry/point.h"
+#include "pargeo/point.h"
+#include "convexHull3d/hull.h"
 #include "pairHash.h"
-#include "hull.h"
 
 #ifdef WRITE
 #include <iostream>

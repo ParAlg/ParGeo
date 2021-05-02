@@ -2,11 +2,11 @@
 #include "parlay/parallel.h"
 #include "parlay/primitives.h"
 #include "parlay/sequence.h"
-#include "common/geometry.h"
-#include "incremental.h"
-#include "hullTopology.h"
-#include "pointVertex.h"
-#include "hull.h"
+#include "pargeo/point.h"
+#include "convexHull3d/incremental.h"
+#include "convexHull3d/hullTopology.h"
+#include "convexHull3d/pointVertex.h"
+#include "convexHull3d/hull.h"
 
 parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &P) {
   using namespace std;

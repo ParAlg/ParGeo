@@ -2,10 +2,9 @@
 #include <tuple>
 #include "parlay/parallel.h"
 #include "parlay/primitives.h"
-#include "geometry/point.h"
-#include "common/geometry.h"
-#include "common/get_time.h"
-#include "spatialGraph.h"
+#include "pargeo/point.h"
+#include "pargeo/getTime.h"
+#include "spatialGraph/spatialGraph.h"
 #include "kdt.h"
 
 template<int dim>
@@ -25,7 +24,7 @@ parlay::sequence<pargeo::edge> pargeo::betaSkeleton(parlay::sequence<pargeo::poi
   cout << "beta = " << beta << endl;
   timer t; t.start();
 #endif
-  sequence<pargeo::edge> dedges = pargeo::delaunayGraph<dim>(P);
+  sequence<edge> dedges = pargeo::delaunayGraph<dim>(P);
 #ifndef SILENT
   cout << "#delaunay-edges = " << dedges.size() << endl;
   cout << "delaunay-time = " << t.get_next() << endl;
@@ -48,6 +47,7 @@ parlay::sequence<pargeo::edge> pargeo::betaSkeleton(parlay::sequence<pargeo::poi
 				     return !tree->nonEmptyLune(c1, r, c2, r, &P[e.u], &P[e.v]);
 				   }
 				 });
+
 #ifndef SILENT
   cout << "edge-pruning-time = " << t.stop() << endl;
   cout << "#edges = " << skeleton.size() << endl;
@@ -56,4 +56,3 @@ parlay::sequence<pargeo::edge> pargeo::betaSkeleton(parlay::sequence<pargeo::poi
 }
 
 template parlay::sequence<pargeo::edge> pargeo::betaSkeleton<2>(parlay::sequence<pargeo::point<2>> &, double);
-template parlay::sequence<pargeo::edge> pargeo::betaSkeleton<3>(parlay::sequence<pargeo::point<3>> &, double);

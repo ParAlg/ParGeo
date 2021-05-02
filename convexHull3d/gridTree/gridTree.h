@@ -5,7 +5,7 @@
 #include <tuple>
 #include <bitset>
 #include "parlay/sequence.h"
-#include "geometry/point.h"
+#include "pargeo/point.h"
 
 using namespace parlay;
 

@@ -24,7 +24,7 @@
 #include <algorithm>
 #include "parlay/parallel.h"
 #include "parlay/primitives.h"
-#include "common/geometry.h"
+#include "delaunayTriangulation/geometry.h"
 #include "oct_tree.h"
 
 namespace pbbsbench {
@@ -171,7 +171,7 @@ struct k_nearest_neighbors {
 // places pointers to them in the .ngh field of each vertex
 template <int max_k, class vtx>
 void ANN(parlay::sequence<vtx*> &v, int k) {
-  timer t("ANN",report_stats);
+  pargeo::timer t("ANN",report_stats);
 
   {
     using knn_tree = k_nearest_neighbors<vtx, max_k>;

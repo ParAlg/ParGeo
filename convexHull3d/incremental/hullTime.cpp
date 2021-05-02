@@ -1,15 +1,15 @@
 #include <iostream>
 #include <algorithm>
 #include "parlay/parallel.h"
-#include "common/get_time.h"
-#include "common/geometry.h"
-#include "common/geometryIO.h"
-#include "common/parse_command_line.h"
-#include "geometry/point.h"
-#include "hull.h"
+#include "pargeo/getTime.h"
+#include "pargeo/point.h"
+#include "pargeo/pointIO.h"
+#include "pargeo/parseCommandLine.h"
+#include "convexHull3d/hull.h"
 
 using namespace std;
-using namespace benchIO;
+using namespace pargeo;
+using namespace pargeo::pointIO;
 
 template <class pt>
 void timeHull(parlay::sequence<pt> &P, size_t numProc, int rounds, char const *outFile) {
@@ -19,7 +19,6 @@ void timeHull(parlay::sequence<pt> &P, size_t numProc, int rounds, char const *o
     cout << "round-time = " << t.get_next() << endl;
   }
   t.stop();
-  //if (outFile != NULL) writeIntSeqToFile(I, outFile);
 }
 
 int main(int argc, char* argv[]) {
@@ -29,7 +28,7 @@ int main(int argc, char* argv[]) {
   int numProc = P.getOptionIntValue("-p",0);
   int rounds = P.getOptionIntValue("-r",1);
 
-  int dim = readDimensionFromFile(iFile);//todo make cheaper
+  int dim = readHeader(iFile);
   if (dim != 3) {
     cout << "Error, convexHull3D only takes 3d inputs, abort." << endl;
     abort();
