@@ -2,7 +2,7 @@
 #include <algorithm>
 #include "parlay/parallel.h"
 #include "pargeo/point.h"
-#include "pargeo/kdtKnn.h"
+#include "pargeo/kdTreeKnn.h"
 #include "pargeo/getTime.h"
 #include "pargeo/pointIO.h"
 #include "pargeo/parseCommandLine.h"
@@ -16,7 +16,7 @@ void timeKnn(parlay::sequence<pargeo::point<dim>> &P, size_t k, int rounds, char
   timer t; t.start();
   parlay::sequence<size_t> I;
   for(int i=0; i<rounds; ++i) {
-    I = kdtKnn::kdtKnn<dim, pargeo::point<dim>>(P, k+1);
+    I = kdTreeKnn<dim, pargeo::point<dim>>(P, k+1);
     cout << "round-time = " << t.get_next() << endl;
   }
   t.stop();
