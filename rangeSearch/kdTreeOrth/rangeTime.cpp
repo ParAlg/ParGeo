@@ -22,9 +22,9 @@ void timeRange(parlay::sequence<pargeo::point<dim>> &P, double k, int rounds, ch
     cout << "build-time = " << t.get_next() << endl;
 
     parallel_for(0, P.size(), [&](size_t i) {
-				auto I = kdTreeRange(P, tree, P[i], k);
-				// auto I = bruteforceRange<dim>(P, P[0], 4);
-				// cout << I.size() << endl;
+				auto I = kdTreeOrthRange(P, tree, P[i], k);
+				//auto I = bruteforceOrthRange<dim>(P, P[i], k);
+				//cout << I.size() << endl;
 			      });
 
     cout << "query-time = " << t.get_next() << endl;
