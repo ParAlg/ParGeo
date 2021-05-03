@@ -154,18 +154,17 @@ namespace pargeo {
     }
   }
 
-  // should make generic to all objects todo
   template<int dim, class objT>
   parlay::sequence<size_t> kdTreeKnn(parlay::sequence<objT> &queries, size_t k) {
     using nodeT = kdNode<dim, objT>;
     nodeT* tree = buildKdt<dim, objT>(queries, true);
     auto out = parlay::sequence<elem<objT*>>(2*k*queries.size());
     auto idx = parlay::sequence<size_t>(k*queries.size());
-    parlay::parallel_for(0, queries.size(), [&](intT i) {
+    parlay::parallel_for(0, queries.size(), [&](size_t i) {
 					      buffer buf = buffer<objT*>(k, out.cut(i*2*k, (i+1)*2*k));
 					      knnHelper<dim, nodeT, objT>(tree, queries[i], buf);
 					      buf.keepK();
-					      for(intT j=0; j<k; ++j) {
+					      for(size_t j=0; j<k; ++j) {
 						idx[i*k+j] = buf[j].entry - queries.data();
 						//cout << buf[j].cost << endl;
 					      }
@@ -175,20 +174,19 @@ namespace pargeo {
     return idx;
   }
 
-  // should make generic to all objects todo
-  template<int dim, class objT>
+  template<int dim, typename objT>
   parlay::sequence<size_t> bruteforceKnn(parlay::sequence<objT> &queries, size_t k) {
     auto out = parlay::sequence<elem<objT*>>(2*k*queries.size());
     auto idx = parlay::sequence<size_t>(k*queries.size());
-    parlay::parallel_for(0, queries.size(), [&](intT i) {
+    parlay::parallel_for(0, queries.size(), [&](size_t i) {
 					      objT q = queries[i];
 					      buffer buf = buffer<objT*>(k, out.cut(i*2*k, (i+1)*2*k));
-					      for(intT j=0; j<queries.size(); ++j) {
+					      for(size_t j=0; j<queries.size(); ++j) {
 						objT* p = &queries[j];
 						buf.insert(elem(q.dist(p), p));
 					      }
 					      buf.keepK();
-					      for(intT j=0; j<k; ++j) {
+					      for(size_t j=0; j<k; ++j) {
 						idx[i*k+j] = buf[j].entry - queries.data();
 						//cout << buf[j].cost << endl;
 					      }
