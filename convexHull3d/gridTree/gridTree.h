@@ -457,7 +457,7 @@ public:
 
   vertexT getCorner(vertexT p, vertexT myMin) {
     // todo compute from point grid id
-    vertexT vt0 = p - pMin;
+    vertexT vt0 = p - myMin;
     vt0[0] = floor( vt0[0] / bSize ) * bSize;
     vt0[1] = floor( vt0[1] / bSize ) * bSize;
     vt0[2] = floor( vt0[2] / bSize ) * bSize;

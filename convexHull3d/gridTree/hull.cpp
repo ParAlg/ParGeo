@@ -12,6 +12,8 @@
 #include <iostream>
 #include <fstream>
 
+#define WRITE
+
 using namespace std;
 
 parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &P) {
@@ -53,15 +55,17 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
     cout << "box-size = " << tree.boxSize(l) << endl;
     cout << "num-pts = " << Q.size() << endl;
 
-    // {
-    //   ofstream myfile;
-    //   myfile.open("point.txt", std::ofstream::trunc);
-    //   for (auto q: Q) {
-    // 	myfile << q[0] << " " << q[1] << " " << q[2] << endl;
-    // 	//myfile << q[0] << " " << q[1] << " " << q[2] << " " << q.attribute.i << endl;
-    //   }
-    //   myfile.close();
-    // }
+#ifdef WRITE
+    {
+      ofstream myfile;
+      myfile.open("point.txt", std::ofstream::trunc);
+      for (auto q: Q) {
+	myfile << q[0] << " " << q[1] << " " << q[2] << endl;
+	//myfile << q[0] << " " << q[1] << " " << q[2] << " " << q.attribute.i << endl;
+      }
+      myfile.close();
+    }
+#endif
 
     // Create a coarse simplex
     auto origin = gridOrigin();
@@ -76,7 +80,9 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
 
     auto pts = linkedHull->getHullPts();
 
-    // linkedHull->writeHull("facet.txt");
+#ifdef WRITE
+    linkedHull->writeHull("facet.txt");
+#endif
 
     // for (auto x: Q) {
     //   size_t id = x.attribute.i;
@@ -91,6 +97,7 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
     // }
     // cout << endl;
 
+#ifdef WRITE
     // { // points in the next level
     //   ofstream myfile;
     //   myfile.open("blue.txt", std::ofstream::trunc);
@@ -101,6 +108,7 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
     //   }
     //   myfile.close();
     // }
+#endif
 
     auto keep = sequence<size_t>(tree.levelSize(l)+1, 0);
     parallel_for(0, pts.size(),
@@ -110,23 +118,25 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
     Q = tree.nextLevel(l, keep);
     cout << "refined-pts = " << Q.size() << endl;
 
-    // auto P2 = tree.level(l+1);
-    // { // points in the next level but not considered next round
-    //   ofstream myfile;
-    //   myfile.open("red.txt", std::ofstream::trunc);
-    //   for (auto p: P2) {
-    //     bool ok = true;
-    //     for (auto q: Q) {
-    // 	  if (p == q) {
-    // 	    ok = false;
-    // 	    break;
-    // 	  }
-    //     }
-    //     if (ok) myfile << p << endl;
-    //   }
-    //   myfile.close();
-    // }
-    // break;
+#ifdef WRITE
+    auto P2 = tree.level(l+1);
+    { // points in the next level but not considered next round
+      ofstream myfile;
+      myfile.open("red.txt", std::ofstream::trunc);
+      for (auto p: P2) {
+        bool ok = true;
+        for (auto q: Q) {
+	  if (p == q) {
+	    ok = false;
+	    break;
+	  }
+        }
+        if (ok) myfile << p << endl;
+      }
+      myfile.close();
+    }
+    break;
+#endif
 
     if (tree.levelSize(l) == P.size() || l == e-1) {
       linkedHull->getHull<pointT>(out);
