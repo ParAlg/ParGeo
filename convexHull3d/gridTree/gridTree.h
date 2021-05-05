@@ -90,13 +90,25 @@ public:
 
   size_t numLevels() { return L; }
 
+  // read the representative point at level l offset i
   gridVertex at(size_t l, size_t i) {
+    //cout << "at " << l << ", " << i << endl;
     if (l >= 0 && l < L) {
       return at(l+1, pointers[l]->at(i));
     } else if (l == L) {
       return P[i];
     } else {
       throw std::runtime_error("Invalid level for point access");
+    }
+  }
+
+  size_t pointer(size_t l, size_t i, size_t k) {
+    if (l >= 0 && l < k) {
+      return pointer(l+1, pointers[l]->at(i), k);
+    } else if (l == k) {
+      return pointers[l]->at(i);
+    } else {
+      throw std::runtime_error("Invalid level for pointer access");
     }
   }
 
@@ -158,6 +170,36 @@ public:
 				out[i] = at(l,i);
 				out[i].attribute.assignIdx(i); // Idx in the level
 			      });
+      return out;
+    } else {
+      throw std::runtime_error("Invalid level for level access");
+    }
+  }
+
+  // Given level l mask, get level k points
+  sequence<gridVertex> getLevel(size_t l, sequence<size_t>& keep, size_t k) {
+    if (l < k && levelSize(l)+1 == keep.size() && k >= 0 && k <= L) {
+      size_t ls = keep.size()-1;
+      parallel_for(0, ls, [&](size_t i){
+			    if (keep[i] > 0)
+			      keep[i] = pointer(l, i+1, k-1) - pointer(l, i, k-1);
+			    else
+			      keep[i] = 0;
+			  });
+      size_t m = parlay::scan_inplace(keep.cut(0, ls));
+      keep[ls] = m;
+
+      sequence<gridVertex> out(m);
+      parallel_for(0, ls, [&](size_t i){
+			    if (keep[i] != keep[i+1]) {
+			      size_t numPts = keep[i+1] - keep[i];
+			      size_t base = pointer(l, i, k-1);
+			      for (size_t j=0; j<numPts; ++j) {
+				out[keep[i] + j] = at(k, base + j);
+				out[keep[i] + j].attribute.assignIdx(base + j);
+			      }
+			    }
+			  });
       return out;
     } else {
       throw std::runtime_error("Invalid level for level access");

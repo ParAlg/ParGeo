@@ -32,7 +32,7 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
   cout << "build-grid-time = " << t.get_next() << endl;
 
   size_t L = tree.numLevels();
-  size_t s = 3;
+  size_t s = 4;
   size_t e = L;
   cout << "L = " << L << endl;
 
@@ -45,14 +45,16 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
   // }
   // cout << endl;
 
+  auto out = sequence<facetT>();
   sequence<gridVertex> Q = tree.level(s);
 
-  auto out = sequence<facetT>();
-
-  for (size_t l = s; l < e; ++ l) {
-    bool lastRound = tree.levelSize(l) == P.size() || l == e-1;
-
+  size_t l = s;
+  size_t skip = 11;
+  while (1) {
+    if (l > e-1) l = e-1;
     cout << "--- level " << l << endl;
+    bool lastRound = tree.levelSize(l) == P.size() || l >= e-1;
+
     cout << "level-size = " << tree.levelSize(l) << endl;
     cout << "box-size = " << tree.boxSize(l) << endl;
     cout << "num-pts = " << Q.size() << endl;
@@ -86,45 +88,20 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
 
     auto pts = linkedHull->getHullPts();
 
+    if (!lastRound) {
+      auto keep = sequence<size_t>(tree.levelSize(l) + 1, 0);
+      parallel_for(0, pts.size(),
+		   [&](size_t i) {
+		     keep[pts[i].attribute.i] = 1;
+		   });
+      //Q = tree.nextLevel(l, keep);
+      Q = tree.getLevel(l, keep, min(l + skip, e-1));
+      cout << "refined-pts = " << Q.size() << endl;
+    }
+
 #ifdef WRITE
     linkedHull->writeHull("facet.txt");
-#endif
 
-    // for (auto x: Q) {
-    //   size_t id = x.attribute.i;
-    //   size_t nextLevelId = tree.pointers[l]->at(x.attribute.i);
-    //   //cout << nextLevelId << " ";
-    //   cout << id << " " << nextLevelId << ": ";
-    //   auto children = tree.children(l, x.attribute.i);
-    //   for (auto y: children) {
-    //   	cout << y.attribute.i << " ";
-    //   }
-    //   cout << endl;
-    // }
-    // cout << endl;
-
-#ifdef WRITE
-    // { // points in the next level
-    //   ofstream myfile;
-    //   myfile.open("blue.txt", std::ofstream::trunc);
-    //   // origin.writeCorners(Q[0], myfile);
-    //   // origin.writeCorners(Q[2], myfile);
-    //   for (auto q: Q) {
-    // 	origin.writeCorners(q, myfile);
-    //   }
-    //   myfile.close();
-    // }
-#endif
-
-    auto keep = sequence<size_t>(tree.levelSize(l)+1, 0);
-    parallel_for(0, pts.size(),
-		 [&](size_t i) {
-		   keep[pts[i].attribute.i] = 1;
-		 });
-    Q = tree.nextLevel(l, keep);
-    cout << "refined-pts = " << Q.size() << endl;
-
-#ifdef WRITE
     auto P2 = tree.level(l+1);
     { // points in the next level but not considered next round
       ofstream myfile;
@@ -146,9 +123,13 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
     if (lastRound) {
       linkedHull->getHull<pointT>(out);
       delete linkedHull;
+      cout << "break!" << endl;
       break;
     }
+
     delete linkedHull;
+
+    l += skip;
   }
 
   cout << "hull-size = " << out.size() << endl;
