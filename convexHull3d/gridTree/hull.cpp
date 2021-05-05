@@ -30,82 +30,113 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
   cout << "build-grid-time = " << t.get_next() << endl;
 
   size_t L = tree.numLevels();
-  size_t s = 4;
-  size_t e = L+1;
-  sequence<gridVertex> Q = tree.level(s);
+  size_t s = 3;
+  size_t e = L;
+  cout << "L = " << L << endl;
 
-  cout << "extract-level-time = " << t.get_next() << endl;
-
-  // {
-  //   ofstream myfile;
-  //   myfile.open("point.txt", std::ofstream::trunc);
-  //   for (auto q: P) {
-  //     myfile << q[0] << " " << q[1] << " " << q[2] << endl;
-  //   }
-  //   myfile.close();
+  // for (size_t l = s; l < e; ++ l) {
+  //   sequence<gridVertex> Q = tree.level(l);
+  //   cout << "---" << endl;
+  //   cout << "level-" << l << "-size = " << Q.size() << endl;
+  //   cout << "level-" << l << "-box-size = " << tree.boxSize(l) << endl;
+  //   cout << "extract-level-time = " << t.get_next() << endl;
   // }
+  // cout << endl;
 
-  sequence<gridVertex> pts;
-  sequence<gridVertex> hullPts;
+  sequence<gridVertex> Q = tree.level(s);
 
   auto out = sequence<facetT>();
 
   for (size_t l = s; l < e; ++ l) {
-    cout << ">>> processing level " << l << endl;
-
-    cout << "num-pts = " << Q.size() << endl;
+    cout << "--- level " << l << endl;
     cout << "level-size = " << tree.levelSize(l) << endl;
     cout << "box-size = " << tree.boxSize(l) << endl;
-    cout << "max-span = " << tree.span() << endl;
-    cout << "approx-factor = " << sqrt(3)*tree.boxSize(l)/tree.span() << endl;
+    cout << "num-pts = " << Q.size() << endl;
+
+    // {
+    //   ofstream myfile;
+    //   myfile.open("point.txt", std::ofstream::trunc);
+    //   for (auto q: Q) {
+    // 	myfile << q[0] << " " << q[1] << " " << q[2] << endl;
+    // 	//myfile << q[0] << " " << q[1] << " " << q[2] << " " << q.attribute.i << endl;
+    //   }
+    //   myfile.close();
+    // }
 
     // Create a coarse simplex
     auto origin = gridOrigin();
     origin.setMin(tree.getMin());
     origin.setBoxSize(tree.boxSize(l));
     auto linkedHull = new _hull<linkedFacet3d<gridVertex>, gridVertex, gridOrigin>(make_slice(Q), origin, false);
+    origin = linkedHull->getOrigin();
 
     incrementHull3dSerial<linkedFacet3d<gridVertex>, gridVertex, gridOrigin>(linkedHull);
 
     cout << "hull-time = " << t.get_next() << endl;
 
-    out = sequence<facetT>(); // do we need this?
-    linkedHull->getHull<pointT>(out);
-    hullPts = linkedHull->getHullPts<gridVertex>(); //todo remove
+    auto pts = linkedHull->getHullPts();
 
-    pts = linkedHull->getHullVertices(); //todo remove
-    cout << "hull1-size = " << pts.size() << endl;
+    // linkedHull->writeHull("facet.txt");
+
+    // for (auto x: Q) {
+    //   size_t id = x.attribute.i;
+    //   size_t nextLevelId = tree.pointers[l]->at(x.attribute.i);
+    //   //cout << nextLevelId << " ";
+    //   cout << id << " " << nextLevelId << ": ";
+    //   auto children = tree.children(l, x.attribute.i);
+    //   for (auto y: children) {
+    //   	cout << y.attribute.i << " ";
+    //   }
+    //   cout << endl;
+    // }
+    // cout << endl;
+
+    // { // points in the next level
+    //   ofstream myfile;
+    //   myfile.open("blue.txt", std::ofstream::trunc);
+    //   // origin.writeCorners(Q[0], myfile);
+    //   // origin.writeCorners(Q[2], myfile);
+    //   for (auto q: Q) {
+    // 	origin.writeCorners(q, myfile);
+    //   }
+    //   myfile.close();
+    // }
 
     auto keep = sequence<size_t>(tree.levelSize(l)+1, 0);
     parallel_for(0, pts.size(),
 		 [&](size_t i) {
 		   keep[pts[i].attribute.i] = 1;
 		 });
-    Q = tree.refine(l, keep); // includes the hull points todo memory?
+    Q = tree.nextLevel(l, keep);
     cout << "refined-pts = " << Q.size() << endl;
 
-    cout << "hull size = " << out.size() << endl;
-    cout << endl;
+    // auto P2 = tree.level(l+1);
+    // { // points in the next level but not considered next round
+    //   ofstream myfile;
+    //   myfile.open("red.txt", std::ofstream::trunc);
+    //   for (auto p: P2) {
+    //     bool ok = true;
+    //     for (auto q: Q) {
+    // 	  if (p == q) {
+    // 	    ok = false;
+    // 	    break;
+    // 	  }
+    //     }
+    //     if (ok) myfile << p << endl;
+    //   }
+    //   myfile.close();
+    // }
+    // break;
+
+    if (tree.levelSize(l) == P.size() || l == e-1) {
+      linkedHull->getHull<pointT>(out);
+      delete linkedHull;
+      break;
+    }
     delete linkedHull;
   }
 
-  // {
-  //   ofstream myfile;
-  //   myfile.open("hull.txt", std::ofstream::trunc);
-  //   for (auto q: hullPts) {
-  //     myfile << q[0] << " " << q[1] << " " << q[2] << endl;
-  //   }
-  //   myfile.close();
-  // }
-
-  // {
-  //   ofstream myfile;
-  //   myfile.open("other.txt", std::ofstream::trunc);
-  //   for (auto q: Q) {
-  //     myfile << q[0] << " " << q[1] << " " << q[2] << endl;
-  //   }
-  //   myfile.close();
-  // }
+  cout << "hull-size = " << out.size() << endl;
   return out;
 }
 

@@ -158,7 +158,6 @@ void incrementHull3dSerial(_hull<linkedFacet3d, vertex3d, origin3d> *context) {
 
     delete frontierEdges;
     delete facetsBeneath;
-
   }
 
 #ifndef SILENT

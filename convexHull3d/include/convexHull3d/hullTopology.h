@@ -22,11 +22,8 @@
 
 #pragma once
 
-#ifdef WRITE
 #include <iostream>
 #include <fstream>
-#endif
-
 #include <atomic>
 #include <vector>
 #include <stack>
@@ -425,6 +422,10 @@ public:
     return f0;
   }
 
+  originT getOrigin() {
+    return origin;
+  }
+
   _hull(slice<vertexT*, vertexT*> P, originT _origin, bool serial): origin(_origin) {
     if (serial) H = constructorSerial(P);
     else H = constructorParallel(P);
@@ -792,14 +793,14 @@ public:
   }
 
   template<class pt>
-  sequence<pt> getHullPts() {
+  sequence<pt> getHullVertices() {
     sequence<pt> out;
     auto fVisit = [&](_edge e) { return true;};
     auto fDo = [&](_edge e) {
-		 out.emplace_back(pt((e.ff->a+origin.get()).coords()));
-		 out.emplace_back(pt((e.ff->b+origin.get()).coords()));
-		 out.emplace_back(pt((e.ff->c+origin.get()).coords()));
-	       };
+  		 out.emplace_back(pt((e.ff->a+origin.get()).coords()));
+  		 out.emplace_back(pt((e.ff->b+origin.get()).coords()));
+  		 out.emplace_back(pt((e.ff->c+origin.get()).coords()));
+  	       };
     auto fStop = [&]() { return false;};
 
     dfsFacet(H, fVisit, fDo, fStop);
@@ -807,17 +808,13 @@ public:
     return parlay::unique(out);
   }
 
-  // Get all kinds of vertices
-  sequence<vertexT> getHullVertices() {
+  sequence<vertexT> getHullPts() {
     sequence<vertexT> out;
     auto fVisit = [&](_edge e) { return true;};
     auto fDo = [&](_edge e) {
 		 auto f = e.ff;
-		 // out.push_back(f->a+origin.get());
-		 // out.push_back(f->b+origin.get());
-		 // out.push_back(f->c+origin.get());
-		 for (auto itr = f->keepList->begin(); itr != f->keepList->end(); itr++) {
-		   out.push_back(*itr + origin.get());
+		 for (size_t i = 0; i < f->numPts(); ++i) {
+		   out.push_back(f->pts(i) + origin.get());
 		 }
 	       };
     auto fStop = [&]() { return false;};
@@ -827,20 +824,19 @@ public:
     return parlay::unique(out);
   }
 
-#ifdef WRITE
-  void writeHull() {
+  void writeHull(char const *fileName) {
     using edgeT = _edge;
+    auto offset = origin.get();
     ofstream myfile;
-    myfile.open("hull.txt", std::ofstream::trunc);
+    myfile.open(fileName, std::ofstream::trunc);
     auto fVisit = [&](edgeT e) { return true;};
     auto fDo = [&](edgeT e) {
-		 myfile << e.ff->a << endl;
-		 myfile << e.ff->b << endl;
-		 myfile << e.ff->c << endl;
+		 myfile << e.ff->a + offset << endl;
+		 myfile << e.ff->b + offset << endl;
+		 myfile << e.ff->c + offset << endl;
 	       };
     auto fStop = [&]() { return false;};
     dfsFacet(H, fVisit, fDo, fStop);
     myfile.close();
   }
-#endif
 };

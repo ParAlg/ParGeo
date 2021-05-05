@@ -132,10 +132,28 @@ public:
     }
   }
 
+  sequence<gridVertex> children(size_t l, size_t i) {
+    if (l >= 0 && l < L) {
+      //sequence<gridVertex> out(levelSize(l));
+      size_t start = pointers[l]->at(i);
+      size_t numChildren = pointers[l]->at(i+1) - start;
+      sequence<gridVertex> out(numChildren);
+      for (int i = 0; i < numChildren; ++i) {
+	out[i] = at(l + 1, start + i);
+	out[i].attribute.assignIdx(start + i); // Idx in the level
+      }
+      return out;
+    } else if (l == L) {
+      throw std::runtime_error("Invalid level L for children access");
+    } else {
+      throw std::runtime_error("Invalid level >L for children access");
+    }
+  }
+
   sequence<gridVertex> level(size_t l) {
     if (l >= 0 && l <= L) {
-      sequence<gridVertex> out(pointers[l]->size()-1);
-      parallel_for(0, pointers[l]->size()-1,
+      sequence<gridVertex> out(levelSize(l));
+      parallel_for(0, levelSize(l),
 		   [&](size_t i){
 				out[i] = at(l,i);
 				out[i].attribute.assignIdx(i); // Idx in the level
@@ -146,7 +164,7 @@ public:
     }
   }
 
-  sequence<gridVertex> refine(size_t l, sequence<size_t>& keep) {
+  sequence<gridVertex> nextLevel(size_t l, sequence<size_t>& keep) {
     if (l >= 0 && l <= L && levelSize(l)+1 == keep.size()) {
       size_t ls = keep.size()-1;
       parallel_for(0, ls, [&](size_t i){
@@ -197,11 +215,12 @@ public:
 				write_max(&extrema[4], _P[i][2], std::less<floatT>());
 				write_min(&extrema[5], _P[i][2], std::less<floatT>());
 			      });
-    maxSpan = max(extrema[4]-extrema[5],
+    maxSpan = 1.01 * max(extrema[4]-extrema[5],
 		  max((extrema[2]-extrema[3]),(extrema[0]-extrema[1])));
     size_t _maxRange = maxRange;
-    bSize = 1.01 * maxSpan / maxRange;
+    bSize = maxSpan / maxRange;
 
+    cout << "max-span = " << maxSpan << endl;
     // untranslated
     pMin[0] = extrema[1];
     pMin[1] = extrema[3];
@@ -436,33 +455,35 @@ public:
     return pargeo::signedVolumeX6(f->a, p, f->area) > numericKnob;
   }
 
-  inline void writeCorners(vertexT p, ofstream& os) {
-    vertexT vt0;
-    vt0[0] = floor( (p[0]) / bSize ) * bSize;
-    vt0[1] = floor( (p[1]) / bSize ) * bSize;
-    vt0[2] = floor( (p[2]) / bSize ) * bSize;
+  vertexT getCorner(vertexT p, vertexT myMin) {
+    // todo compute from point grid id
+    vertexT vt0 = p - pMin;
+    vt0[0] = floor( vt0[0] / bSize ) * bSize;
+    vt0[1] = floor( vt0[1] / bSize ) * bSize;
+    vt0[2] = floor( vt0[2] / bSize ) * bSize;
+    return vt0 + myMin;
+  }
 
+  // Input p needs to be untranslated
+  inline void writeCorners(vertexT p, ofstream& os) {
+    vertexT vt0 = getCorner(p, pMin + o);
     for (size_t i=0; i<8; ++i) {
-      vertexT vt = vt0;
-      // plot 10 points in between
+      auto vt = vt0;
       vt[0] += (i & 1) * bSize;
       vt[1] += ((i>>1) & 1) * bSize;
       vt[2] += ((i>>2) & 1) * bSize;
-      os << vt[0] << " " << vt[1] << " " << vt[2] << endl;
+      os << vt[0] << " " << vt[1] << " " << vt[2] << " " << i << endl;
     }
   }
 
   inline bool anyCornerVisible(facetT* f, vertexT p) {
-    vertexT vt0;
-    vt0[0] = floor( (p[0]) / bSize ) * bSize;
-    vt0[1] = floor( (p[1]) / bSize ) * bSize;
-    vt0[2] = floor( (p[2]) / bSize ) * bSize;
-
+    vertexT vt0 = getCorner(p, pMin);
     for (size_t i=0; i<8; ++i) {
       vertexT vt = vt0;
       vt[0] += (i & 1) * bSize;
       vt[1] += ((i>>1) & 1) * bSize;
       vt[2] += ((i>>2) & 1) * bSize;
+
       if (visible(f, vt))
 	return true;
     }

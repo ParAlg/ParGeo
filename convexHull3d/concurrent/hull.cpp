@@ -45,7 +45,7 @@ parlay::sequence<pointVertex> concurrentHull(parlay::sequence<pointVertex> &Q, s
 			     auto origin = pointOrigin();
 			     auto linkedHull = new _hull<linkedFacet3d<pt>, pt, pointOrigin>(Q.cut(s, e), origin, true);
 			     incrementHull3dSerial<linkedFacet3d<pt>, pt, pointOrigin>(linkedHull);
-			     subHulls[i] = linkedHull->getHullPts<pt>();
+			     subHulls[i] = linkedHull->getHullVertices<pt>();
 			   }, 1);
 
   sequence<pt> uniquePts = parlay::flatten(subHulls);
