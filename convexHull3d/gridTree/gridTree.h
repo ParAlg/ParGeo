@@ -466,28 +466,36 @@ public:
 
   // Input p needs to be untranslated
   inline void writeCorners(vertexT p, ofstream& os) {
-    vertexT vt0 = getCorner(p, pMin + o);
-    for (size_t i=0; i<8; ++i) {
-      auto vt = vt0;
-      vt[0] += (i & 1) * bSize;
-      vt[1] += ((i>>1) & 1) * bSize;
-      vt[2] += ((i>>2) & 1) * bSize;
-      os << vt[0] << " " << vt[1] << " " << vt[2] << " " << i << endl;
+    if (bSize < 0) {
+      os << p[0] << " " << p[1] << " " << p[2] << " " << 0 << endl;
+    } else {
+      vertexT vt0 = getCorner(p, pMin + o);
+      for (size_t i=0; i<8; ++i) {
+	auto vt = vt0;
+	vt[0] += (i & 1) * bSize;
+	vt[1] += ((i>>1) & 1) * bSize;
+	vt[2] += ((i>>2) & 1) * bSize;
+	os << vt[0] << " " << vt[1] << " " << vt[2] << " " << i << endl;
+      }
     }
   }
 
   inline bool anyCornerVisible(facetT* f, vertexT p) {
-    vertexT vt0 = getCorner(p, pMin);
-    for (size_t i=0; i<8; ++i) {
-      vertexT vt = vt0;
-      vt[0] += (i & 1) * bSize;
-      vt[1] += ((i>>1) & 1) * bSize;
-      vt[2] += ((i>>2) & 1) * bSize;
+    if (bSize < 0) {
+      return visible(f, p);
+    } else {
+      vertexT vt0 = getCorner(p, pMin);
+      for (size_t i=0; i<8; ++i) {
+	vertexT vt = vt0;
+	vt[0] += (i & 1) * bSize;
+	vt[1] += ((i>>1) & 1) * bSize;
+	vt[2] += ((i>>2) & 1) * bSize;
 
-      if (visible(f, vt))
-	return true;
+	if (visible(f, vt))
+	  return true;
+      }
+      return false;
     }
-    return false;
   }
 
   // This function returns true of any of the box corner of p is visible

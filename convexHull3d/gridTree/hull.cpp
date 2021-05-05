@@ -12,7 +12,7 @@
 #include <iostream>
 #include <fstream>
 
-#define WRITE
+//#define WRITE
 
 using namespace std;
 
@@ -50,6 +50,8 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
   auto out = sequence<facetT>();
 
   for (size_t l = s; l < e; ++ l) {
+    bool lastRound = tree.levelSize(l) == P.size() || l == e-1;
+
     cout << "--- level " << l << endl;
     cout << "level-size = " << tree.levelSize(l) << endl;
     cout << "box-size = " << tree.boxSize(l) << endl;
@@ -70,7 +72,11 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
     // Create a coarse simplex
     auto origin = gridOrigin();
     origin.setMin(tree.getMin());
-    origin.setBoxSize(tree.boxSize(l));
+    if (lastRound) {
+      origin.setBoxSize(-1);
+    } else {
+      origin.setBoxSize(tree.boxSize(l));
+    }
     auto linkedHull = new _hull<linkedFacet3d<gridVertex>, gridVertex, gridOrigin>(make_slice(Q), origin, false);
     origin = linkedHull->getOrigin();
 
@@ -135,10 +141,9 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
       }
       myfile.close();
     }
-    break;
 #endif
 
-    if (tree.levelSize(l) == P.size() || l == e-1) {
+    if (lastRound) {
       linkedHull->getHull<pointT>(out);
       delete linkedHull;
       break;
