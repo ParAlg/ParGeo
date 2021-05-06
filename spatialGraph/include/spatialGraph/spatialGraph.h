@@ -21,4 +21,7 @@ parlay::sequence<pargeo::edge> gabrielGraph(parlay::sequence<pargeo::point<dim>>
 template<int dim>
 parlay::sequence<pargeo::edge> betaSkeleton(parlay::sequence<pargeo::point<dim>> &S, double);
 
+template<int dim>
+parlay::sequence<pargeo::edge> euclideanSpanner(parlay::sequence<pargeo::point<dim>> &S, double);
+
 }
