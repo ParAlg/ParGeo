@@ -6,13 +6,13 @@
 
 namespace pargeo {
 
-  template<int dim, class objT>
+  template<int _dim, class objT>
   class kdNode {
 
     typedef int intT;
     typedef double floatT;
-    typedef pargeo::point<dim> pointT;
-    typedef kdNode<dim, objT> nodeT;
+    typedef pargeo::point<_dim> pointT;
+    typedef kdNode<_dim, objT> nodeT;
 
     // Data fields
 
@@ -96,7 +96,7 @@ namespace pargeo {
     }
 
     inline bool itemInBox(pointT pMin1, pointT pMax1, objT* item) {
-      for(int i=0; i<dim; ++i) {
+      for(int i=0; i<_dim; ++i) {
 	if (pMax1[i]<item->at(i) || pMin1[i]>item->at(i)) return false;
       }
       return true;
@@ -104,7 +104,7 @@ namespace pargeo {
 
     intT findWidest() {
       floatT xM = -1;
-      for (int kk=0; kk<dim; ++kk) {
+      for (int kk=0; kk<_dim; ++kk) {
 	if (pMax[kk]-pMin[kk]>xM) {
 	  xM = pMax[kk]-pMin[kk];
 	  k = kk;}}
@@ -176,6 +176,7 @@ namespace pargeo {
     }
 
   public:
+    static constexpr int dim  = _dim;
 
     inline nodeT* L() {return left;}
 
@@ -199,16 +200,30 @@ namespace pargeo {
 
     inline pointT getMin() {return pMin;}
 
+    inline floatT getMax(int i) {return pMax[i];}
+
+    inline floatT getMin(int i) {return pMin[i];}
+
     static const int boxInclude = 0;
 
     static const int boxOverlap = 1;
 
     static const int boxExclude = 2;
 
+    inline floatT lMax() {
+      floatT myMax = 0;
+      for (int d=0; d<_dim; ++d) {
+	floatT thisMax = pMax[d] - pMin[d];
+	if (thisMax > myMax) {
+	  myMax = thisMax;}
+      }
+      return myMax;
+    }
+
     inline int boxCompare(pointT pMin1, pointT pMax1, pointT pMin2, pointT pMax2) {
       bool exclude = false;
       bool include = true; //1 include 2
-      for(int i=0; i<dim; ++i) {
+      for(int i=0; i<_dim; ++i) {
 	if (pMax1[i]<pMin2[i] || pMin1[i]>pMax2[i]) exclude = true;
 	if (pMax1[i]<pMax2[i] || pMin1[i]>pMin2[i]) include = false;
       }
@@ -217,16 +232,16 @@ namespace pargeo {
       else return boxOverlap;
     }
 
-  kdNode(parlay::slice<objT**, objT**> itemss, intT nn, nodeT *space,
-	 parlay::slice<bool*, bool*> flags, intT leafSize=16):
-    items(itemss) {//, n(nn) {
+    kdNode(parlay::slice<objT**, objT**> itemss, intT nn, nodeT *space,
+	   parlay::slice<bool*, bool*> flags, intT leafSize=16):
+      items(itemss) {//, n(nn) {
       if (size()>2000) constructParallel(space, flags, leafSize);
       else constructSerial(space, leafSize);
     }
 
-  kdNode(parlay::slice<objT**, objT**> itemss, intT nn, nodeT *space,
-	 intT leafSize=16):
-    items(itemss) {//, n(nn) {
+    kdNode(parlay::slice<objT**, objT**> itemss, intT nn, nodeT *space,
+	   intT leafSize=16):
+      items(itemss) {//, n(nn) {
       constructSerial(space, leafSize);
     }
 
