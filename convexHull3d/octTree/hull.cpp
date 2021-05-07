@@ -7,16 +7,14 @@
 #include "convexHull3d/incremental.h"
 #include "convexHull3d/hullTopology.h"
 #include "convexHull3d/hull.h"
-#include "gridTree.h"
-
+#include "gridVertex.h"
+#include "octTree.h"
 #include <iostream>
 #include <fstream>
 
-//#define WRITE
-
 using namespace std;
 
-parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &P) {
+parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &P, size_t s = 4, size_t skip = 4, bool write = false) {
   using namespace std;
   using namespace parlay;
   using floatT = pargeo::fpoint<3>::floatT;
@@ -28,12 +26,10 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
   pargeo::timer t;
   t.start();
 
-  auto tree = gridTree3d<pointT>(make_slice(P));
-  cout << "build-grid-time = " << t.get_next() << endl;
+  auto tree = octTree<gridVertex>(make_slice(P));
+  cout << ">>> build-grid-time = " << t.get_next() << endl;
 
   size_t L = tree.numLevels();
-  size_t s = 4;
-  size_t e = L;
   cout << "L = " << L << endl;
 
   // for (size_t l = s; l < e; ++ l) {
@@ -48,28 +44,35 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
   auto out = sequence<facetT>();
   sequence<gridVertex> Q = tree.level(s);
 
+  if (write) {
+    ofstream myfile;
+    myfile.open("point.txt", std::ofstream::trunc);
+    for (auto q: P) {
+      myfile << q[0] << " " << q[1] << " " << q[2] << endl;
+      //myfile << q[0] << " " << q[1] << " " << q[2] << " " << q.attribute.i << endl;
+    }
+    myfile.close();
+  }
+
   size_t l = s;
-  size_t skip = 11;
   while (1) {
-    if (l > e-1) l = e-1;
-    cout << "--- level " << l << endl;
-    bool lastRound = tree.levelSize(l) == P.size() || l >= e-1;
+    timer tr; tr.start();
 
-    cout << "level-size = " << tree.levelSize(l) << endl;
-    cout << "box-size = " << tree.boxSize(l) << endl;
-    cout << "num-pts = " << Q.size() << endl;
+    if (l > L-1) l = L-1;
+    cout << "--------------- level " << l << endl;
+    bool lastRound = tree.levelSize(l) == P.size() || l >= L-1;
 
-#ifdef WRITE
-    {
+    cout << Q.size() << " / " << tree.levelSize(l) << endl;
+
+    if (write) {
       ofstream myfile;
-      myfile.open("point.txt", std::ofstream::trunc);
+      myfile.open("blue.txt", std::ofstream::trunc);
       for (auto q: Q) {
 	myfile << q[0] << " " << q[1] << " " << q[2] << endl;
 	//myfile << q[0] << " " << q[1] << " " << q[2] << " " << q.attribute.i << endl;
       }
       myfile.close();
     }
-#endif
 
     // Create a coarse simplex
     auto origin = gridOrigin();
@@ -84,7 +87,7 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
 
     incrementHull3dSerial<linkedFacet3d<gridVertex>, gridVertex, gridOrigin>(linkedHull);
 
-    cout << "hull-time = " << t.get_next() << endl;
+    cout << " hull-time = " << tr.get_next() << endl;
 
     auto pts = linkedHull->getHullPts();
 
@@ -95,15 +98,14 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
 		     keep[pts[i].attribute.i] = 1;
 		   });
       //Q = tree.nextLevel(l, keep);
-      Q = tree.getLevel(l, keep, min(l + skip, e-1));
-      cout << "refined-pts = " << Q.size() << endl;
+      Q = tree.getLevel(l, keep, min(l + skip, L-1));
+      //cout << "refined-pts = " << Q.size() << endl;
     }
 
-#ifdef WRITE
-    linkedHull->writeHull("facet.txt");
+    if (write) {
+      linkedHull->writeHull("facet.txt");
 
-    auto P2 = tree.level(l+1);
-    { // points in the next level but not considered next round
+      auto P2 = tree.level(l+1);
       ofstream myfile;
       myfile.open("red.txt", std::ofstream::trunc);
       for (auto p: P2) {
@@ -118,22 +120,22 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
       }
       myfile.close();
     }
-#endif
 
     if (lastRound) {
       linkedHull->getHull<pointT>(out);
       delete linkedHull;
-      cout << "break!" << endl;
       break;
     }
 
     delete linkedHull;
+    cout << " filter-time = " << tr.stop() << endl;
 
     l += skip;
   }
+  cout << ">>> hull-compute-time = " << t.get_next() << endl;
 
   cout << "hull-size = " << out.size() << endl;
   return out;
 }
 
-parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &);
+parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &, size_t, size_t);
