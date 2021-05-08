@@ -14,7 +14,7 @@
 
 using namespace std;
 
-parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &P, size_t s = 4, size_t skip = 4, bool write = false) {
+parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &P, size_t s = 0, size_t skip = 1, bool write = false) {
   using namespace std;
   using namespace parlay;
   using floatT = pargeo::fpoint<3>::floatT;
@@ -27,19 +27,29 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
   t.start();
 
   auto tree = octTree<gridVertex>(make_slice(P));
+
+  // auto levels = sequence<size_t>();
+  // levels.push_back(8);
+  // levels.push_back(4);
+  // levels.push_back(0);
+  // auto tree = octTree<gridVertex>(make_slice(P), levels);
+
   cout << ">>> build-grid-time = " << t.get_next() << endl;
 
   size_t L = tree.numLevels();
-  cout << "L = " << L << endl;
 
-  // for (size_t l = s; l < e; ++ l) {
+  // cout << "L = " << L << endl;
+  // for (size_t l = s; l <= L; ++ l) {
   //   sequence<gridVertex> Q = tree.level(l);
-  //   cout << "---" << endl;
-  //   cout << "level-" << l << "-size = " << Q.size() << endl;
-  //   cout << "level-" << l << "-box-size = " << tree.boxSize(l) << endl;
+  //   cout << "--- level " << l << endl;
+  //   cout << "level-idx = " << tree.levelIndex(l) << endl;
+  //   cout << "level-size = " << tree.levelSize(l) << endl;
+  //   cout << "box-size = " << tree.boxSize(l) << endl;
   //   cout << "extract-level-time = " << t.get_next() << endl;
   // }
-  // cout << endl;
+  // return parlay::sequence<facet3d<pargeo::fpoint<3>>>();
+
+  s = 4;
 
   auto out = sequence<facetT>();
   sequence<gridVertex> Q = tree.level(s);
@@ -54,11 +64,9 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
     myfile.close();
   }
 
-  size_t l = s;
-  while (1) {
+  for (size_t l = s; l < tree.numLevels(); ++l) {
     timer tr; tr.start();
 
-    if (l > L-1) l = L-1;
     cout << "--------------- level " << l << endl;
     bool lastRound = tree.levelSize(l) == P.size() || l >= L-1;
 
@@ -97,8 +105,8 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
 		   [&](size_t i) {
 		     keep[pts[i].attribute.i] = 1;
 		   });
-      //Q = tree.nextLevel(l, keep);
-      Q = tree.getLevel(l, keep, min(l + skip, L-1));
+      Q = tree.nextLevel(l, keep);
+      //Q = tree.getLevel(l, keep, min(l + skip, L-1));
       //cout << "refined-pts = " << Q.size() << endl;
     }
 
@@ -130,7 +138,8 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
     delete linkedHull;
     cout << " filter-time = " << tr.stop() << endl;
 
-    l += skip;
+    //l += skip;
+    //l += 1;
   }
   cout << ">>> hull-compute-time = " << t.get_next() << endl;
 

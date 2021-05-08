@@ -28,8 +28,8 @@ int main(int argc, char* argv[]) {
   char* iFile = P.getArgument(0);
   char* oFile = P.getOptionValue("-o");
   int rounds = P.getOptionIntValue("-r",1);
-  int s = P.getOptionIntValue("-s", 4);
-  int skip = P.getOptionIntValue("-skip", 4);
+  int s = P.getOptionIntValue("-s", 0);
+  int skip = P.getOptionIntValue("-skip", 1);
 
   int dim = readHeader(iFile);
   if (dim != 3) {
