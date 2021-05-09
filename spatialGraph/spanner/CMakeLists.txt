@@ -1,6 +1,6 @@
-project(euclideanSpanner)
+project(spanner)
 
-add_executable(${PROJECT_NAME} euclideanSpanner.cpp graphTime.cpp)
+add_executable(${PROJECT_NAME} spanner.cpp graphTime.cpp)
 
 target_link_libraries(${PROJECT_NAME} pargeolib)
 

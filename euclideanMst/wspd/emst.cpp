@@ -4,7 +4,8 @@
 #include "pargeo/point.h"
 #include "pargeo/wspd.h"
 #include "pargeo/kdTree.h"
-#include "bccp.h"
+#include "pargeo/bccp.h"
+#include "pargeo/kruskal.h"
 #include "euclideanMst/euclideanMst.h"
 
 using namespace parlay;
@@ -25,9 +26,11 @@ parlay::sequence<pargeo::edge> pargeo::euclideanMst(parlay::sequence<pargeo::poi
 
   cout << "decomposition-time = " << t.get_next() << endl;
 
+  cout << "pairs = " << pairs.size() << endl;
+
   struct wEdge {
     size_t u,v;
-    floatT w;
+    floatT weight;
   };
 
   auto base = S.data();
@@ -36,13 +39,24 @@ parlay::sequence<pargeo::edge> pargeo::euclideanMst(parlay::sequence<pargeo::poi
 				  wEdge e;
 				  e.u = get<0>(bcp) - base;
 				  e.v = get<1>(bcp) - base;
-				  e.w = get<2>(bcp);
+				  e.weight = get<2>(bcp);
 				  return e;
 				});
 
   cout << "bccp-time = " << t.get_next() << endl;
 
-  return sequence<pargeo::edge>();
+  auto edgeIds = kruskal(edges, S.size());
+
+  cout << "kruskal-time = " << t.get_next() << endl;
+
+  auto mstEdges = tabulate(edgeIds.size(),
+			   [&](size_t i){
+			     auto e = edges[edgeIds[i]];
+			     return pargeo::edge(e.u, e.v);
+			   });
+
+  cout << "edges = " << mstEdges.size() << endl;
+  return mstEdges;
 }
 
 template sequence<edge> pargeo::euclideanMst<2>(sequence<point<2>> &);

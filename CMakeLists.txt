@@ -40,6 +40,8 @@ add_subdirectory(rangeSearch)
 
 add_subdirectory(closestPair)
 
+add_subdirectory(euclideanMst)
+
 add_subdirectory(spatialGraph)
 
 add_subdirectory(delaunayTriangulation)
