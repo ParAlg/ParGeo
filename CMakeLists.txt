@@ -36,6 +36,8 @@ add_subdirectory(knnSearch)
 
 add_subdirectory(spatialSort)
 
+add_subdirectory(rangeSearch)
+
 add_subdirectory(closestPair)
 
 add_subdirectory(spatialGraph)
