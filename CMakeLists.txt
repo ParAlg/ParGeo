@@ -32,11 +32,15 @@ message(STATUS "CMAKE_INSTALL_PREFIX:           ${CMAKE_INSTALL_PREFIX}" )
 # -------------------------------------------------
 # Add benchmark directories
 
+add_subdirectory(wspd)
+
 add_subdirectory(knnSearch)
 
 add_subdirectory(rangeSearch)
 
 add_subdirectory(closestPair)
+
+add_subdirectory(euclideanMst)
 
 add_subdirectory(spatialGraph)
 
