@@ -78,6 +78,10 @@ namespace pargeo {
       return aVal < bVal;
     }
 
+    // friend bool operator>(_point a, _point b) {
+    //   return !(a<b) && !(a==b);
+    // }
+
     friend bool operator==(_point a, _point b) {
       for (int ii=0; ii<dim; ++ii) {
 	if (a[ii] != b[ii]) return false;}

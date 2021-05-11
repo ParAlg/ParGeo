@@ -102,9 +102,22 @@ struct linkedFacet3d {
       keepList->push_back(v);
   }
 
+  void push_keep(vertexT v) {
+    keepList->push_back(v);
+  }
+
+  void push_visible(vertexT v) {
+    if (a != v && b != v && c != v)
+      seeList->push_back(v);
+  }
+
   // Accesses the visible points (boxes)
   size_t numVisiblePts() { return seeList->size(); }
   inline vertexT& visiblePts(size_t i) { return seeList->at(i); }
+
+  // Accesses the kept points (boxes)
+  size_t numKeepPts() { return keepList->size(); }
+  inline vertexT& keepPts(size_t i) { return keepList->at(i); }
 
   // Access both the visible and intersecting (boxes)
   inline size_t numPts() { return seeList->size() + keepList->size(); }

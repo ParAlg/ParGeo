@@ -16,8 +16,9 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
   using facetT = facet3d<pargeo::fpoint<3>>;
 
   size_t n = P.size();
+#ifndef SILENT
   cout << "#-points = " << n << endl;
-
+#endif
   sequence<pointVertex> Q(P.size());
   parallel_for(0, P.size(), [&](size_t i) {
 			      Q[i] = pointVertex(P[i].coords());
@@ -37,8 +38,9 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
   auto out = sequence<facetT>();
   linkedHull->getHull<pointT>(out);
 
+#ifndef SILENT
   cout << out.size() << endl;
-
+#endif
   delete linkedHull;
   return out;
 }

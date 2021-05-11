@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <set>
 #include <iostream>
 #include <fstream>
 #include <atomic>
@@ -295,7 +296,43 @@ public:
     linkFacet(f2, f1, f0, f3);
     linkFacet(f3, f1, f2, f0);
 
-    for(size_t i=0; i<P.size(); i++) {
+#ifdef GRID
+
+    for(size_t i=0; i<Q.size(); i++) {
+      if (origin.visible(f0, Q[i])) {
+	Q[i].attribute.seeFacet = f0;
+	f0->push_visible(Q[i]);
+      } else if (origin.visible(f1, Q[i])) {
+	Q[i].attribute.seeFacet = f1;
+	f1->push_visible(Q[i]);
+      } else if (origin.visible(f2, Q[i])) {
+	Q[i].attribute.seeFacet = f2;
+	f2->push_visible(Q[i]);
+      } else if (origin.visible(f3, Q[i])) {
+	Q[i].attribute.seeFacet = f3;
+	f3->push_visible(Q[i]);
+      } else {
+	Q[i].attribute.seeFacet = nullptr;
+      }
+    }
+
+    for(size_t i=0; i<Q.size(); i++) {
+      if (origin.keep(f0, Q[i])) f0->push_keep(Q[i]);
+
+      if (origin.keep(f1, Q[i])) f1->push_keep(Q[i]);
+
+      if (origin.keep(f2, Q[i])) f2->push_keep(Q[i]);
+
+      if (origin.keep(f3, Q[i])) f3->push_keep(Q[i]);
+    }
+    // cout << "keep0 = " << f0->numKeepPts() << endl;
+    // cout << "keep1 = " << f1->numKeepPts() << endl;
+    // cout << "keep2 = " << f2->numKeepPts() << endl;
+    // cout << "keep3 = " << f3->numKeepPts() << endl;
+    // cout << endl;
+#else
+
+    for(size_t i=0; i<Q.size(); i++) {
       if (origin.keep(f0, Q[i])) {
 	Q[i].attribute.seeFacet = f0;
 	f0->push_back(Q[i], &origin);
@@ -312,6 +349,8 @@ public:
 	Q[i].attribute.seeFacet = nullptr;
       }
     }
+
+#endif
 
 #ifdef VERBOSE
     cout << "initial-hull:" << endl;
@@ -388,6 +427,9 @@ public:
     linkFacet(f2, f1, f0, f3);
     linkFacet(f3, f1, f2, f0);
 
+#ifndef GRID
+    throw std::runtime_error("parallel grid redistribution is in progress");
+#else
     auto flag = sequence<int>(P.size());
     parallel_for(0, P.size(), [&](size_t i) {
 				if (origin.keep(f0, Q[i])) {
@@ -409,6 +451,7 @@ public:
     f1->reassign(chunks[1], &origin);
     f2->reassign(chunks[2], &origin);
     f3->reassign(chunks[3], &origin);
+#endif
 
 #ifdef VERBOSE
     cout << "initial-hull:" << endl;
@@ -670,6 +713,51 @@ public:
       fn += facetsBeneath[j]->numPts();
     }
 
+#ifdef GRID
+    for(int i=0; i<nf; ++i) { // Old facet loop
+      for(size_t j=0; j<facetsBeneath[i]->numVisiblePts(); ++j) { // Point loop
+	facetsBeneath[i]->visiblePts(j).attribute.seeFacet = nullptr;
+	for (int k=0; k<nnf; ++k) { // New facet loop
+	  if (origin.visible(newFacets[k], facetsBeneath[i]->visiblePts(j))) {
+	    facetsBeneath[i]->visiblePts(j).attribute.seeFacet = newFacets[k];
+	    newFacets[k]->push_visible(facetsBeneath[i]->visiblePts(j));
+	    break;
+	  }}}}
+
+    set<vertexT> intersection;
+    for(int i=0; i<nf; ++i) { // Old facet loop
+      // cout << facetsBeneath[i]->numKeepPts() << endl;
+      for(size_t j=0; j<facetsBeneath[i]->numKeepPts(); ++j) { // Point loop
+	intersection.insert(facetsBeneath[i]->keepPts(j));
+      }
+    }
+    // cout << "unique: " << intersection.size() << endl;
+
+    // for(int i=0; i<nf; ++i) { // Old facet loop
+    //   cout << facetsBeneath[i]->numKeepPts() << endl;
+    for (auto p: intersection) {
+      p.attribute.seeFacet = nullptr;
+      for (int k=0; k<nnf; ++k) { // New facet loop
+	if (origin.keep(newFacets[k], p))
+	  newFacets[k]->push_keep(p);
+      }
+    }
+
+    // for(int i=0; i<nf; ++i) { // Old facet loop
+    //   cout << facetsBeneath[i]->numKeepPts() << endl;
+    //   for(size_t j=0; j<facetsBeneath[i]->numKeepPts(); ++j) { // Point loop
+    // 	facetsBeneath[i]->keepPts(j).attribute.seeFacet = nullptr;
+    // 	for (int k=0; k<nnf; ++k) { // New facet loop
+    // 	  if (origin.keep(newFacets[k], facetsBeneath[i]->keepPts(j))) {
+    // 	    newFacets[k]->push_keep(facetsBeneath[i]->keepPts(j));
+    // 	  }}}}
+
+    // for (int k=0; k<nnf; ++k) { // New facet loop
+    //   cout << "keep" << k << " = " << newFacets[k]->numKeepPts() << endl;
+    // }
+    // cout << endl;
+
+#else
     for(int i=0; i<nf; ++i) { // Old facet loop
       for(size_t j=0; j<facetsBeneath[i]->numPts(); ++j) { // Point loop
 	facetsBeneath[i]->pts(j).attribute.seeFacet = nullptr;
@@ -679,6 +767,7 @@ public:
 	    newFacets[k]->push_back(facetsBeneath[i]->pts(j), &origin);
 	    break;
 	  }}}}
+#endif
   }
 
   void redistributeParallel(slice<facetT**, facetT**> facetsBeneath,
@@ -704,6 +793,9 @@ public:
       fn += facetsBeneath[j]->numPts();
     }
 
+#ifdef GRID
+    throw std::runtime_error("parallel grid redistribution is in progress");
+#else
     auto flag = sequence<int>(fn);
     parallel_for(0, fn, [&](size_t i) {
 			  flag[i] = nnf;
@@ -721,7 +813,7 @@ public:
     for (int j=0; j<nnf; ++j) {
       newFacets[j]->reassign(chunks[j], &origin);
     }
-
+#endif
   }
 
   std::atomic<size_t>& hullSize() {
@@ -746,9 +838,8 @@ public:
     auto fDo = [&](_edge e) {
 		 if (checker && hullSizeDfs(e.ff) != hs) {
 		   cout << " ..." << endl;
-		   cout << "Error, inconsistency detected, abort" << endl;
 		   cout << "Erroneous hull size = " << hullSizeDfs(e.ff) << endl;
-		   abort();
+		   throw std::runtime_error("Error, hull inconsistency detected");
 		 }
 		 if (!checker) cout << *e.ff << ":" << e.ff->numVisiblePts() << " ";
 	       };

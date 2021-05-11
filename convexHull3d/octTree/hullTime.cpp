@@ -16,7 +16,7 @@ void timeHull(parlay::sequence<pt> &P, int s, int skip, int rounds, char const *
   timer t; t.start();
   bool savePlot = outFile != NULL;
   for(int i=0; i<rounds; ++i) {
-    hull3d(P, s, skip, savePlot);
+    hull3dGrid(P, s, skip, savePlot);
     cout << "round-time = " << t.get_next() << endl;
   }
   t.stop();

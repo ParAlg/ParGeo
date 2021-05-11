@@ -14,9 +14,9 @@ template<typename pt>
 class octTree {
   using floatT = typename pt::floatT;
 
-  sequence<pt> P;
-
   sequence<size_t>** pointers;
+
+  sequence<pt> P;
 
   size_t L;
 
@@ -199,6 +199,41 @@ public:
     }
   }
 
+  // Given level l mask, get last level points (casted)
+  template <typename ptOut>
+  sequence<ptOut> getPoints(size_t l, sequence<size_t>& keep) {
+    if (levelSize(l)+1 == keep.size() && l <= L) {
+      size_t ls = keep.size()-1;
+
+      parallel_for(0, ls-1, [&](size_t i) {
+			    if (keep[i] > 0) {
+			      keep[i] =
+				at(l,i+1).attribute.i - at(l,i).attribute.i;
+			      //keep[i] = pointers[l]->at(i+1) - pointers[l]->at(i);
+			    } else
+			      keep[i] = 0;
+			  });
+      keep[ls-1] = P.size() - at(l,ls-1).attribute.i;
+
+      size_t m = parlay::scan_inplace(keep.cut(0, ls));
+      keep[ls] = m;
+
+      sequence<ptOut> out(m);
+      parallel_for(0, ls, [&](size_t i){
+			    if (keep[i] != keep[i+1]) {
+			      size_t numPts = keep[i+1] - keep[i];
+			      size_t base = at(l,i).attribute.i;
+			      for (size_t j=0; j<numPts; ++j) {
+				out[keep[i] + j] = ptOut(P[base + j].coords());
+			      }
+			    }
+			  });
+      return out;
+    } else {
+      throw std::runtime_error("Invalid level for base point access");
+    }
+  }
+
   sequence<pt> nextLevel(size_t l, sequence<size_t>& keep) {
     if (l >= 0 && l <= L && levelSize(l)+1 == keep.size()) {
       size_t ls = keep.size()-1;
@@ -268,11 +303,13 @@ public:
 				P[i] = pt(_P[i].coords());
 				P[i].attribute = gridAtt3d();
 				P[i].attribute.id = computeId(_P[i], pMin, bSize);
-				P[i].attribute.i = i;
 			      });
 
     parlay::sort_inplace(make_slice(P), [&](pt const& a, pt const& b){
 					  return a.attribute.id < b.attribute.id;});
+    parallel_for(0, P.size(), [&](size_t i){
+				P[i].attribute.i = i;
+			      });
   }
 
   template <typename pIn>
@@ -353,7 +390,7 @@ public:
     size_t lIdx = toConstruct.size() - 1;
 
     for (int l = maxBit-1; l >= 0; -- l) {
-      cout << l << endl;
+      //cout << l << endl;
 
       if (!construct(l)) {
 	s *= 2;
@@ -374,7 +411,9 @@ public:
 					  flag[i] = 1;
 					} else flag[i] = 0;
 				      });
+
       size_t numGrids = parlay::scan_inplace(flag.cut(0, levelSize(lIdx+1)));
+      cout << "numGrids = " << numGrids << endl;
       flag[levelSize(lIdx+1)] = numGrids;
       cout << " scanning-time = " << t.get_next() << endl;
 

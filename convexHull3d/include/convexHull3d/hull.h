@@ -24,4 +24,4 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
 
 parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &P, size_t);
 
-parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &P, size_t, size_t, bool);
+parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dGrid(parlay::sequence<pargeo::fpoint<3>> &P, size_t, size_t, bool);

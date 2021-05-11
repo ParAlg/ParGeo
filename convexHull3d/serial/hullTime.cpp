@@ -13,12 +13,18 @@ using namespace pargeo::pointIO;
 
 template <class pt>
 void timeHull(parlay::sequence<pt> &P, int rounds, char const *outFile) {
+#ifndef SILENT
   timer t; t.start();
+#endif
   for(int i=0; i<rounds; ++i) {
     hull3d(P);
+#ifndef SILENT
     cout << "round-time = " << t.get_next() << endl;
+#endif
   }
+#ifndef SILENT
   t.stop();
+#endif
   //if (outFile != NULL) writeIntSeqToFile(I, outFile);
 }
 
