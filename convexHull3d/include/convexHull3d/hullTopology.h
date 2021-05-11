@@ -22,11 +22,10 @@
 
 #pragma once
 
-#include <set>
+//#include <set>
 #include <iostream>
 #include <fstream>
 #include <atomic>
-#include <vector>
 #include <stack>
 #include <tuple>
 #include "parlay/sequence.h"
@@ -724,33 +723,26 @@ public:
 	    break;
 	  }}}}
 
-    set<vertexT> intersection;
-    for(int i=0; i<nf; ++i) { // Old facet loop
-      // cout << facetsBeneath[i]->numKeepPts() << endl;
-      for(size_t j=0; j<facetsBeneath[i]->numKeepPts(); ++j) { // Point loop
-	intersection.insert(facetsBeneath[i]->keepPts(j));
-      }
-    }
-    // cout << "unique: " << intersection.size() << endl;
-
+    // set<vertexT> intersection;
     // for(int i=0; i<nf; ++i) { // Old facet loop
-    //   cout << facetsBeneath[i]->numKeepPts() << endl;
-    for (auto p: intersection) {
-      p.attribute.seeFacet = nullptr;
-      for (int k=0; k<nnf; ++k) { // New facet loop
-	if (origin.keep(newFacets[k], p))
-	  newFacets[k]->push_keep(p);
-      }
-    }
-
-    // for(int i=0; i<nf; ++i) { // Old facet loop
-    //   cout << facetsBeneath[i]->numKeepPts() << endl;
     //   for(size_t j=0; j<facetsBeneath[i]->numKeepPts(); ++j) { // Point loop
-    // 	facetsBeneath[i]->keepPts(j).attribute.seeFacet = nullptr;
-    // 	for (int k=0; k<nnf; ++k) { // New facet loop
-    // 	  if (origin.keep(newFacets[k], facetsBeneath[i]->keepPts(j))) {
-    // 	    newFacets[k]->push_keep(facetsBeneath[i]->keepPts(j));
-    // 	  }}}}
+    // 	intersection.insert(facetsBeneath[i]->keepPts(j));
+    //   }}
+    // for (auto p: intersection) {
+    //   p.attribute.seeFacet = nullptr;
+    //   for (int k=0; k<nnf; ++k) { // New facet loop
+    // 	if (origin.keep(newFacets[k], p))
+    // 	  newFacets[k]->push_keep(p);
+    //   }}
+
+    for(int i=0; i<nf; ++i) { // Old facet loop
+      for(size_t j=0; j<facetsBeneath[i]->numKeepPts(); ++j) { // Point loop
+	facetsBeneath[i]->keepPts(j).attribute.seeFacet = nullptr;
+	for (int k=0; k<nnf; ++k) { // New facet loop
+	  if (origin.keep(newFacets[k], facetsBeneath[i]->keepPts(j))) {
+	    newFacets[k]->push_keep(facetsBeneath[i]->keepPts(j));
+	    break;
+	  }}}}
 
     // for (int k=0; k<nnf; ++k) { // New facet loop
     //   cout << "keep" << k << " = " << newFacets[k]->numKeepPts() << endl;

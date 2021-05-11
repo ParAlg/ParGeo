@@ -8,7 +8,6 @@ using namespace parlay;
 using namespace pargeo;
 
 //todo namespace
-//todo figure out the perf gap vs no grid
 
 template<typename pt>
 class octTree {
@@ -20,11 +19,7 @@ class octTree {
 
   size_t L;
 
-  floatT bSize; // the smallest box size
-
   sequence<floatT> boxSizes;
-
-  sequence<size_t> levelIdx;
 
   pt pMin;
 
@@ -67,63 +62,33 @@ public:
 
   static constexpr size_t maxBit = 16; // 2**maxBit = maxRange
 
+  // Constructor
+  // - toConstruct: the levels to construct in decreasing id
+  template <typename pIn>
+  octTree(slice<pIn*, pIn*> _P, sequence<size_t>& toConstruct) {
+    floatT bSize = zorderSort(_P);
+    constructLevels(toConstruct, bSize);
+  }
+
+  ~octTree() {
+    for (size_t l=0; l<L; ++l)
+      delete pointers[l];
+    free(pointers);
+  }
+
   size_t numLevels() { return L; }
-
-  // read the representative point at level l offset i
-  pt at(size_t l, size_t i) {
-    if (l >= 0 && l < L) {
-      return at(l+1, pointers[l]->at(i));
-    } else if (l == L) {
-      return P[i];
-    } else {
-      throw std::runtime_error("Invalid level for point access");
-    }
-  }
-
-  // read the pointer value of level k, pointed by level l offset i
-  size_t pointer(size_t l, size_t i, size_t k) {
-    if (l >= 0 && l < k) {
-      return pointer(l+1, pointers[l]->at(i), k);
-    } else if (l == k) {
-      return pointers[l]->at(i);
-    } else {
-      throw std::runtime_error("Invalid level for pointer access");
-    }
-  }
-
-  size_t levelIndex(size_t l) {
-    if (l >= 0 && l < L) {
-      return levelIdx[l];
-    } else if (l == L) {
-      return maxBit;
-    } else {
-      throw std::runtime_error("Invalid level for box size");
-    }
-  }
 
   floatT boxSize(size_t l) {
     if (l >= 0 && l < L) {
       return boxSizes[l];
-      //return bSize * pow(2, maxBit - l - 1);
     } else if (l == L) {
       return 0;
     } else {
       throw std::runtime_error("Invalid level for box size");
     }
-    // if (l >= 0 && l < L) {
-    //   return bSize * pow(2, maxBit - l - 1);
-    // } else if (l == L) {
-    //   return 0;
-    // } else {
-    //   throw std::runtime_error("Invalid level for box size");
-    // }
   }
 
-  floatT span() {
-    return maxSpan;
-  }
-
-  pt getMin() {
+  pt coordinateMin() {
     return pMin;
   }
 
@@ -137,25 +102,18 @@ public:
     }
   }
 
-  // return level l node i children
-  // sequence<pt> children(size_t l, size_t i) {
-  //   if (l >= 0 && l < L) {
-  //     size_t start = pointers[l]->at(i);
-  //     size_t numChildren = pointers[l]->at(i+1) - start;
-  //     sequence<pt> out(numChildren);
-  //     for (int i = 0; i < numChildren; ++i) {
-  // 	out[i] = at(l + 1, start + i);
-  // 	out[i].attribute.i = start + i; // Idx in the level
-  //     }
-  //     return out;
-  //   } else if (l == L) {
-  //     throw std::runtime_error("Invalid level L for children access");
-  //   } else {
-  //     throw std::runtime_error("Invalid level >L for children access");
-  //   }
-  // }
+  // Read representative point, level l offset i
+  pt at(size_t l, size_t i) {
+    if (l >= 0 && l < L) {
+      return at(l+1, pointers[l]->at(i));
+    } else if (l == L) {
+      return P[i];
+    } else {
+      throw std::runtime_error("Invalid level for point access");
+    }
+  }
 
-  sequence<pt> level(size_t l) {
+  sequence<pt> levelSample(size_t l) {
     if (l >= 0 && l <= L) {
       sequence<pt> out(levelSize(l));
       parallel_for(0, levelSize(l),
@@ -169,62 +127,29 @@ public:
     }
   }
 
-  // Given level l mask, get level k points
-  sequence<pt> getLevel(size_t l, sequence<size_t>& keep, size_t k) {
-    if (l < k && levelSize(l)+1 == keep.size() && k >= 0 && k <= L) {
-      size_t ls = keep.size()-1;
-      parallel_for(0, ls, [&](size_t i){
-			    if (keep[i] > 0)
-			      keep[i] = pointer(l, i+1, k-1) - pointer(l, i, k-1);
-			    else
-			      keep[i] = 0;
-			  });
-      size_t m = parlay::scan_inplace(keep.cut(0, ls));
-      keep[ls] = m;
-
-      sequence<pt> out(m);
-      parallel_for(0, ls, [&](size_t i){
-			    if (keep[i] != keep[i+1]) {
-			      size_t numPts = keep[i+1] - keep[i];
-			      size_t base = pointer(l, i, k-1);
-			      for (size_t j=0; j<numPts; ++j) {
-				out[keep[i] + j] = at(k, base + j);
-				out[keep[i] + j].attribute.i = base + j;
-			      }
-			    }
-			  });
-      return out;
-    } else {
-      throw std::runtime_error("Invalid level for level access");
-    }
-  }
-
-  // Given level l mask, get last level points (casted)
   template <typename ptOut>
-  sequence<ptOut> getPoints(size_t l, sequence<size_t>& keep) {
-    if (levelSize(l)+1 == keep.size() && l <= L) {
-      size_t ls = keep.size()-1;
+  sequence<ptOut> getPoints(size_t l, sequence<size_t>& mask) {
+    if (levelSize(l)+1 == mask.size() && l <= L) {
+      size_t ls = mask.size()-1;
 
       parallel_for(0, ls-1, [&](size_t i) {
-			    if (keep[i] > 0) {
-			      keep[i] =
-				at(l,i+1).attribute.i - at(l,i).attribute.i;
-			      //keep[i] = pointers[l]->at(i+1) - pointers[l]->at(i);
-			    } else
-			      keep[i] = 0;
+			    if (mask[i] > 0) {
+			      mask[i] = at(l,i+1).attribute.i - at(l,i).attribute.i;
+			    } else {
+			      mask[i] = 0;}
 			  });
-      keep[ls-1] = P.size() - at(l,ls-1).attribute.i;
+      mask[ls-1] = P.size() - at(l,ls-1).attribute.i;
 
-      size_t m = parlay::scan_inplace(keep.cut(0, ls));
-      keep[ls] = m;
+      size_t m = parlay::scan_inplace(mask.cut(0, ls));
+      mask[ls] = m;
 
       sequence<ptOut> out(m);
       parallel_for(0, ls, [&](size_t i){
-			    if (keep[i] != keep[i+1]) {
-			      size_t numPts = keep[i+1] - keep[i];
+			    if (mask[i] != mask[i+1]) {
+			      size_t numPts = mask[i+1] - mask[i];
 			      size_t base = at(l,i).attribute.i;
 			      for (size_t j=0; j<numPts; ++j) {
-				out[keep[i] + j] = ptOut(P[base + j].coords());
+				out[mask[i] + j] = ptOut(P[base + j].coords());
 			      }
 			    }
 			  });
@@ -234,26 +159,26 @@ public:
     }
   }
 
-  sequence<pt> nextLevel(size_t l, sequence<size_t>& keep) {
-    if (l >= 0 && l <= L && levelSize(l)+1 == keep.size()) {
-      size_t ls = keep.size()-1;
+  sequence<pt> nextLevelSample(size_t l, sequence<size_t>& mask) {
+    if (l >= 0 && l <= L && levelSize(l)+1 == mask.size()) {
+      size_t ls = mask.size()-1;
       parallel_for(0, ls, [&](size_t i){
-			    if (keep[i] > 0) {
-			      keep[i] = pointers[l]->at(i+1) - pointers[l]->at(i);
+			    if (mask[i] > 0) {
+			      mask[i] = pointers[l]->at(i+1) - pointers[l]->at(i);
 			    } else
-			      keep[i] = 0;
+			      mask[i] = 0;
 			  });
-      size_t m = parlay::scan_inplace(keep.cut(0, ls));
-      keep[ls] = m;
+      size_t m = parlay::scan_inplace(mask.cut(0, ls));
+      mask[ls] = m;
 
       sequence<pt> out(m);
       parallel_for(0, ls, [&](size_t i){
-			    if (keep[i] != keep[i+1]) {
-			      size_t numPts = keep[i+1] - keep[i];
+			    if (mask[i] != mask[i+1]) {
+			      size_t numPts = mask[i+1] - mask[i];
 			      for (size_t j=0; j<numPts; ++j) {
 				size_t nextLvlIdx = pointers[l]->at(i) + j;
-				out[keep[i] + j] = at(l+1, nextLvlIdx);
-				out[keep[i] + j].attribute.i = nextLvlIdx;
+				out[mask[i] + j] = at(l+1, nextLvlIdx);
+				out[mask[i] + j].attribute.i = nextLvlIdx;
 			      }
 			    }
 			  });
@@ -263,14 +188,9 @@ public:
     }
   }
 
-  ~octTree() {
-    for (size_t l=0; l<L; ++l)
-      delete pointers[l];
-    free(pointers);
-  }
-
   template <typename pIn>
-  void zorderSort(slice<pIn*, pIn*> _P) {
+  floatT zorderSort(slice<pIn*, pIn*> _P) {
+    timer t; t.start();
     std::atomic<floatT> extrema[6];
     for (int i=0; i<3; ++i) {
       extrema[i*2] = _P[0][i];
@@ -287,16 +207,12 @@ public:
     maxSpan = 1.01 * max(extrema[4]-extrema[5],
 			 max((extrema[2]-extrema[3]),(extrema[0]-extrema[1])));
     size_t _maxRange = maxRange;
-    bSize = maxSpan / maxRange;
-
-    cout << "max-span = " << maxSpan << endl;
+    floatT bSize = maxSpan / maxRange;
 
     // untranslated
     pMin[0] = extrema[1];
     pMin[1] = extrema[3];
     pMin[2] = extrema[5];
-
-    cout << "grid-size = " << bSize << endl;
 
     P = sequence<pt>(_P.size());
     parallel_for(0, P.size(), [&](size_t i){
@@ -304,71 +220,27 @@ public:
 				P[i].attribute = gridAtt3d();
 				P[i].attribute.id = computeId(_P[i], pMin, bSize);
 			      });
+    cout << "grid-init-time = " << t.get_next() << endl;
 
     parlay::sort_inplace(make_slice(P), [&](pt const& a, pt const& b){
 					  return a.attribute.id < b.attribute.id;});
     parallel_for(0, P.size(), [&](size_t i){
 				P[i].attribute.i = i;
 			      });
+    cout << "grid-sort-time = " << t.stop() << endl;
+    return bSize;
   }
 
-  template <typename pIn>
-  octTree(slice<pIn*, pIn*> _P) {
-    zorderSort(_P);
-    constructAllLevels();
-  }
-
-  size_t constructAllLevels() {
-    sequence<size_t> flag(P.size()+1);
-    // Build the coarser maxBit levels, from the finest to the coarsest (maxBit-1 to 0)
-
-    L = maxBit;
-    pointers = (sequence<size_t>**) malloc(sizeof(sequence<size_t>*)*maxBit);
-    boxSizes = sequence<floatT>(maxBit);
-    levelIdx = sequence<size_t>(maxBit);
-
-    floatT s = bSize;
-
-    for (int l = maxBit-1; l >= 0; -- l) {
-      timer t; t.start();
-
-      boxSizes[l] = s;
-      s *= 2;
-      levelIdx[l] = l;
-
-      // access indirections here
-      flag[0] = 1;
-      parallel_for(1, levelSize(l+1), [&](size_t i){
-					if (gridId(l, at(l+1, i).attribute.id) !=
-					    gridId(l, at(l+1, i-1).attribute.id)) {
-					  flag[i] = 1;
-					} else flag[i] = 0;
-				      });
-      size_t numGrids = parlay::scan_inplace(flag.cut(0, levelSize(l+1)));
-      flag[levelSize(l+1)] = numGrids;
-      cout << " scanning-time = " << t.get_next() << endl;
-
-      pointers[l] = new sequence<size_t>(numGrids+1);
-      parallel_for(0, levelSize(l+1), [&](size_t i){
-					if (flag[i] != flag[i+1]) {
-					  pointers[l]->at(flag[i]) = i;
-					}
-				      });
-      pointers[l]->at(numGrids) = levelSize(l+1);
-      cout << " pointing-time =  " << t.stop() << endl;
-      cout << "num-grids = " << numGrids << endl;
+  size_t constructLevels(sequence<size_t>& toConstruct, floatT bSize) {
+    { // check input
+      size_t l = maxBit;
+      for (auto x: toConstruct) {
+	if (x < 0 || x > maxBit-1 || x >= l)
+	  throw std::runtime_error("level # must be [0,15], in decreasing order");
+	l = x;
+      }
     }
-    return maxBit;
-  }
 
-  // toConstruct: the level numbers in the reverse order
-  template <typename pIn>
-  octTree(slice<pIn*, pIn*> _P, sequence<size_t>& toConstruct) {
-    zorderSort(_P);
-    constructLevels(toConstruct);
-  }
-
-  size_t constructLevels(sequence<size_t>& toConstruct) {
     sequence<size_t> flag(P.size()+1);
     // Build the coarser maxBit levels, from the finest to the coarsest (maxBit-1 to 0)
 
@@ -376,7 +248,6 @@ public:
 
     pointers = (sequence<size_t>**) malloc(sizeof(sequence<size_t>*)*L);
     boxSizes = sequence<floatT>(L);
-    levelIdx = sequence<size_t>(L);
 
     floatT s = bSize;
 
@@ -390,7 +261,6 @@ public:
     size_t lIdx = toConstruct.size() - 1;
 
     for (int l = maxBit-1; l >= 0; -- l) {
-      //cout << l << endl;
 
       if (!construct(l)) {
 	s *= 2;
@@ -400,9 +270,8 @@ public:
       timer t; t.start();
 
       boxSizes[lIdx] = s;
-      cout << "level " << l << ": " << s << endl;
+      cout << "--- level " << l << ": " << s << endl;
       s *= 2;
-      levelIdx[lIdx] = l;
 
       flag[0] = 1;
       parallel_for(1, levelSize(lIdx+1), [&](size_t i){
@@ -413,7 +282,7 @@ public:
 				      });
 
       size_t numGrids = parlay::scan_inplace(flag.cut(0, levelSize(lIdx+1)));
-      cout << "numGrids = " << numGrids << endl;
+
       flag[levelSize(lIdx+1)] = numGrids;
       cout << " scanning-time = " << t.get_next() << endl;
 

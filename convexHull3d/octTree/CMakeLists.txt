@@ -1,6 +1,6 @@
 project(octTreeHull3d)
 
-set(CMAKE_CXX_FLAGS "-DPARLAY_SEQUENTIAL -DGRID -mcx16 -O3 -DNDEBUG ${EXTRA_FLAGS}")
+set(CMAKE_CXX_FLAGS "-DHOMEGROWN -pthread -DGRID -mcx16 -O3 -DNDEBUG ${EXTRA_FLAGS}")
 
 add_executable(${PROJECT_NAME} hullTime.cpp hull.cpp)
 
