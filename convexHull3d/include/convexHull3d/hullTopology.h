@@ -22,7 +22,6 @@
 
 #pragma once
 
-//#include <set>
 #include <iostream>
 #include <fstream>
 #include <atomic>
@@ -315,19 +314,19 @@ public:
       }
     }
 
-    // for(size_t i=0; i<Q.size(); i++) {
-    //   if (origin.keep(f0, Q[i])) f0->push_keep(Q[i]);
-    //   if (origin.keep(f1, Q[i])) f1->push_keep(Q[i]);
-    //   if (origin.keep(f2, Q[i])) f2->push_keep(Q[i]);
-    //   if (origin.keep(f3, Q[i])) f3->push_keep(Q[i]);
-    // }
-
     for(size_t i=0; i<Q.size(); i++) {
       if (origin.keep(f0, Q[i])) f0->push_keep(Q[i]);
-      else if (origin.keep(f1, Q[i])) f1->push_keep(Q[i]);
-      else if (origin.keep(f2, Q[i])) f2->push_keep(Q[i]);
-      else if (origin.keep(f3, Q[i])) f3->push_keep(Q[i]);
+      if (origin.keep(f1, Q[i])) f1->push_keep(Q[i]);
+      if (origin.keep(f2, Q[i])) f2->push_keep(Q[i]);
+      if (origin.keep(f3, Q[i])) f3->push_keep(Q[i]);
     }
+
+    // for(size_t i=0; i<Q.size(); i++) {
+    //   if (origin.keep(f0, Q[i])) f0->push_keep(Q[i]);
+    //   else if (origin.keep(f1, Q[i])) f1->push_keep(Q[i]);
+    //   else if (origin.keep(f2, Q[i])) f2->push_keep(Q[i]);
+    //   else if (origin.keep(f3, Q[i])) f3->push_keep(Q[i]);
+    // }
 
 #else
 
@@ -427,51 +426,7 @@ public:
     linkFacet(f3, f1, f2, f0);
 
 #ifdef GRID
-    throw std::runtime_error("parallel grid redistribution is not tested");
-
-    auto flag = sequence<int>(P.size());
-
-    parallel_for(0, P.size(), [&](size_t i) {
-				if (origin.visible(f0, Q[i])) {
-				  flag[i] = 0; Q[i].attribute.seeFacet = f0;
-				} else if (origin.visible(f1, Q[i])) {
-				  flag[i] = 1; Q[i].attribute.seeFacet = f1;
-				} else if (origin.visible(f2, Q[i])) {
-				  flag[i] = 2; Q[i].attribute.seeFacet = f2;
-				} else if (origin.visible(f3, Q[i])) {
-				  flag[i] = 3; Q[i].attribute.seeFacet = f3;
-				} else {
-				  flag[i] = 4; Q[i].attribute.seeFacet = nullptr;
-				}
-			      });
-
-    auto chunks = split_k(5, &Q, flag);
-
-    f0->reassignVisible(chunks[0]);
-    f1->reassignVisible(chunks[1]);
-    f2->reassignVisible(chunks[2]);
-    f3->reassignVisible(chunks[3]);
-
-    parallel_for(0, P.size(), [&](size_t i) {
-				if (origin.keep(f0, Q[i])) {
-				  flag[i] = 0;
-				} else if (origin.keep(f1, Q[i])) {
-				  flag[i] = 1;
-				} else if (origin.keep(f2, Q[i])) {
-				  flag[i] = 2;
-				} else if (origin.keep(f3, Q[i])) {
-				  flag[i] = 3;
-				} else {
-				  flag[i] = 4;
-				}
-			      });
-
-    auto keepChunks = split_k(5, &Q, flag);
-
-    f0->reassignKeep(keepChunks[0]);
-    f1->reassignKeep(keepChunks[1]);
-    f2->reassignKeep(keepChunks[2]);
-    f3->reassignKeep(keepChunks[3]);
+    throw std::runtime_error("parallel grid redistribution is not implemented");
 #else
     auto flag = sequence<int>(P.size());
     parallel_for(0, P.size(), [&](size_t i) {
@@ -767,43 +722,28 @@ public:
 	    break;
 	  }}}}
 
-
-    // set<vertexT> intersection;
-    // for(int i=0; i<nf; ++i) { // Old facet loop
-    //   for(size_t j=0; j<facetsBeneath[i]->numKeepPts(); ++j) { // Point loop
-    // 	intersection.insert(facetsBeneath[i]->keepPts(j));
-    //   }}
-    // for (auto p: intersection) {
-    //   p.attribute.seeFacet = nullptr;
-    //   for (int k=0; k<nnf; ++k) { // New facet loop
-    // 	if (origin.keep(newFacets[k], p))
-    // 	  newFacets[k]->push_keep(p);
-    //   }}
-
-
-    // sequence<vertexT> intersection;
-    // for(int i=0; i<nf; ++i) { // Old facet loop
-    //   for(size_t j=0; j<facetsBeneath[i]->numKeepPts(); ++j) { // Point loop
-    // 	intersection.push_back(facetsBeneath[i]->keepPts(j));
-    //   }}
-    // parlay::sort_inplace(intersection);
-    // intersection = unique(intersection);
-    // for (auto p: intersection) {
-    //   p.attribute.seeFacet = nullptr;
-    //   for (int k=0; k<nnf; ++k) { // New facet loop
-    // 	if (origin.keep(newFacets[k], p))
-    // 	  newFacets[k]->push_keep(p);
-    //   }}
-
-
+    sequence<vertexT> intersection;
     for(int i=0; i<nf; ++i) { // Old facet loop
       for(size_t j=0; j<facetsBeneath[i]->numKeepPts(); ++j) { // Point loop
-	facetsBeneath[i]->keepPts(j).attribute.seeFacet = nullptr;
-	for (int k=0; k<nnf; ++k) { // New facet loop
-	  if (origin.keep(newFacets[k], facetsBeneath[i]->keepPts(j))) {
-	    newFacets[k]->push_keep(facetsBeneath[i]->keepPts(j));
-	    break;
-	  }}}}
+	intersection.push_back(facetsBeneath[i]->keepPts(j));
+      }}
+    parlay::sort_inplace(intersection);
+    intersection = unique(intersection);
+    for (auto p: intersection) {
+      p.attribute.seeFacet = nullptr;
+      for (int k=0; k<nnf; ++k) { // New facet loop
+	if (origin.keep(newFacets[k], p))
+	  newFacets[k]->push_keep(p);
+      }}
+
+    // for(int i=0; i<nf; ++i) { // Old facet loop
+    //   for(size_t j=0; j<facetsBeneath[i]->numKeepPts(); ++j) { // Point loop
+    // 	facetsBeneath[i]->keepPts(j).attribute.seeFacet = nullptr;
+    // 	for (int k=0; k<nnf; ++k) { // New facet loop
+    // 	  if (origin.keep(newFacets[k], facetsBeneath[i]->keepPts(j))) {
+    // 	    newFacets[k]->push_keep(facetsBeneath[i]->keepPts(j));
+    // 	    break;
+    // 	  }}}}
 
 #else
     for(int i=0; i<nf; ++i) { // Old facet loop
@@ -838,7 +778,7 @@ public:
     }
 
     auto tmpBuffer = typename facetT::seqT(fn);
-    fn = 0;
+    fn = 0; // Used the second time as an offset counter
     for(int j=0; j<nf; ++j) {
       parallel_for(0, facetsBeneath[j]->numPts(),
 		   [&](size_t x){tmpBuffer[fn+x] = facetsBeneath[j]->pts(x);});

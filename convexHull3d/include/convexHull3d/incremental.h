@@ -178,6 +178,143 @@ void incrementHull3dSerial(_hull<linkedFacet3d, vertex3d, origin3d> *context) {
 #endif
 }
 
+// Sequential point insertion but parallel point
+template<class linkedFacet3d, class vertex3d, class origin3d>
+void incrementHull3dParallel(_hull<linkedFacet3d, vertex3d, origin3d> *context) {
+
+#ifndef SILENT
+  timer t;
+  size_t errors = 0;
+  size_t round = 0;
+  double apexTime = 0;
+  double frontierTime = 0;
+  double createTime = 0;
+  double splitTime = 0;
+#endif
+
+  while (true) {
+
+#ifndef SILENT
+    t.start();
+#endif
+  loopStart:
+
+#ifdef WRITE
+    context->writeHull();
+#endif
+
+    vertex3d apex = context->furthestApexParallel();
+
+#ifdef VERBOSE
+    cout << ">>>>>>>>>" << endl;
+    //context->printHull();
+    cout << "apex chosen = " << apex.attribute.i << endl;
+#endif
+#ifndef SILENT
+    apexTime += t.get_next();
+#endif
+
+    if (apex.isEmpty()) break;
+#ifndef SILENT
+    round ++;
+#endif
+    auto frontier = context->computeFrontier(apex);
+    auto frontierEdges = get<0>(frontier);
+    auto facetsBeneath = get<1>(frontier);
+
+#ifndef SILENT
+    frontierTime += t.get_next();
+#endif
+
+    for(size_t i=0; i<frontierEdges->size(); ++i) {
+      auto nv = frontierEdges->at((i+1)%frontierEdges->size());
+      auto cv = frontierEdges->at(i);
+      if (cv.b != nv.a) {
+	apex.attribute.seeFacet->clear();
+#ifndef SILENT
+	errors ++;
+#endif
+	goto loopStart;
+      }
+    }
+
+#ifdef VERBOSE
+    cout << "visible = " << *apex.attribute.seeFacet << ": ";
+    for (auto x: *apex.attribute.seeFacet->seeList) {
+      cout << x.attribute.i << " ";
+    }
+    cout << endl;
+
+    cout << "frontier = ";
+    for(auto e: *frontierEdges) {
+      cout << e.a.attribute.i << "," << e.b.attribute.i << " ";
+    }
+    cout << endl;
+
+    cout << "to delete = ";
+    for(auto f: *facetsBeneath)
+      cout << *f << " ";
+    cout << endl;
+#endif
+
+    // Create new facets
+    auto newFacets = sequence<linkedFacet3d*>(frontierEdges->size());
+
+    for (size_t i=0; i<frontierEdges->size(); ++i) {
+      typename _hull<linkedFacet3d, vertex3d, origin3d>::_edge e = frontierEdges->at(i);
+      newFacets[i] = new linkedFacet3d(e.a, e.b, apex);
+    }
+
+#ifdef VERBOSE
+    cout << "to create = ";
+    for (size_t i=0; i<frontierEdges->size(); ++i)
+      cout << *(newFacets[i]) << " ";
+    cout << endl;
+#endif
+
+    // Connect new facets
+    for (size_t i=0; i<frontierEdges->size(); ++i) {
+      context->linkFacet(newFacets[i],
+		newFacets[(i+1)%frontierEdges->size()],
+		frontierEdges->at(i).ff,
+		newFacets[(i-1+frontierEdges->size())%frontierEdges->size()]
+		);
+    }
+
+    context->setStart(newFacets[0]);
+#ifndef SILENT
+    createTime += t.get_next();
+#endif
+    context->redistributeParallel(facetsBeneath->cut(0, facetsBeneath->size()), make_slice(newFacets));
+#ifndef SILENT
+    splitTime += t.stop();
+#endif
+    // Delete existing facets
+    for(int j=0; j<facetsBeneath->size(); ++j)
+      delete facetsBeneath->at(j);
+
+    delete frontierEdges;
+    delete facetsBeneath;
+  }
+
+#ifndef SILENT
+  cout << "apex-time = " << apexTime << endl;
+  cout << "frontier-time = " << frontierTime << endl;
+  cout << "create-time = " << createTime << endl;
+  cout << "split-time = " << splitTime << endl;
+  cout << "#-rounds = " << round << endl;
+  cout << "#-errors = " << errors << endl;
+#endif
+
+#ifdef VERBOSE
+  cout << "hull-size = " << context->hullSizeDfs() << endl;
+#endif
+
+#ifdef WRITE
+  context->writeHull();
+#endif
+}
+
 #ifdef RESERVE
 
 template<class linkedFacet3d, class vertex3d, class origin3d>

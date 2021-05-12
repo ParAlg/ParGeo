@@ -1,8 +1,8 @@
-project(concurrentHull3d)
-
-#------------------- Compile as executable
+project(parallelHull3d)
 
 set(CMAKE_CXX_FLAGS "-DHOMEGROWN -pthread -mcx16 -O3 -DNDEBUG ${EXTRA_FLAGS}")
+
+#------------------- Compile as executable
 
 add_executable(${PROJECT_NAME} hullTime.cpp hull.cpp)
 

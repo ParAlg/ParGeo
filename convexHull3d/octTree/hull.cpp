@@ -109,8 +109,10 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dGrid(parlay::sequence<pargeo:
   cout << "--------------- final level " << endl;
   tr.start();
   cout << " " << finalQ.size() << " / " << P.size() << endl;
-  auto result = hull3dSerial(finalQ);
-  //auto result = hull3dConcurrent(finalQ);
+  //auto result = hull3dSerial(finalQ);
+  auto result = hull3dConcurrent(finalQ);
+  //auto result = hull3dParallel(finalQ);
+  //auto result = hull3dIncremental(finalQ);
   cout << " round-time = " << tr.stop() << endl;
 
   cout << ">>> total-hull-time = " << t.get_next() << endl;

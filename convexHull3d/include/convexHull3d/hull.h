@@ -24,6 +24,8 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
 
 parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dSerial(parlay::sequence<pargeo::fpoint<3>> &P);
 
+parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dParallel(parlay::sequence<pargeo::fpoint<3>> &P);
+
 parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dIncremental(parlay::sequence<pargeo::fpoint<3>> &P, size_t numProc = 0);
 
 parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dConcurrent(parlay::sequence<pargeo::fpoint<3>> &P, size_t numProc = 0);

@@ -11,7 +11,8 @@
 
 using namespace pargeo;
 
-parlay::sequence<pointVertex> concurrentHull(parlay::sequence<pointVertex> &Q, size_t numProc) {
+template <typename ptOut>
+parlay::sequence<ptOut> concurrentHull(parlay::sequence<pointVertex> &Q, size_t numProc) {
   using namespace std;
   using namespace parlay;
   using pt = pointVertex;
@@ -37,7 +38,7 @@ parlay::sequence<pointVertex> concurrentHull(parlay::sequence<pointVertex> &Q, s
 #ifndef SILENT
   cout << "#-subproblems = " << numProc << endl;
 #endif
-  sequence<sequence<pt>> subHulls(numProc);
+  sequence<sequence<ptOut>> subHulls(numProc);
 
   parallel_for(0, numProc, [&](size_t i) {
 			     size_t s = i * blkSize;
@@ -45,20 +46,20 @@ parlay::sequence<pointVertex> concurrentHull(parlay::sequence<pointVertex> &Q, s
 			     auto origin = pointOrigin();
 			     auto linkedHull = new _hull<linkedFacet3d<pt>, pt, pointOrigin>(Q.cut(s, e), origin, true);
 			     incrementHull3dSerial<linkedFacet3d<pt>, pt, pointOrigin>(linkedHull);
-			     subHulls[i] = linkedHull->getHullVertices<pt>();
-			     //subHulls[i] = hull3dInternalSerial(Q.cut(s, e));
+			     subHulls[i] = linkedHull->getHullVertices<ptOut>();
+			     //subHulls[i] = hull3dInternalSerial(Q.cut(s, e)); // todo compilation issue
 			   }, 1);
 
-  sequence<pt> uniquePts = parlay::flatten(subHulls);
+  sequence<ptOut> uniquePts = parlay::flatten(subHulls);
 #ifndef SILENT
   cout << "output-size = " << uniquePts.size() << endl;
   cout << "hull-time = " << t.stop() << endl;
 #endif
-  if (false) {//Q.size() / uniquePts.size() >= 2) {
-    return concurrentHull(uniquePts, numProc);
-  } else {
-    return uniquePts;
-  }
+
+  // Divide and conquer once seems to be the most efficient for now
+  return uniquePts;
+
+  // note can consider recursively calling concurrent hull, did not find fast before
 }
 
 parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dConcurrent(parlay::sequence<pargeo::fpoint<3>> &P, size_t numProc) {
@@ -77,22 +78,26 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dConcurrent(parlay::sequence<p
   parallel_for(0, P.size(), [&](size_t i) {
 			      Q[i] = pt(P[i].coords());});
 
-  sequence<pt> Q2 = concurrentHull(Q, numProc);
 #ifndef SILENT
   cout << "> concurrent-hull-time = " << t.get_next() << endl;
 #endif
+
+  sequence<pt> Q2 = concurrentHull<pt>(Q, numProc);
   auto origin = pointOrigin();
   auto finalLinkedHull = new _hull<linkedFacet3d<pt>, pt, pointOrigin>(make_slice(Q2), origin, false);
   incrementHull3dSerial<linkedFacet3d<pt>, pt, pointOrigin>(finalLinkedHull); // todo parallelize
+  //incrementHull3d<linkedFacet3d<pt>, pt, pointOrigin>(finalLinkedHull, numProc);
+  auto out = sequence<facet3d<pargeo::fpoint<3>>>();
+  finalLinkedHull->getHull<pargeo::fpoint<3>>(out);
+
 #ifndef SILENT
   cout << "> merge-hull-time = " << t.stop() << endl;
 #endif
-  auto out = sequence<facet3d<pargeo::fpoint<3>>>();
-  finalLinkedHull->getHull<pargeo::fpoint<3>>(out);
+
 #ifndef SILENT
   cout << "hull-size = " << out.size() << endl;
 #endif
-  delete finalLinkedHull;
+
   return out;
 }
 

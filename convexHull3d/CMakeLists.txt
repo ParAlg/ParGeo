@@ -11,6 +11,7 @@ add_library(${PROJECT_NAME}
   )
 
 add_subdirectory(serial)
+add_subdirectory(parallel)
 add_subdirectory(incremental)
 add_subdirectory(concurrent)
 add_subdirectory(octTree)
