@@ -1,6 +1,6 @@
 project(serialHull3d)
 
-set(CMAKE_CXX_FLAGS "-DPARLAY_SEQUENTIAL -mcx16 -O3 -DNDEBUG ${EXTRA_FLAGS}")
+set(CMAKE_CXX_FLAGS "-DPARLAY_SEQUENTIAL -DSERIAL_HULL -mcx16 -O3 -DNDEBUG ${EXTRA_FLAGS}")
 
 #------------------- Compile as executable
 
@@ -14,7 +14,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE ../include)
 
 add_library(${PROJECT_NAME}Lib
   hull.cpp
-  hullTime.cpp
+  hullInternal.cpp
   )
 
 target_link_libraries(${PROJECT_NAME}Lib pargeolib)

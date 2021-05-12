@@ -12,11 +12,11 @@ using namespace pargeo;
 using namespace pargeo::pointIO;
 
 template <class pt>
-void timeHull(parlay::sequence<pt> &P, int s, int skip, int rounds, char const *outFile) {
+void timeHull(parlay::sequence<pt> &P, int s, int rounds, char const *outFile) {
   timer t; t.start();
   bool savePlot = outFile != NULL;
   for(int i=0; i<rounds; ++i) {
-    hull3dGrid(P, s, skip, savePlot);
+    hull3dGrid(P, s, savePlot);
     cout << "round-time = " << t.get_next() << endl;
   }
   t.stop();
@@ -28,8 +28,7 @@ int main(int argc, char* argv[]) {
   char* iFile = P.getArgument(0);
   char* oFile = P.getOptionValue("-o");
   int rounds = P.getOptionIntValue("-r",1);
-  int s = P.getOptionIntValue("-s", 0);
-  int skip = P.getOptionIntValue("-skip", 1);
+  int s = P.getOptionIntValue("-s", 4);
 
   int dim = readHeader(iFile);
   if (dim != 3) {
@@ -38,5 +37,5 @@ int main(int argc, char* argv[]) {
   }
 
   parlay::sequence<pargeo::fpoint<3>> Points = readPointsFromFile<pargeo::fpoint<3>>(iFile);
-  timeHull<pargeo::fpoint<3>>(Points, s, skip, rounds, oFile);
+  timeHull<pargeo::fpoint<3>>(Points, s, rounds, oFile);
 }

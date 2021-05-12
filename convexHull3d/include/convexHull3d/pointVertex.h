@@ -1,6 +1,9 @@
 #pragma once
 
+#include <vector>
 #include "incremental.h"
+
+using namespace std;
 
 class vertexAtt;
 
@@ -30,11 +33,11 @@ class pointOrigin;
 template <class vertexT>
 struct linkedFacet3d {
 
-  //#ifdef SERIAL
-  //typedef vector<vertexT> seqT;
-  //#else
+#ifdef SERIAL_HULL
+  typedef vector<vertexT> seqT;
+#else
   typedef sequence<vertexT> seqT;
-  //#endif
+#endif
 
   vertexT a, b, c;
   linkedFacet3d *abFacet;

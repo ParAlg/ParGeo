@@ -22,6 +22,10 @@ using facet3d = _facet3d<pt, pargeo::_empty>;
 
 parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &P);
 
-parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &P, size_t);
+parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dSerial(parlay::sequence<pargeo::fpoint<3>> &P);
 
-parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dGrid(parlay::sequence<pargeo::fpoint<3>> &P, size_t, size_t, bool);
+parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dIncremental(parlay::sequence<pargeo::fpoint<3>> &P, size_t numProc = 0);
+
+parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dConcurrent(parlay::sequence<pargeo::fpoint<3>> &P, size_t numProc = 0);
+
+parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dGrid(parlay::sequence<pargeo::fpoint<3>> &P, size_t, bool);

@@ -37,11 +37,11 @@ template <class vertexT>
 struct linkedFacet3d {
   static constexpr typename pargeo::fpoint<3>::floatT numericKnob = 1e-5;
 
-  //#ifdef SERIAL
-  //typedef vector<vertexT> seqT;
-  //#else
+#ifdef SERIAL_HULL
+  typedef vector<vertexT> seqT;
+#else
   typedef sequence<vertexT> seqT;
-  //#endif
+#endif
 
   vertexT a, b, c;
   linkedFacet3d *abFacet;
@@ -78,21 +78,32 @@ struct linkedFacet3d {
   seqT *keepList;
 
   void reassign(seqT *_seeList, gridOrigin* o) {
+    throw std::runtime_error("should not call reassign for grid impl");
+  //   delete seeList;
+  //   delete keepList;
+
+  //   //todo parallelize
+  //   seeList = new seqT();
+  //   keepList = new seqT();
+  //   for (size_t i=0; i<_seeList->size(); ++i) {
+  //     auto v = _seeList->at(i);
+  //     if (o->visible(this, v) && a != v && b != v && c != v)
+  // 	seeList->push_back(v);
+  //     else
+  // 	keepList->push_back(v);
+  //   }
+
+  //   delete _seeList;
+  }
+
+  void reassignVisible(seqT *_seeList) {
     delete seeList;
+    seeList = _seeList;
+  }
+
+  void reassignKeep(seqT *_keepList) {
     delete keepList;
-
-    //todo parallelize
-    seeList = new seqT();
-    keepList = new seqT();
-    for (size_t i=0; i<_seeList->size(); ++i) {
-      auto v = _seeList->at(i);
-      if (o->visible(this, v) && a != v && b != v && c != v)
-	seeList->push_back(v);
-      else
-	keepList->push_back(v);
-    }
-
-    delete _seeList;
+    keepList = _keepList;
   }
 
   void push_back(vertexT v, gridOrigin* o) {
@@ -111,16 +122,22 @@ struct linkedFacet3d {
       seeList->push_back(v);
   }
 
-  // Accesses the visible points (boxes)
+  // Accesses the visible samples
+
   size_t numVisiblePts() { return seeList->size(); }
+
   inline vertexT& visiblePts(size_t i) { return seeList->at(i); }
 
-  // Accesses the kept points (boxes)
+  // Accesses the boxes
+
   size_t numKeepPts() { return keepList->size(); }
+
   inline vertexT& keepPts(size_t i) { return keepList->at(i); }
 
-  // Access both the visible and intersecting (boxes)
+  // Access both the visible samples and intersecting boxes
+
   inline size_t numPts() { return seeList->size() + keepList->size(); }
+
   vertexT& pts(size_t i) {
     if (i < seeList->size()) {
       return seeList->at(i);

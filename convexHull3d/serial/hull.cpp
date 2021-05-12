@@ -1,4 +1,3 @@
-#include "parlay/hash_table.h"
 #include "parlay/parallel.h"
 #include "parlay/primitives.h"
 #include "parlay/sequence.h"
@@ -8,7 +7,7 @@
 #include "convexHull3d/pointVertex.h"
 #include "convexHull3d/hull.h"
 
-parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &P) {
+parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dSerial(parlay::sequence<pargeo::fpoint<3>> &P) {
   using namespace std;
   using namespace parlay;
   using floatT = pargeo::fpoint<3>::floatT;
@@ -45,4 +44,4 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpo
   return out;
 }
 
-parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &);
+parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dSerial(parlay::sequence<pargeo::fpoint<3>> &);

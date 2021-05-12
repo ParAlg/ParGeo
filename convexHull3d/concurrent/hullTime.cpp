@@ -15,7 +15,7 @@ template <class pt>
 void timeHull(parlay::sequence<pt> &P, size_t numProc, int rounds, char const *outFile) {
   timer t; t.start();
   for(int i=0; i<rounds; ++i) {
-    hull3d(P, numProc);
+    hull3dConcurrent(P, numProc);
     cout << "round-time = " << t.get_next() << endl;
   }
   t.stop();

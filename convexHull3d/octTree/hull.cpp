@@ -12,29 +12,30 @@
 #include <iostream>
 #include <fstream>
 
-parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dGrid(parlay::sequence<pargeo::fpoint<3>> &P, size_t s = 0, size_t skip = 1, bool write = false) {
+parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dGrid(parlay::sequence<pargeo::fpoint<3>> &P, size_t s = 4, bool write = false) {
   using namespace std;
   using namespace parlay;
   using pointT = pargeo::fpoint<3>;
   using floatT = pointT::floatT;
   using facetT = facet3d<pargeo::fpoint<3>>;
 
-  if (write) {
-    ofstream myfile;
-    myfile.open("point.txt", std::ofstream::trunc);
-    for (auto q: P) {
-      myfile << q[0] << " " << q[1] << " " << q[2] << endl;
-    }
-    myfile.close();
-  }
+  // if (write) {
+  //   ofstream myfile;
+  //   myfile.open("point.txt", std::ofstream::trunc);
+  //   for (auto q: P) {
+  //     myfile << q[0] << " " << q[1] << " " << q[2] << endl;
+  //   }
+  //   myfile.close();
+  // }
 
   pargeo::timer t;
   pargeo::timer tr;
   t.start();
 
   auto levels = sequence<size_t>();
+  levels.push_back(s);
   //levels.push_back(15);
-  levels.push_back(4);
+  //levels.push_back(4);
   //levels.push_back(2);
   auto tree = octTree<gridVertex>(make_slice(P), levels);
 
@@ -55,14 +56,14 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dGrid(parlay::sequence<pargeo:
       Q = tree.nextLevelSample(l-1, mask);
     cout << " " << Q.size() << " / " << tree.levelSize(l) << endl;
 
-    if (write) {
-      ofstream myfile;
-      myfile.open("blue.txt", std::ofstream::trunc);
-      for (auto q: Q) {
-	myfile << q[0] << " " << q[1] << " " << q[2] << endl;
-      }
-      myfile.close();
-    }
+    // if (write) {
+    //   ofstream myfile;
+    //   myfile.open("blue.txt", std::ofstream::trunc);
+    //   for (auto q: Q) {
+    // 	myfile << q[0] << " " << q[1] << " " << q[2] << endl;
+    //   }
+    //   myfile.close();
+    // }
 
     // Create a coarse simplex
 
@@ -87,17 +88,17 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dGrid(parlay::sequence<pargeo:
 
     if (write) {
       linkedHull->writeHull("facet.txt");
-      auto P2 = tree.levelSample(l+1);
-      ofstream myfile;
-      myfile.open("red.txt", std::ofstream::trunc);
-      for (auto p: P2) {
-        bool ok = true;
-        for (auto q: Q) {
-	  if (p == q) {
-	    ok = false; break; }}
-        if (ok) myfile << p << endl;
-      }
-      myfile.close();
+      // auto P2 = tree.levelSample(l+1);
+      // ofstream myfile;
+      // myfile.open("red.txt", std::ofstream::trunc);
+      // for (auto p: P2) {
+      //   bool ok = true;
+      //   for (auto q: Q) {
+      // 	  if (p == q) {
+      // 	    ok = false; break; }}
+      //   if (ok) myfile << p << endl;
+      // }
+      // myfile.close();
     }
 
     delete linkedHull;
@@ -108,7 +109,8 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dGrid(parlay::sequence<pargeo:
   cout << "--------------- final level " << endl;
   tr.start();
   cout << " " << finalQ.size() << " / " << P.size() << endl;
-  auto result = hull3d(finalQ);
+  auto result = hull3dSerial(finalQ);
+  //auto result = hull3dConcurrent(finalQ);
   cout << " round-time = " << tr.stop() << endl;
 
   cout << ">>> total-hull-time = " << t.get_next() << endl;
@@ -117,4 +119,4 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dGrid(parlay::sequence<pargeo:
   return result;
 }
 
-parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dGrid(parlay::sequence<pargeo::fpoint<3>> &, size_t, size_t, bool);
+parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dGrid(parlay::sequence<pargeo::fpoint<3>> &, size_t, bool);
