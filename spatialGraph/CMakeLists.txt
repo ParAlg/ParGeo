@@ -7,12 +7,14 @@ add_library(${PROJECT_NAME}
   knnGraph/knnGraph.cpp
   gabrielGraph/gabrielGraph.cpp
   betaSkeleton/betaSkeleton.cpp
+  spanner/spanner.cpp
   )
 
 add_subdirectory(knnGraph)
 add_subdirectory(delaunayGraph)
 add_subdirectory(gabrielGraph)
 add_subdirectory(betaSkeleton)
+add_subdirectory(spanner)
 
 target_link_libraries(${PROJECT_NAME} pargeolib delaunay2d)
 

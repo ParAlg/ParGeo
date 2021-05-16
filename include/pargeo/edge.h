@@ -25,4 +25,7 @@ namespace pargeo {
     }
   };
 
+  using edge = pargeo::_edge<false, size_t>;
+  using dirEdge = pargeo::_edge<true, size_t>;
+
 } // END namespace pargeo

@@ -1,3 +1,26 @@
+// This code is part of the project "Fast Parallel Algorithms for Euclidean
+// Minimum Spanning Tree and Hierarchical Spatial Clustering"
+// Copyright (c) 2021 Yiqiu Wang, Shangdi Yu, Yan Gu, Julian Shun
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights (to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 #pragma once
 
 #include "parlay/parallel.h"
@@ -6,13 +29,13 @@
 
 namespace pargeo {
 
-  template<int dim, class objT>
+  template<int _dim, class _objT>
   class kdNode {
 
     typedef int intT;
     typedef double floatT;
-    typedef pargeo::point<dim> pointT;
-    typedef kdNode<dim, objT> nodeT;
+    typedef pargeo::point<_dim> pointT;
+    typedef kdNode<_dim, _objT> nodeT;
 
     // Data fields
 
@@ -28,7 +51,7 @@ namespace pargeo {
 
     nodeT* sib;
 
-    parlay::slice<objT**, objT**> items;
+    parlay::slice<_objT**, _objT**> items;
 
     // Methods
 
@@ -95,8 +118,8 @@ namespace pargeo {
       return lPt;
     }
 
-    inline bool itemInBox(pointT pMin1, pointT pMax1, objT* item) {
-      for(int i=0; i<dim; ++i) {
+    inline bool itemInBox(pointT pMin1, pointT pMax1, _objT* item) {
+      for(int i=0; i<_dim; ++i) {
 	if (pMax1[i]<item->at(i) || pMin1[i]>item->at(i)) return false;
       }
       return true;
@@ -104,7 +127,7 @@ namespace pargeo {
 
     intT findWidest() {
       floatT xM = -1;
-      for (int kk=0; kk<dim; ++kk) {
+      for (int kk=0; kk<_dim; ++kk) {
 	if (pMax[kk]-pMin[kk]>xM) {
 	  xM = pMax[kk]-pMin[kk];
 	  k = kk;}}
@@ -177,6 +200,10 @@ namespace pargeo {
 
   public:
 
+    using objT = _objT;
+
+    static constexpr int dim  = _dim;
+
     inline nodeT* L() {return left;}
 
     inline nodeT* R() {return right;}
@@ -185,7 +212,9 @@ namespace pargeo {
 
     inline intT size() {return items.size();}
 
-    inline objT* operator[](intT i) {return items[i];}
+    inline _objT* operator[](intT i) {return items[i];}
+
+    inline _objT* at(intT i) {return items[i];}
 
     /* inline void setEmpty() {n=-1;} */
 
@@ -193,11 +222,15 @@ namespace pargeo {
 
     inline bool isLeaf() {return !left;}//check
 
-    inline objT* getItem(intT i) {return items[i];}
+    inline _objT* getItem(intT i) {return items[i];}
 
     inline pointT getMax() {return pMax;}
 
     inline pointT getMin() {return pMin;}
+
+    inline floatT getMax(int i) {return pMax[i];}
+
+    inline floatT getMin(int i) {return pMin[i];}
 
     static const int boxInclude = 0;
 
@@ -205,10 +238,20 @@ namespace pargeo {
 
     static const int boxExclude = 2;
 
+    inline floatT lMax() {
+      floatT myMax = 0;
+      for (int d=0; d<_dim; ++d) {
+	floatT thisMax = pMax[d] - pMin[d];
+	if (thisMax > myMax) {
+	  myMax = thisMax;}
+      }
+      return myMax;
+    }
+
     inline int boxCompare(pointT pMin1, pointT pMax1, pointT pMin2, pointT pMax2) {
       bool exclude = false;
       bool include = true; //1 include 2
-      for(int i=0; i<dim; ++i) {
+      for(int i=0; i<_dim; ++i) {
 	if (pMax1[i]<pMin2[i] || pMin1[i]>pMax2[i]) exclude = true;
 	if (pMax1[i]<pMax2[i] || pMin1[i]>pMin2[i]) include = false;
       }
@@ -217,16 +260,16 @@ namespace pargeo {
       else return boxOverlap;
     }
 
-  kdNode(parlay::slice<objT**, objT**> itemss, intT nn, nodeT *space,
-	 parlay::slice<bool*, bool*> flags, intT leafSize=16):
-    items(itemss) {//, n(nn) {
+    kdNode(parlay::slice<_objT**, _objT**> itemss, intT nn, nodeT *space,
+	   parlay::slice<bool*, bool*> flags, intT leafSize=16):
+      items(itemss) {//, n(nn) {
       if (size()>2000) constructParallel(space, flags, leafSize);
       else constructSerial(space, leafSize);
     }
 
-  kdNode(parlay::slice<objT**, objT**> itemss, intT nn, nodeT *space,
-	 intT leafSize=16):
-    items(itemss) {//, n(nn) {
+    kdNode(parlay::slice<_objT**, _objT**> itemss, intT nn, nodeT *space,
+	   intT leafSize=16):
+      items(itemss) {//, n(nn) {
       constructSerial(space, leafSize);
     }
 
