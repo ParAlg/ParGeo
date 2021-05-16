@@ -1,5 +1,6 @@
-// This code is part of the "Pargeo" project
-// Copyright (c) 2020 Yiqiu Wang and the Pargeo Team
+// This code is part of the project "Fast Parallel Algorithms for Euclidean
+// Minimum Spanning Tree and Hierarchical Spatial Clustering"
+// Copyright (c) 2021 Yiqiu Wang, Shangdi Yu, Yan Gu, Julian Shun
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the
