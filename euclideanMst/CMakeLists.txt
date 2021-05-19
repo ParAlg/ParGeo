@@ -9,6 +9,8 @@ add_library(${PROJECT_NAME}
 
 add_subdirectory(wspd)
 
+add_subdirectory(filterKruskal)
+
 target_link_libraries(${PROJECT_NAME} pargeolib)
 
 target_include_directories(${PROJECT_NAME}

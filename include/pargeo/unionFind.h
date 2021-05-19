@@ -25,6 +25,7 @@
 #include "parlay/primitives.h"
 #include "parlay/parallel.h"
 #include "pargeo/atomics.h"
+#include "pargeo/edge.h"
 
 namespace pargeo {
 
@@ -38,7 +39,7 @@ struct unionFind {
   parlay::sequence<vertexId> parents;
 
   bool is_root(vertexId u) {
-    return parents[u] < 0;}
+    return parents[u] == (vertexId)-1;}
 
   // initialize n elements all as roots
   unionFind(size_t n) {
@@ -85,4 +86,58 @@ struct unionFind {
 	    pargeo::atomic_compare_and_swap(&parents[u], -1, v));
   }
 };
+
+// The following supports both "union" that is only safe sequentially
+// and "link" that is safe in parallel.  Find is always safe in parallel.
+// See:  "Internally deterministic parallel algorithms can be fast"
+// Blelloch, Fineman, Gibbons, and Shun
+// for a discussion of link/find.
+template <class vertexId>
+struct edgeUnionFind {
+  parlay::sequence<vertexId> parents;
+  parlay::sequence<edge> edges;
+
+  bool is_root(vertexId u) {
+    return parents[u] == (vertexId)-1;}
+
+  // initialize n elements all as roots
+  edgeUnionFind(size_t n) {
+    parents = parlay::sequence<vertexId>(n, -1);
+    edges = parlay::sequence<edge>(n, edge());
+  }
+
+  vertexId find(vertexId i) {
+    if (is_root(i)) return i;
+    vertexId p = parents[i];
+    if (is_root(p)) return p;
+
+    // find root, shortcutting along the way
+    do {
+      vertexId gp = parents[p];
+      parents[i] = gp;
+      i = p;
+      p = gp;
+    } while (!is_root(p));
+    return p;
+  }
+
+  // Version of union that is safe for parallelism
+  // when no cycles are created (e.g. only link from larger
+  // to smaller vertexId).
+  // Does not use ranks.
+  void link(vertexId u, vertexId v) {
+    edges[u] = edge(u, v);
+    parents[u] = v;}
+
+  size_t numEdge() {
+    return parlay::count_if(make_slice(edges), [&](edge e) {
+						 return !e.isEmpty();
+					       });
+  }
+
+  parlay::sequence<edge> getEdge() {
+    return parlay::filter(edges, [&](edge e){return !e.isEmpty();});
+  }
+};
+
 } // End namespace

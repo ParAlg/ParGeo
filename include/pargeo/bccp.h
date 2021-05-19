@@ -50,26 +50,6 @@ namespace pargeo {
     };
 
     template <typename nodeT>
-    inline double nodeDistance(nodeT* n1, nodeT* n2) {
-      using floatT = typename nodeT::objT::floatT;
-
-      for (int d = 0; d < n1->dim; ++ d) {
-	if (n1->getMin(d) > n2->getMax(d) || n2->getMin(d) > n1->getMax(d)) {
-	  // disjoint at dim d, and intersect on dim < d
-	  floatT rsqr = 0;
-	  for (int dd = d; dd < n1->dim; ++ dd) {
-	    floatT tmp = max(n1->getMin(dd) - n2->getMax(dd),
-			     n2->getMin(dd) - n1->getMax(dd));
-	    tmp = max(tmp, (floatT)0);
-	    rsqr += tmp*tmp;
-	  }
-	  return sqrt(rsqr);
-	}
-      }
-      return 0; // could be intersecting
-    }
-
-    template <typename nodeT>
     bcp<typename nodeT::objT> bcpBruteforce(nodeT* n1, nodeT* n2) {
       bcp<typename nodeT::objT> r;
       for (size_t i = 0; i < n1->size(); ++ i) {
