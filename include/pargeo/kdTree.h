@@ -328,19 +328,25 @@ namespace pargeo {
   }
 
   template<int dim, class objT>
-  kdNode<dim, objT>* buildKdt(parlay::sequence<objT>& P, bool parallel=true, bool noCoarsen=false) {
+  kdNode<dim, objT>* buildKdt(parlay::sequence<objT>& P,
+			      bool parallel=true,
+			      bool noCoarsen=false,
+			      parlay::sequence<objT*>* items=nullptr) {
     typedef kdNode<dim, objT> nodeT;
 
     size_t n = P.size();
 
-    // todo make items a parameter
-    auto items = new parlay::sequence<objT*>(n);
-    //parlay::parallel_for(0, n, [&](size_t i) {items[i]=&P[i];});
+    if (!items) {
+      items = new parlay::sequence<objT*>(n);
+    }
+
+
     parlay::parallel_for(0, n, [&](size_t i) {items->at(i)=&P[i];});
-    //parlay::slice<objT**, objT**> itemSlice = parlay::slice(items.begin(), items.end());
+
     parlay::slice<objT**, objT**> itemSlice = items->cut(0, items->size());
 
     auto root = (nodeT*) malloc(sizeof(nodeT)*(2*n-1));
+
     /* parlay::parallel_for(0, 2*n-1, [&](size_t i) { */
     /* 	root[i].setEmpty(); */
     /*   }); */

@@ -9,7 +9,7 @@ add_library(${PROJECT_NAME}
 
 add_subdirectory(wspd)
 
-add_subdirectory(filterKruskal)
+add_subdirectory(memoGfk)
 
 target_link_libraries(${PROJECT_NAME} pargeolib)
 
