@@ -82,7 +82,6 @@ parlay::sequence<pargeo::edge> pargeo::euclideanMst(parlay::sequence<pargeo::poi
 	e.u = get<0>(bcp) - base;
 	e.v = get<1>(bcp) - base;
 	e.weight = get<2>(bcp);
-	//cout << e.u << " " << e.v << " " << e.weight << endl;
 	return e;
       });
 
@@ -96,6 +95,12 @@ parlay::sequence<pargeo::edge> pargeo::euclideanMst(parlay::sequence<pargeo::poi
     beta *= 2;
     rhoLo = rhoHi;
   }
+
+  // floatT sum = 0;
+  // auto E = UF.getEdge();
+  // for (auto e: E)
+  //   sum += S[e.u].dist(S[e.v]);
+  // cout << "edge-sum = " << sum << endl;
 
   cout << "wspd-time = " << wspdTime << endl;
   cout << "kruskal-time = " << kruskalTime << endl;

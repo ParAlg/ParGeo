@@ -125,8 +125,8 @@ struct edgeUnionFind {
   // when no cycles are created (e.g. only link from larger
   // to smaller vertexId).
   // Does not use ranks.
-  void link(vertexId u, vertexId v) {
-    edges[u] = edge(u, v);
+  void link(vertexId u, vertexId v, vertexId uReal, vertexId vReal) {
+    edges[u] = edge(uReal, vReal);
     parents[u] = v;}
 
   size_t numEdge() {

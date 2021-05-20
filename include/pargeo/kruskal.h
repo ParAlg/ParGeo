@@ -98,15 +98,18 @@ namespace pargeo {
     // Union find step without MST mapping
     struct EdgeUnionFindStep {
       parlay::sequence<indexedEdge> &E;
+      parlay::sequence<indexedEdge> EReal;
       parlay::sequence<reservation> &R;
       edgeUnionFind<vertexId> &UF;
       EdgeUnionFindStep(parlay::sequence<indexedEdge> &E,
 			edgeUnionFind<vertexId> &UF,
 			parlay::sequence<reservation> &R) :
-	E(E), R(R), UF(UF) {}
+	E(E), R(R), UF(UF) {
+        EReal = parlay::sequence<indexedEdge>(E);
+      }
 
       bool reserve(edgeId i) {
-	vertexId u = E[i].u = UF.find(E[i].u);
+	vertexId u = E[i].u = UF.find(E[i].u); // Oh!!
 	vertexId v = E[i].v = UF.find(E[i].v);
 	if (u != v) {
 	  R[v].reserve(i);
@@ -118,12 +121,14 @@ namespace pargeo {
       bool commit(edgeId i) {
 	vertexId u = E[i].u;
 	vertexId v = E[i].v;
+	vertexId uReal = EReal[i].u;
+	vertexId vReal = EReal[i].v;
 	if (R[v].check(i)) {
 	  R[u].checkReset(i);
-	  UF.link(v, u);
+	  UF.link(v, u, vReal, uReal);
 	  return true;}
 	else if (R[u].check(i)) {
-	  UF.link(u, v);
+	  UF.link(u, v, uReal, vReal);
 	  return true; }
 	else return false;
       }
@@ -166,7 +171,10 @@ namespace pargeo {
   }
 
   template <typename edgeT>
-  void batchKruskal(parlay::sequence<edgeT> &E, size_t n, edgeUnionFind<long>& UF) {
+  void batchKruskal(parlay::sequence<edgeT> &E,
+		    size_t n,
+		    edgeUnionFind<long>& UF) {
+
     using namespace kruskalInternal;
 
     size_t m = E.size();
@@ -185,6 +193,5 @@ namespace pargeo {
     parlay::sequence<kruskalInternal::reservation> R(n);
     EdgeUnionFindStep UFStep1(IW1, UF, R);
     speculative_for<vertexId>(UFStep1, 0, IW1.size(), 20, false);
-
   }
 } // End namespace pargeo
