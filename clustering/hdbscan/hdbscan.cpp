@@ -5,19 +5,20 @@
 #include "pargeo/point.h"
 #include "pargeo/wspd.h"
 #include "pargeo/kdTree.h"
+#include "pargeo/kdTreeKnn.h"
 #include "pargeo/bccp.h"
 #include "pargeo/kruskal.h"
-#include "euclideanMst/euclideanMst.h"
+#include "clustering/hdbscan.h"
 #include "wspdFilter.h"
 #include "mark.h"
 
 using namespace std;
 using namespace parlay;
 using namespace pargeo;
-using namespace pargeo::emstInternal;
+using namespace pargeo::hdbscanInternal;
 
 template<int dim>
-parlay::sequence<pargeo::edge> pargeo::euclideanMst(parlay::sequence<pargeo::point<dim>> &S) {
+parlay::sequence<pargeo::edge> pargeo::hdbscan(parlay::sequence<pargeo::point<dim>> &S, size_t minPts) {
   using pointT = point<dim>;
   using nodeT = kdNode<dim, point<dim>>;
   using floatT = typename pointT::floatT;
@@ -30,11 +31,28 @@ parlay::sequence<pargeo::edge> pargeo::euclideanMst(parlay::sequence<pargeo::poi
 
   timer t0;
   t0.start();
-  bool paraTree = true;
 
   nodeT* tree = buildKdt<dim, point<dim>>(S, true, true);
 
   cout << "build-tree-time = " << t0.get_next() << endl;
+
+  // todo return distances
+  sequence<size_t> nns = kdTreeKnn<dim, pointT>(S, minPts, tree, true);
+
+  sequence<floatT> coreDist = sequence<floatT>(S.size());
+  parallel_for (0, S.size(), [&](intT i) {
+			       coreDist[i] = S[nns[i*minPts + minPts-1]].dist(S[i]);
+			     });
+
+  cout << "core-dist-time = " << t0.get_next() << endl;
+
+  sequence<floatT> cdMin = sequence<floatT>(tree->size() * 2);
+  sequence<floatT> cdMax = sequence<floatT>(tree->size() * 2);
+  parallel_for(0, tree->size()*2, [&](intT i) {
+      cdMin[i] = std::numeric_limits<floatT>::max();
+      cdMax[i] = std::numeric_limits<floatT>::lowest();
+    });
+  hdbscanInternal::nodeCD(tree, coreDist, cdMin, cdMax, tree, S.data());
 
   floatT rhoLo = -0.1;
   floatT beta = 2;
@@ -52,7 +70,8 @@ parlay::sequence<pargeo::edge> pargeo::euclideanMst(parlay::sequence<pargeo::poi
     t0.start();
 
     floatT rhoHi;
-    auto bccps = filterWspdParallel<nodeT>(beta, rhoLo, rhoHi, tree, &UF);
+    auto bccps = filterWspdParallel<nodeT>(beta, rhoLo, rhoHi, tree, &UF,
+					   coreDist, cdMin, cdMax, S.data());
 
     wspdTime += t0.get_next();
 
@@ -97,8 +116,12 @@ parlay::sequence<pargeo::edge> pargeo::euclideanMst(parlay::sequence<pargeo::poi
 
   // floatT sum = 0;
   // auto E = UF.getEdge();
-  // for (auto e: E)
-  //   sum += S[e.u].dist(S[e.v]);
+  // for (auto e: E) {
+  //   floatT w = S[e.u].dist(S[e.v]);
+  //   w = max(w, coreDist[e.u]);
+  //   w = max(w, coreDist[e.v]);
+  //   sum += w;
+  // }
   // cout << "edge-sum = " << sum << endl;
 
   cout << "wspd-time = " << wspdTime << endl;
@@ -107,9 +130,9 @@ parlay::sequence<pargeo::edge> pargeo::euclideanMst(parlay::sequence<pargeo::poi
   return UF.getEdge();
 }
 
-template sequence<edge> pargeo::euclideanMst<2>(sequence<point<2>> &);
-template sequence<edge> pargeo::euclideanMst<3>(sequence<point<3>> &);
-template sequence<edge> pargeo::euclideanMst<4>(sequence<point<4>> &);
-template sequence<edge> pargeo::euclideanMst<5>(sequence<point<5>> &);
-template sequence<edge> pargeo::euclideanMst<6>(sequence<point<6>> &);
-template sequence<edge> pargeo::euclideanMst<7>(sequence<point<7>> &);
+template sequence<edge> pargeo::hdbscan<2>(sequence<point<2>> &, size_t);
+template sequence<edge> pargeo::hdbscan<3>(sequence<point<3>> &, size_t);
+template sequence<edge> pargeo::hdbscan<4>(sequence<point<4>> &, size_t);
+template sequence<edge> pargeo::hdbscan<5>(sequence<point<5>> &, size_t);
+template sequence<edge> pargeo::hdbscan<6>(sequence<point<6>> &, size_t);
+template sequence<edge> pargeo::hdbscan<7>(sequence<point<7>> &, size_t);

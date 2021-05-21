@@ -36,6 +36,8 @@ add_subdirectory(wspd)
 
 add_subdirectory(knnSearch)
 
+add_subdirectory(clustering)
+
 add_subdirectory(rangeSearch)
 
 add_subdirectory(closestPair)
