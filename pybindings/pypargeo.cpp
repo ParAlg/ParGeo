@@ -418,7 +418,7 @@ PYBIND11_MODULE(pypargeo, m)
 	"Weighted planar Beta skeleton.",
 	py::arg("array"), py::arg("beta"));
 
-  m.def("hdbscan",
+  m.def("HDBSCAN",
 	&py_hdbscan,
 	"Hierarchical DBSCAN*.",
 	py::arg("array"), py::arg("minPts"));

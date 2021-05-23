@@ -17,7 +17,7 @@ using namespace pargeo;
 using namespace pargeo::emstInternal;
 
 template<int dim>
-parlay::sequence<pargeo::edge> pargeo::euclideanMst(parlay::sequence<pargeo::point<dim>> &S) {
+parlay::sequence<pargeo::wghEdge> pargeo::euclideanMst(parlay::sequence<pargeo::point<dim>> &S) {
   using pointT = point<dim>;
   using nodeT = kdNode<dim, point<dim>>;
   using floatT = typename pointT::floatT;
@@ -107,9 +107,9 @@ parlay::sequence<pargeo::edge> pargeo::euclideanMst(parlay::sequence<pargeo::poi
   return UF.getEdge();
 }
 
-template sequence<edge> pargeo::euclideanMst<2>(sequence<point<2>> &);
-template sequence<edge> pargeo::euclideanMst<3>(sequence<point<3>> &);
-template sequence<edge> pargeo::euclideanMst<4>(sequence<point<4>> &);
-template sequence<edge> pargeo::euclideanMst<5>(sequence<point<5>> &);
-template sequence<edge> pargeo::euclideanMst<6>(sequence<point<6>> &);
-template sequence<edge> pargeo::euclideanMst<7>(sequence<point<7>> &);
+template sequence<wghEdge> pargeo::euclideanMst<2>(sequence<point<2>> &);
+template sequence<wghEdge> pargeo::euclideanMst<3>(sequence<point<3>> &);
+template sequence<wghEdge> pargeo::euclideanMst<4>(sequence<point<4>> &);
+template sequence<wghEdge> pargeo::euclideanMst<5>(sequence<point<5>> &);
+template sequence<wghEdge> pargeo::euclideanMst<6>(sequence<point<6>> &);
+template sequence<wghEdge> pargeo::euclideanMst<7>(sequence<point<7>> &);
