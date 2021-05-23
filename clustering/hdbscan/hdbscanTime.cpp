@@ -7,6 +7,7 @@
 #include "pargeo/getTime.h"
 #include "pargeo/parseCommandLine.h"
 #include "clustering/hdbscan.h"
+#include "clustering/dendrogram.h"
 
 using namespace std;
 using namespace parlay;
@@ -29,7 +30,8 @@ void timeHdbscan(sequence<point<dim>>& P, size_t minPts, int rounds, char* outFi
 
   for (int i=0; i < rounds; i++) {
     timer t0; t0.start();
-    hdbscan<dim>(P, minPts);
+    sequence<wghEdge> E = hdbscan<dim>(P, minPts);
+    dendrogram(E, P.size());
     cout << "timing = " << t0.stop() << endl;
   }
 }

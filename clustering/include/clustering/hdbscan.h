@@ -6,8 +6,7 @@
 
 namespace pargeo {
 
-  // todo introduce weight into edge
   template<int dim>
-  parlay::sequence<pargeo::edge> hdbscan(parlay::sequence<pargeo::point<dim>> &, size_t);
+  parlay::sequence<pargeo::wghEdge> hdbscan(parlay::sequence<pargeo::point<dim>> &, size_t);
 
 }

@@ -95,7 +95,7 @@ struct unionFind {
 template <class vertexId>
 struct edgeUnionFind {
   parlay::sequence<vertexId> parents;
-  parlay::sequence<edge> edges;
+  parlay::sequence<wghEdge> edges;
 
   bool is_root(vertexId u) {
     return parents[u] == (vertexId)-1;}
@@ -103,7 +103,7 @@ struct edgeUnionFind {
   // initialize n elements all as roots
   edgeUnionFind(size_t n) {
     parents = parlay::sequence<vertexId>(n, -1);
-    edges = parlay::sequence<edge>(n, edge());
+    edges = parlay::sequence<wghEdge>(n, wghEdge());
   }
 
   vertexId find(vertexId i) {
@@ -125,18 +125,19 @@ struct edgeUnionFind {
   // when no cycles are created (e.g. only link from larger
   // to smaller vertexId).
   // Does not use ranks.
-  void link(vertexId u, vertexId v, vertexId uReal, vertexId vReal) {
-    edges[u] = edge(uReal, vReal);
+  void link(vertexId u, vertexId v,
+	    vertexId uReal, vertexId vReal, double weight) {
+    edges[u] = wghEdge(uReal, vReal, weight);
     parents[u] = v;}
 
   size_t numEdge() {
-    return parlay::count_if(make_slice(edges), [&](edge e) {
+    return parlay::count_if(make_slice(edges), [&](wghEdge e) {
 						 return !e.isEmpty();
 					       });
   }
 
-  parlay::sequence<edge> getEdge() {
-    return parlay::filter(edges, [&](edge e){return !e.isEmpty();});
+  parlay::sequence<wghEdge> getEdge() {
+    return parlay::filter(edges, [&](wghEdge e){return !e.isEmpty();});
   }
 };
 

@@ -1,4 +1,6 @@
 #include "spatialGraph/spatialGraph.h"
+#include "clustering/hdbscan.h"
+#include "clustering/dendrogram.h"
 #include "pargeo/pointIO.h"
 #include "pargeo/graphIO.h"
 #include <string>
@@ -329,6 +331,35 @@ py::array_t<float> py_wghKnnGraph(py::array_t<double, py::array::c_style | py::a
     throw std::runtime_error("Only dimensions 2-7 are supported");
 }
 
+py::array_t<double> py_hdbscan(py::array_t<double, py::array::c_style | py::array::forcecast> array, size_t minPts) {
+  if (array.ndim() != 2)
+    throw std::runtime_error("Input should be 2-D NumPy array");
+
+  if (sizeof(pargeo::point<2>) != 16)
+    throw std::runtime_error("sizeof(pargeo::point<2>) != 16, check point.h");
+
+  int dim = array.shape()[1];
+  size_t n = array.size() / dim;
+  parlay::sequence<pargeo::dirEdge> result_vec;
+
+  if (dim == 2) {
+    parlay::sequence<pargeo::point<2>> array_vec(n);
+    std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
+    sequence<pargeo::wghEdge> E = pargeo::hdbscan<2>(array_vec, minPts);
+    sequence<pargeo::dendroNode> dendro = pargeo::dendrogram(E, array_vec.size());
+    sequence<double> A(dendro.size()*4);
+    parlay::parallel_for(0, dendro.size(), [&](size_t i){
+	A[i*4+0] = get<0>(dendro[i]);
+	A[i*4+1] = get<1>(dendro[i]);
+	A[i*4+2] = get<2>(dendro[i]);
+	A[i*4+3] = get<3>(dendro[i]);
+      });
+    return wrapArray2d<double>(A, 4);
+  } else {
+    throw std::runtime_error("Only dimension 2 is supported at the moment");
+  }
+}
+
 PYBIND11_MODULE(pypargeo, m)
 {
   m.doc() = "Pargeo: a library for parallel computational geometry.";
@@ -386,4 +417,9 @@ PYBIND11_MODULE(pypargeo, m)
 	&py_wghSkeleton,
 	"Weighted planar Beta skeleton.",
 	py::arg("array"), py::arg("beta"));
+
+  m.def("hdbscan",
+	&py_hdbscan,
+	"Hierarchical DBSCAN*.",
+	py::arg("array"), py::arg("minPts"));
 }

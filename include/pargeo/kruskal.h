@@ -109,7 +109,7 @@ namespace pargeo {
       }
 
       bool reserve(edgeId i) {
-	vertexId u = E[i].u = UF.find(E[i].u); // Oh!!
+	vertexId u = E[i].u = UF.find(E[i].u);
 	vertexId v = E[i].v = UF.find(E[i].v);
 	if (u != v) {
 	  R[v].reserve(i);
@@ -125,10 +125,10 @@ namespace pargeo {
 	vertexId vReal = EReal[i].v;
 	if (R[v].check(i)) {
 	  R[u].checkReset(i);
-	  UF.link(v, u, vReal, uReal);
+	  UF.link(v, u, vReal, uReal, EReal[i].w);
 	  return true;}
 	else if (R[u].check(i)) {
-	  UF.link(u, v, uReal, vReal);
+	  UF.link(u, v, uReal, vReal, EReal[i].w);
 	  return true; }
 	else return false;
       }

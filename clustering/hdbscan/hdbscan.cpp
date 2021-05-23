@@ -1,3 +1,26 @@
+// This code is part of the project "Fast Parallel Algorithms for Euclidean
+// Minimum Spanning Tree and Hierarchical Spatial Clustering"
+// Copyright (c) 2021 Yiqiu Wang, Shangdi Yu, Yan Gu, Julian Shun
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights (to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 #include <tuple>
 #include "parlay/parallel.h"
 #include "parlay/sequence.h"
@@ -18,7 +41,7 @@ using namespace pargeo;
 using namespace pargeo::hdbscanInternal;
 
 template<int dim>
-parlay::sequence<pargeo::edge> pargeo::hdbscan(parlay::sequence<pargeo::point<dim>> &S, size_t minPts) {
+parlay::sequence<pargeo::wghEdge> pargeo::hdbscan(parlay::sequence<pargeo::point<dim>> &S, size_t minPts) {
   using pointT = point<dim>;
   using nodeT = kdNode<dim, point<dim>>;
   using floatT = typename pointT::floatT;
@@ -130,9 +153,9 @@ parlay::sequence<pargeo::edge> pargeo::hdbscan(parlay::sequence<pargeo::point<di
   return UF.getEdge();
 }
 
-template sequence<edge> pargeo::hdbscan<2>(sequence<point<2>> &, size_t);
-template sequence<edge> pargeo::hdbscan<3>(sequence<point<3>> &, size_t);
-template sequence<edge> pargeo::hdbscan<4>(sequence<point<4>> &, size_t);
-template sequence<edge> pargeo::hdbscan<5>(sequence<point<5>> &, size_t);
-template sequence<edge> pargeo::hdbscan<6>(sequence<point<6>> &, size_t);
-template sequence<edge> pargeo::hdbscan<7>(sequence<point<7>> &, size_t);
+template sequence<wghEdge> pargeo::hdbscan<2>(sequence<point<2>> &, size_t);
+template sequence<wghEdge> pargeo::hdbscan<3>(sequence<point<3>> &, size_t);
+template sequence<wghEdge> pargeo::hdbscan<4>(sequence<point<4>> &, size_t);
+template sequence<wghEdge> pargeo::hdbscan<5>(sequence<point<5>> &, size_t);
+template sequence<wghEdge> pargeo::hdbscan<6>(sequence<point<6>> &, size_t);
+template sequence<wghEdge> pargeo::hdbscan<7>(sequence<point<7>> &, size_t);
