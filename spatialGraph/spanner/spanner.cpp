@@ -7,7 +7,7 @@
 #include "spatialGraph/spatialGraph.h"
 
 template<int dim>
-parlay::sequence<pargeo::edge> pargeo::euclideanSpanner(parlay::sequence<pargeo::point<dim>> &S, double t) {
+parlay::sequence<pargeo::edge> pargeo::spanner(parlay::sequence<pargeo::point<dim>> &S, double t) {
   using namespace std;
   using namespace pargeo;
   using namespace parlay;
@@ -46,9 +46,9 @@ parlay::sequence<pargeo::edge> pargeo::euclideanSpanner(parlay::sequence<pargeo:
   return edges;
 }
 
-template parlay::sequence<pargeo::edge> pargeo::euclideanSpanner<2>(parlay::sequence<pargeo::point<2>> &, double);
-template parlay::sequence<pargeo::edge> pargeo::euclideanSpanner<3>(parlay::sequence<pargeo::point<3>> &, double);
-template parlay::sequence<pargeo::edge> pargeo::euclideanSpanner<4>(parlay::sequence<pargeo::point<4>> &, double);
-template parlay::sequence<pargeo::edge> pargeo::euclideanSpanner<5>(parlay::sequence<pargeo::point<5>> &, double);
-template parlay::sequence<pargeo::edge> pargeo::euclideanSpanner<6>(parlay::sequence<pargeo::point<6>> &, double);
-template parlay::sequence<pargeo::edge> pargeo::euclideanSpanner<7>(parlay::sequence<pargeo::point<7>> &, double);
+template parlay::sequence<pargeo::edge> pargeo::spanner<2>(parlay::sequence<pargeo::point<2>> &, double);
+template parlay::sequence<pargeo::edge> pargeo::spanner<3>(parlay::sequence<pargeo::point<3>> &, double);
+template parlay::sequence<pargeo::edge> pargeo::spanner<4>(parlay::sequence<pargeo::point<4>> &, double);
+template parlay::sequence<pargeo::edge> pargeo::spanner<5>(parlay::sequence<pargeo::point<5>> &, double);
+template parlay::sequence<pargeo::edge> pargeo::spanner<6>(parlay::sequence<pargeo::point<6>> &, double);
+template parlay::sequence<pargeo::edge> pargeo::spanner<7>(parlay::sequence<pargeo::point<7>> &, double);

@@ -1,6 +1,6 @@
 import numpy as np
 from pypargeo import loadPoints
-from pypargeo import hdbscan
+from pypargeo import HDBSCAN
 from scipy.cluster.hierarchy import dendrogram, linkage
 from matplotlib import pyplot as plt
 from sklearn.datasets import make_blobs
