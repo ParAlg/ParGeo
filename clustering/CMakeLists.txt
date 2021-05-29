@@ -1,15 +1,15 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(euclideanMst)
+project(clustering)
 
 add_library(${PROJECT_NAME}
-  wspd/emst.cpp
-  wspd/emstTime.cpp
+  hdbscan/hdbscan.cpp
+  hdbscan/hdbscanTime.cpp
+  dendrogram/dendrogram.cpp
   )
 
-add_subdirectory(wspd)
-
-add_subdirectory(memoGfk)
+add_subdirectory(hdbscan)
+add_subdirectory(dendrogram)
 
 target_link_libraries(${PROJECT_NAME} pargeolib)
 

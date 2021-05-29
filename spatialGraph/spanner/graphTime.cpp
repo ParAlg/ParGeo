@@ -17,7 +17,7 @@ template<int dim>
 void timeGraph(parlay::sequence<pargeo::point<dim>> &P, double k, int rounds, char const *outFile) {
   timer t; t.start();
   for(int i=0; i<rounds; ++i) {
-    auto I = euclideanSpanner<dim>(P, k);
+    auto I = spanner<dim>(P, k);
     cout << "round-time = " << t.get_next() << endl;
     if (i == rounds-1 && outFile != NULL) graphIO::writeEdgeSeqToFile(I, outFile);
   }

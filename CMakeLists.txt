@@ -38,6 +38,8 @@ add_subdirectory(knnSearch)
 
 add_subdirectory(spatialSort)
 
+add_subdirectory(clustering)
+
 add_subdirectory(rangeSearch)
 
 add_subdirectory(closestPair)

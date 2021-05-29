@@ -30,7 +30,7 @@ namespace pargeo {
 
   using namespace std;
 
-  namespace bccpInternal {
+  namespace hdbscanBccpInternal {
 
     template <typename objT>
     struct bcp {
@@ -49,28 +49,39 @@ namespace pargeo {
       }
     };
 
-    template <typename nodeT>
-    bcp<typename nodeT::objT> bcpBruteforce(nodeT* n1, nodeT* n2) {
+    template <class nodeT>
+      bcp<typename nodeT::objT> bcpBruteforce(nodeT* n1,
+					      nodeT* n2,
+					      sequence<floatT> &coreDist,
+					      typename nodeT::objT* P) {
       bcp<typename nodeT::objT> r;
       for (size_t i = 0; i < n1->size(); ++ i) {
 	for (size_t j = 0; j < n2->size(); ++ j) {
-	  double tmp = n1->at(i)->dist( *(n2->at(j)) );
-	  r.update(n1->at(i), n2->at(j), tmp);
+	  floatT dist = max(n1->getItem(i)->dist(*n2->getItem(j)),
+			    coreDist[n1->getItem(i)-P]);
+	  dist = max(dist, coreDist[n2->getItem(j)-P]);
+	  r.update(n1->getItem(i), n2->getItem(j), dist);
 	}
       }
       return r;
     }
 
-    template <typename nodeT>
-    inline void bcpHelper(nodeT* n1, nodeT* n2, bcp<typename nodeT::objT>* r) {
+    template <class nodeT>
+    inline void bcpHelper(nodeT* n1,
+			  nodeT* n2,
+			  bcp<typename nodeT::objT>* r,
+			  sequence<floatT> &coreDist,
+			  typename nodeT::objT* P) {
       if (nodeDistance(n1, n2) > r->dist) return;
 
       if (n1->isLeaf() && n2->isLeaf()) {
 
 	for (size_t i=0; i<n1->size(); ++i) {
 	  for (size_t j=0; j<n2->size(); ++j) {
-	    r->update(n1->at(i), n2->at(j),
-		      n1->at(i)->dist(*n2->at(j)));
+	    floatT dist = max(n1->getItem(i)->dist(*n2->getItem(j)),
+			      coreDist[n1->getItem(i)-P]);
+	    dist = max(dist, coreDist[n2->getItem(j)-P]);
+	    r->update(n1->getItem(i), n2->getItem(j), dist);
 	  }
 	}
 
@@ -79,17 +90,17 @@ namespace pargeo {
 	if (n1->isLeaf()) {
 
 	  if (nodeDistance(n1, n2->L()) < nodeDistance(n1, n2->R())) {
-	    bcpHelper(n1, n2->L(), r); bcpHelper(n1, n2->R(), r);
+	    bcpHelper(n1, n2->L(), r, coreDist, P); bcpHelper(n1, n2->R(), r, coreDist, P);
 	  } else {
-	    bcpHelper(n1, n2->R(), r); bcpHelper(n1, n2->L(), r);
+	    bcpHelper(n1, n2->R(), r, coreDist, P); bcpHelper(n1, n2->L(), r, coreDist, P);
 	  }
 
 	} else if (n2->isLeaf()) {
 
 	  if (nodeDistance(n2, n1->L()) < nodeDistance(n2, n1->R())) {
-	    bcpHelper(n1->L(), n2, r); bcpHelper(n1->R(), n2, r);
+	    bcpHelper(n1->L(), n2, r, coreDist, P); bcpHelper(n1->R(), n2, r, coreDist, P);
 	  } else {
-	    bcpHelper(n1->R(), n2, r); bcpHelper(n1->L(), n2, r);
+	    bcpHelper(n1->R(), n2, r, coreDist, P); bcpHelper(n1->L(), n2, r, coreDist, P);
 	  }
 
 	} else {
@@ -101,32 +112,36 @@ namespace pargeo {
 	  ordering[3] = make_pair(n1->R(), n2->R());
 
 	  auto cmp = [&](pair<nodeT*,nodeT*> p1, pair<nodeT*,nodeT*> p2) {
-									  return nodeDistance(p1.first, p1.second) < nodeDistance(p2.first, p2.second);};
+            return nodeDistance(p1.first, p1.second) < nodeDistance(p2.first, p2.second);};
 	  sort(ordering, ordering + 4, cmp);
 
 	  for (int o=0; o<4; ++o) {
-	    bcpHelper(ordering[o].first, ordering[o].second, r);}
+	    bcpHelper(ordering[o].first, ordering[o].second, r, coreDist, P);}
 
 	}
 
       }
     }
 
-  } // End namespace bcpInternal
+  } // End namespace hdbscanBccpInternal
 
   template <typename nodeT>
   tuple<typename nodeT::objT*,
 	typename nodeT::objT*,
-	typename nodeT::objT::floatT> bccp(nodeT* n1, nodeT* n2) {
-    using namespace bccpInternal;
+    typename nodeT::objT::floatT> hdbscanBccp(nodeT* n1,
+					      nodeT* n2,
+					      sequence<floatT> &coreDist,
+					      typename nodeT::objT* P
+					      ) {
+    using namespace hdbscanBccpInternal;
     using floatT = double;
 
     auto r = bcp<typename nodeT::objT>();
 
-    bcpHelper(n1, n2, &r);
+    bcpHelper(n1, n2, &r, coreDist, P);
 
-    // auto verify = bcpBruteforce(n1, n2);
-    // if (r.u != verify.u || r.v != verify.v) {
+    // auto verify = bcpBruteforce(n1, n2, coreDist, P);
+    // if (r.dist != verify.dist) {
     //   throw std::runtime_error("bcp wrong");
     // }
     return tuple(r.u, r.v, r.dist);

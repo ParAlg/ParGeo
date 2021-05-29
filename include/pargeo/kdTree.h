@@ -38,12 +38,11 @@ namespace pargeo {
     typedef kdNode<_dim, _objT> nodeT;
 
     // Data fields
+    intT id;
 
     int k;
 
     pointT pMin, pMax;
-
-    //intT n;
 
     nodeT* left;
 
@@ -199,7 +198,6 @@ namespace pargeo {
     }
 
   public:
-
     using objT = _objT;
 
     static constexpr int dim  = _dim;
@@ -216,11 +214,7 @@ namespace pargeo {
 
     inline _objT* at(intT i) {return items[i];}
 
-    /* inline void setEmpty() {n=-1;} */
-
-    /* inline bool isEmpty() {return n<0;} */
-
-    inline bool isLeaf() {return !left;}//check
+    inline bool isLeaf() {return !left;}
 
     inline _objT* getItem(intT i) {return items[i];}
 
@@ -232,15 +226,40 @@ namespace pargeo {
 
     inline floatT getMin(int i) {return pMin[i];}
 
+    bool hasId() {
+      return id != -1;
+    }
+
+    void setId(intT _id) {
+      id = _id;
+    }
+
+    void resetId() {
+      id = -1;
+    }
+
+    intT getId() {
+      return id;
+    }
+
     static const int boxInclude = 0;
 
     static const int boxOverlap = 1;
 
     static const int boxExclude = 2;
 
+    floatT diag() {
+      floatT result = 0;
+      for (int d = 0; d < _dim; ++ d) {
+	floatT tmp = pMax[d] - pMin[d];
+	result += tmp * tmp;
+      }
+      return sqrt(result);
+    }
+
     inline floatT lMax() {
       floatT myMax = 0;
-      for (int d=0; d<_dim; ++d) {
+      for (int d=0; d < _dim; ++d) {
 	floatT thisMax = pMax[d] - pMin[d];
 	if (thisMax > myMax) {
 	  myMax = thisMax;}
@@ -262,30 +281,72 @@ namespace pargeo {
 
     kdNode(parlay::slice<_objT**, _objT**> itemss, intT nn, nodeT *space,
 	   parlay::slice<bool*, bool*> flags, intT leafSize=16):
-      items(itemss) {//, n(nn) {
+      items(itemss) {
+      resetId();
       if (size()>2000) constructParallel(space, flags, leafSize);
       else constructSerial(space, leafSize);
     }
 
     kdNode(parlay::slice<_objT**, _objT**> itemss, intT nn, nodeT *space,
 	   intT leafSize=16):
-      items(itemss) {//, n(nn) {
+      items(itemss) {
+      resetId();
       constructSerial(space, leafSize);
     }
 
   };
 
+  template <typename nodeT>
+  inline double nodeDistance(nodeT* n1, nodeT* n2) {
+    using floatT = typename nodeT::objT::floatT;
+
+    for (int d = 0; d < n1->dim; ++ d) {
+      if (n1->getMin(d) > n2->getMax(d) || n2->getMin(d) > n1->getMax(d)) {
+	// disjoint at dim d, and intersect on dim < d
+	floatT rsqr = 0;
+	for (int dd = d; dd < n1->dim; ++ dd) {
+	  floatT tmp = max(n1->getMin(dd) - n2->getMax(dd),
+			   n2->getMin(dd) - n1->getMax(dd));
+	  tmp = max(tmp, (floatT)0);
+	  rsqr += tmp*tmp;
+	}
+	return sqrt(rsqr);
+      }
+    }
+    return 0; // could be intersecting
+  }
+
+  template <typename nodeT>
+  inline double nodeFarDistance(nodeT* n1, nodeT* n2) {
+    using floatT = typename nodeT::objT::floatT;
+    floatT result = 0;
+    for (int d = 0; d < n1->dim; ++ d) {
+      floatT tmp = max(n1->getMax(d), n2->getMax(d)) - min(n1->getMin(d), n2->getMin(d));
+      result += tmp * tmp;
+    }
+    return sqrt(result);
+  }
+
   template<int dim, class objT>
-  kdNode<dim, objT>* buildKdt(parlay::sequence<objT>& P, bool parallel=true, bool noCoarsen=false) {
+  kdNode<dim, objT>* buildKdt(parlay::sequence<objT>& P,
+			      bool parallel=true,
+			      bool noCoarsen=false,
+			      parlay::sequence<objT*>* items=nullptr) {
     typedef kdNode<dim, objT> nodeT;
 
     size_t n = P.size();
 
-    auto items = parlay::sequence<objT*>(n);
-    parlay::parallel_for(0, n, [&](size_t i) {items[i]=&P[i];});
-    parlay::slice<objT**, objT**> itemSlice = parlay::slice(items.begin(), items.end());
+    if (!items) {
+      items = new parlay::sequence<objT*>(n);
+    }
+
+
+    parlay::parallel_for(0, n, [&](size_t i) {items->at(i)=&P[i];});
+
+    parlay::slice<objT**, objT**> itemSlice = items->cut(0, items->size());
 
     auto root = (nodeT*) malloc(sizeof(nodeT)*(2*n-1));
+
     /* parlay::parallel_for(0, 2*n-1, [&](size_t i) { */
     /* 	root[i].setEmpty(); */
     /*   }); */
@@ -297,7 +358,6 @@ namespace pargeo {
     } else {
       root[0] = nodeT(itemSlice, n, root+1, noCoarsen ? 1 : 16);
     }
-
     return root;
   }
 

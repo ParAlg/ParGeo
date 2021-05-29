@@ -13,6 +13,8 @@ from pypargeo import KnnGraph
 from pypargeo import WghKnnGraph
 from pypargeo import BetaSkeleton
 from pypargeo import WghBetaSkeleton
+from pypargeo import WghEuclideanMst
+from pypargeo import Spanner
 
 start_time = None
 
@@ -62,3 +64,5 @@ test(points, "beta-skeleton1-100", BetaSkeleton, True, 1)
 test(points, "beta-wgh-skeleton1-100", WghBetaSkeleton, True, 1)
 test(points, "beta-skeleton2-100", BetaSkeleton, True, 2)
 test(points, "beta-skeleton5-100", BetaSkeleton, True, 5)
+test(points, "emst-100", WghEuclideanMst, True)
+test(points, "10-spanner-100", Spanner, True, 10)
