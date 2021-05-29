@@ -5,9 +5,9 @@
 #include <string>
 #include <string>
 #include <cstring>
-#include "../parlay/primitives.h"
-#include "../parlay/parallel.h"
-#include "../parlay/io.h"
+#include "parlay/primitives.h"
+#include "parlay/parallel.h"
+#include "parlay/io.h"
 
 namespace pargeo {
 namespace graphIO {

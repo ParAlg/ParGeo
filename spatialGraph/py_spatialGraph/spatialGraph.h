@@ -1,1 +1,0 @@
-../gabrielGraph/spatialGraph.h
