@@ -7,6 +7,6 @@
 namespace pargeo {
 
   template<int dim>
-  parlay::sequence<pargeo::wghEdge> euclideanMst(parlay::sequence<pargeo::point<dim>> &);
+  parlay::sequence<pargeo::wghEdge> hdbscan(parlay::sequence<pargeo::point<dim>> &, size_t);
 
 }

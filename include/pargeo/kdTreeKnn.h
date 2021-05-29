@@ -68,6 +68,11 @@ namespace pargeo {
 	return buf[k-1];
       }
 
+      void sort() { // todo check
+	if (ptr < k) throw std::runtime_error("Error, sorting kbuffer without enough k.");
+	parlay::sort(buf.cut(0, k));
+      }
+
       void insert(elem<T> t_elem) {
 	buf[ptr++] = t_elem;
 	if (ptr >= buf.size()) keepK();
@@ -156,22 +161,30 @@ namespace pargeo {
   }
 
   template<int dim, class objT>
-  parlay::sequence<size_t> kdTreeKnn(parlay::sequence<objT> &queries, size_t k) {
+  parlay::sequence<size_t> kdTreeKnn(parlay::sequence<objT> &queries,
+				     size_t k,
+				     kdNode<dim, objT>* tree = nullptr,
+				     bool sorted = false) {
     using nodeT = kdNode<dim, objT>;
-    nodeT* tree = buildKdt<dim, objT>(queries, true);
+    bool freeTree = false;
+    if (!tree) {
+      freeTree = true;
+      tree = buildKdt<dim, objT>(queries, true);
+    }
     auto out = parlay::sequence<elem<objT*>>(2*k*queries.size());
     auto idx = parlay::sequence<size_t>(k*queries.size());
     parlay::parallel_for(0, queries.size(), [&](size_t i) {
 					      buffer buf = buffer<objT*>(k, out.cut(i*2*k, (i+1)*2*k));
 					      knnHelper<dim, nodeT, objT>(tree, queries[i], buf);
 					      buf.keepK();
+					      if (sorted) buf.sort();
 					      for(size_t j=0; j<k; ++j) {
 						idx[i*k+j] = buf[j].entry - queries.data();
 						//cout << buf[j].cost << endl;
 					      }
 					      //cout << endl;
 					    });
-    free(tree);
+    if (freeTree) free(tree);
     return idx;
   }
 

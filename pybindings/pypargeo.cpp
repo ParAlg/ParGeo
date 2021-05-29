@@ -1,4 +1,7 @@
 #include "spatialGraph/spatialGraph.h"
+#include "euclideanMst/euclideanMst.h"
+#include "clustering/hdbscan.h"
+#include "clustering/dendrogram.h"
 #include "pargeo/pointIO.h"
 #include "pargeo/graphIO.h"
 #include <string>
@@ -44,9 +47,12 @@ py::array_t<T> castEdgeList(Edg& E) {
   return wrapArray2d<T>(result_vec, 2);
 }
 
-// Removes edges with weight >epsilon
+// Computes edge weights;
+// removes edges with weight >epsilon
 template<class T, class Edg, class Pts>
-py::array_t<T> castWghEdgeList(Edg& E, Pts& P, T eps=-1) {
+py::array_t<T> castWghEdgeList(Edg& E,
+			       Pts& P,
+			       T eps=-1) {
   struct wghEdge {T u, v, weight;};
   sequence<wghEdge> result(E.size());
   parlay::parallel_for(0, E.size(),
@@ -54,6 +60,26 @@ py::array_t<T> castWghEdgeList(Edg& E, Pts& P, T eps=-1) {
 		 result[i].u = (T) E[i].u;
 		 result[i].v = (T) E[i].v;
 		 result[i].weight = (T) P[E[i].u].dist(P[E[i].v]);
+	       });
+  if (eps > 0) {
+    auto filtered =
+      parlay::filter(result, [&](auto e){ return e.weight <= eps; });
+    return wrapArray2d<T>(filtered, 3);
+  } else {
+    return wrapArray2d<T>(result, 3);
+  }
+}
+
+template<class T, class Edg>
+py::array_t<T> castWghEdgeList(Edg& E,
+			       T eps=-1) {
+  struct wghEdge {T u, v, weight;};
+  sequence<wghEdge> result(E.size());
+  parlay::parallel_for(0, E.size(),
+	       [&](size_t i){
+		 result[i].u = (T) E[i].u;
+		 result[i].v = (T) E[i].v;
+		 result[i].weight = (T) E[i].weight;
 	       });
   if (eps > 0) {
     auto filtered =
@@ -329,6 +355,182 @@ py::array_t<float> py_wghKnnGraph(py::array_t<double, py::array::c_style | py::a
     throw std::runtime_error("Only dimensions 2-7 are supported");
 }
 
+py::array_t<size_t> py_spanner(py::array_t<double, py::array::c_style | py::array::forcecast> array, double t) {
+  if (array.ndim() != 2)
+    throw std::runtime_error("Input should be 2-D NumPy array");
+
+  if (sizeof(pargeo::point<2>) != 16)
+    throw std::runtime_error("sizeof(pargeo::point<2>) != 16, check point.h");
+
+  int dim = array.shape()[1];
+  size_t n = array.size() / dim;
+  parlay::sequence<pargeo::edge> result_vec;
+
+  if (dim == 2) {
+    parlay::sequence<pargeo::point<2>> array_vec(n);
+    std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
+    result_vec = pargeo::spanner<2>(array_vec, t);
+  } else if (dim == 3) {
+    parlay::sequence<pargeo::point<3>> array_vec(n);
+    std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
+    result_vec = pargeo::spanner<3>(array_vec, t);
+  } else if (dim == 4) {
+    parlay::sequence<pargeo::point<4>> array_vec(n);
+    std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
+    result_vec = pargeo::spanner<4>(array_vec, t);
+  } else if (dim == 5) {
+    parlay::sequence<pargeo::point<5>> array_vec(n);
+    std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
+    result_vec = pargeo::spanner<5>(array_vec, t);
+  } else if (dim == 6) {
+    parlay::sequence<pargeo::point<6>> array_vec(n);
+    std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
+    result_vec = pargeo::spanner<6>(array_vec, t);
+  } else if (dim == 7) {
+    parlay::sequence<pargeo::point<7>> array_vec(n);
+    std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
+    result_vec = pargeo::spanner<7>(array_vec, t);
+  } else
+    throw std::runtime_error("Only dimensions 2-7 are supported");
+
+  return castEdgeList<unsigned int>(result_vec);
+}
+
+py::array_t<float> py_wghSpanner(py::array_t<double, py::array::c_style | py::array::forcecast> array, size_t t) {
+  if (array.ndim() != 2)
+    throw std::runtime_error("Input should be 2-D NumPy array");
+
+  if (sizeof(pargeo::point<2>) != 16)
+    throw std::runtime_error("sizeof(pargeo::point<2>) != 16, check point.h");
+
+  int dim = array.shape()[1];
+  size_t n = array.size() / dim;
+  parlay::sequence<pargeo::edge> result_vec;
+
+  if (dim == 2) {
+    parlay::sequence<pargeo::point<2>> array_vec(n);
+    std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
+    auto result_vec = pargeo::spanner<2>(array_vec, t);
+    return castWghEdgeList<float>(result_vec, array_vec);
+  } else if (dim == 3) {
+    parlay::sequence<pargeo::point<3>> array_vec(n);
+    std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
+    auto result_vec = pargeo::spanner<3>(array_vec, t);
+    return castWghEdgeList<float>(result_vec, array_vec);
+  } else if (dim == 4) {
+    parlay::sequence<pargeo::point<4>> array_vec(n);
+    std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
+    auto result_vec = pargeo::spanner<4>(array_vec, t);
+    return castWghEdgeList<float>(result_vec, array_vec);
+  } else if (dim == 5) {
+    parlay::sequence<pargeo::point<5>> array_vec(n);
+    std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
+    auto result_vec = pargeo::spanner<5>(array_vec, t);
+    return castWghEdgeList<float>(result_vec, array_vec);
+  } else if (dim == 6) {
+    parlay::sequence<pargeo::point<6>> array_vec(n);
+    std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
+    auto result_vec = pargeo::spanner<6>(array_vec, t);
+    return castWghEdgeList<float>(result_vec, array_vec);
+  } else if (dim == 7) {
+    parlay::sequence<pargeo::point<7>> array_vec(n);
+    std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
+    auto result_vec = pargeo::spanner<7>(array_vec, t);
+    return castWghEdgeList<float>(result_vec, array_vec);
+  } else
+    throw std::runtime_error("Only dimensions 2-7 are supported");
+}
+
+py::array_t<float> py_wghEmst(py::array_t<double, py::array::c_style | py::array::forcecast> array) {
+  if (array.ndim() != 2)
+    throw std::runtime_error("Input should be 2-D NumPy array");
+
+  if (sizeof(pargeo::point<2>) != 16)
+    throw std::runtime_error("sizeof(pargeo::point<2>) != 16, check point.h");
+
+  int dim = array.shape()[1];
+  size_t n = array.size() / dim;
+
+  parlay::sequence<pargeo::wghEdge> result_vec;
+  if (dim == 2) {
+    parlay::sequence<pargeo::point<2>> array_vec(n);
+    std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
+    result_vec = pargeo::euclideanMst<2>(array_vec);
+  } else if (dim == 3) {
+    parlay::sequence<pargeo::point<3>> array_vec(n);
+    std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
+    result_vec = pargeo::euclideanMst<3>(array_vec);
+  } else if (dim == 4) {
+    parlay::sequence<pargeo::point<4>> array_vec(n);
+    std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
+    result_vec = pargeo::euclideanMst<4>(array_vec);
+  } else if (dim == 5) {
+    parlay::sequence<pargeo::point<5>> array_vec(n);
+    std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
+    result_vec = pargeo::euclideanMst<5>(array_vec);
+  } else if (dim == 6) {
+    parlay::sequence<pargeo::point<6>> array_vec(n);
+    std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
+    result_vec = pargeo::euclideanMst<6>(array_vec);
+  } else if (dim == 7) {
+    parlay::sequence<pargeo::point<7>> array_vec(n);
+    std::memcpy(array_vec.data(), array.data(), array.size() * sizeof(double));
+    result_vec = pargeo::euclideanMst<7>(array_vec);
+  } else
+    throw std::runtime_error("Only supports 2-7 dim points.");
+
+    return castWghEdgeList<float>(result_vec);
+}
+
+py::array_t<double> py_hdbscan(py::array_t<double, py::array::c_style | py::array::forcecast> array, size_t minPts) {
+  if (array.ndim() != 2)
+    throw std::runtime_error("Input should be 2-D NumPy array");
+
+  if (sizeof(pargeo::point<2>) != 16)
+    throw std::runtime_error("sizeof(pargeo::point<2>) != 16, check point.h");
+
+  int dim = array.shape()[1];
+  size_t n = array.size() / dim;
+  parlay::sequence<pargeo::dirEdge> result_vec;
+
+  sequence<pargeo::wghEdge> E;
+  if (dim == 2) {
+    parlay::sequence<pargeo::point<2>> P(n);
+    std::memcpy(P.data(), array.data(), array.size() * sizeof(double));
+    E = pargeo::hdbscan<2>(P, minPts);
+  } else if (dim == 3) {
+    parlay::sequence<pargeo::point<3>> P(n);
+    std::memcpy(P.data(), array.data(), array.size() * sizeof(double));
+    E = pargeo::hdbscan<3>(P, minPts);
+  } else if (dim == 4) {
+    parlay::sequence<pargeo::point<4>> P(n);
+    std::memcpy(P.data(), array.data(), array.size() * sizeof(double));
+    E = pargeo::hdbscan<4>(P, minPts);
+  } else if (dim == 5) {
+    parlay::sequence<pargeo::point<5>> P(n);
+    std::memcpy(P.data(), array.data(), array.size() * sizeof(double));
+    E = pargeo::hdbscan<5>(P, minPts);
+  } else if (dim == 6) {
+    parlay::sequence<pargeo::point<6>> P(n);
+    std::memcpy(P.data(), array.data(), array.size() * sizeof(double));
+    E = pargeo::hdbscan<6>(P, minPts);
+  } else if (dim == 7) {
+    parlay::sequence<pargeo::point<7>> P(n);
+    std::memcpy(P.data(), array.data(), array.size() * sizeof(double));
+    E = pargeo::hdbscan<7>(P, minPts);
+  } else {
+    throw std::runtime_error("Only dimensions 2-7 is supported at the moment");
+  }
+  sequence<pargeo::dendroNode> dendro = pargeo::dendrogram(E, n);
+  sequence<double> A(dendro.size()*4);
+  parlay::parallel_for(0, dendro.size(), [&](size_t i){
+					   A[i*4+0] = get<0>(dendro[i]);
+					   A[i*4+1] = get<1>(dendro[i]);
+					   A[i*4+2] = get<2>(dendro[i]);
+					   A[i*4+3] = get<3>(dendro[i]);});
+  return wrapArray2d<double>(A, 4);
+}
+
 PYBIND11_MODULE(pypargeo, m)
 {
   m.doc() = "Pargeo: a library for parallel computational geometry.";
@@ -386,4 +588,24 @@ PYBIND11_MODULE(pypargeo, m)
 	&py_wghSkeleton,
 	"Weighted planar Beta skeleton.",
 	py::arg("array"), py::arg("beta"));
+
+  m.def("Spanner",
+	&py_spanner,
+	"Unweighted spanner based on the WSPD.",
+	py::arg("array"), py::arg("t"));
+
+  m.def("WghSpanner",
+	&py_spanner,
+	"Weighted spanner based on the WSPD.",
+	py::arg("array"), py::arg("t"));
+
+  m.def("WghEuclideanMst",
+	&py_wghEmst,
+	"Weighted Euclidean MST.",
+	py::arg("array"));
+
+  m.def("HDBSCAN",
+	&py_hdbscan,
+	"Hierarchical DBSCAN*.",
+	py::arg("array"), py::arg("minPts"));
 }

@@ -50,7 +50,7 @@ namespace pargeo {
   long speculative_for(S step, idxT s, idxT e, long granularity,
 		       bool hasState=1, long maxTries=-1) {
     if (maxTries < 0) maxTries = 100 + 200*granularity;
-    long maxRoundSize = (e-s)/granularity+1;
+    long maxRoundSize = max((long) 4, (e-s)/granularity+1);
     long currentRoundSize = maxRoundSize/4;
     // integer types, do not need to be initialized
     auto I = parlay::sequence<idxT>::uninitialized(maxRoundSize);
