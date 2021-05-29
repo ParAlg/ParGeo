@@ -41,5 +41,7 @@ add_subdirectory(closestPair)
 
 add_subdirectory(kdTree)
 
+add_subdirectory(wspd)
+
 message(STATUS "CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}")
 file(COPY datasets DESTINATION ${CMAKE_BINARY_DIR}/test)

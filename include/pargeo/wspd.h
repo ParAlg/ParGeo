@@ -132,7 +132,7 @@ namespace pargeo {
     auto wg = wspdNormalSerial<nodeT>(&out);
 
     computeWspdSerial<nodeT, wspdNormalSerial<nodeT>>(tree, &wg, s);
-    cout << "#-wspd = " << out.size() << endl;
+    //cout << "#-wspd = " << out.size() << endl;
     return out;
   }
 
@@ -227,7 +227,7 @@ namespace pargeo {
 
     computeWspdParallel<nodeT, wspdNormalParallel<nodeT>>(tree, &wg, s);
     auto out = wg.collectPairs();
-    cout << "#-wspd-collected = " << out.size() << endl;
+    //cout << "#-wspd-collected = " << out.size() << endl;
 
     return out;
   }
