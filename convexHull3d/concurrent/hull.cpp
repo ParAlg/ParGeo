@@ -1,29 +1,46 @@
-#include "parlay/hash_table.h"
-#include "parlay/parallel.h"
-#include "parlay/primitives.h"
-#include "parlay/sequence.h"
-#include "pargeo/point.h"
-#include "pargeo/zorderSort.h"
-#include "convexHull3d/pointVertex.h"
-#include "convexHull3d/hullTopology.h"
-#include "convexHull3d/incremental.h"
+// This code is part of the Pargeo Library
+// Copyright (c) 2021 Yiqiu Wang and the Pargeo Team
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights (to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 #include "convexHull3d/hull.h"
+
+#include "parlay/parallel.h"
+#include "parlay/sequence.h"
+#include "pargeo/getTime.h"
+#include "pargeo/point.h"
 
 using namespace pargeo;
 
 template <typename ptOut>
-parlay::sequence<ptOut> concurrentHull(parlay::sequence<pointVertex> &Q, size_t numProc) {
+parlay::sequence<ptOut>
+concurrentHull(parlay::sequence<vertex> &Q, size_t numProc) {
   using namespace std;
   using namespace parlay;
-  using pt = pointVertex;
-#ifndef SILENT
+  using pt = vertex;
+
+#ifdef HULL_CONCURRENT_VERBOSE
   cout << "------------" << endl;
   cout << "input-size = " << Q.size() << endl;
   timer t; t.start();
 #endif
-
-  //sort_inplace(Q, [&](pt i, pt j){return i[0] < j[0];});
-  //zorderSortInPlace3d(Q);
 
   if (!numProc) numProc = num_workers();
 
@@ -35,41 +52,38 @@ parlay::sequence<ptOut> concurrentHull(parlay::sequence<pointVertex> &Q, size_t 
     numProc -= 1;
     blkSize = floor(Q.size() / numProc);
   }
-#ifndef SILENT
+
+#ifdef HULL_CONCURRENT_VERBOSE
   cout << "#-subproblems = " << numProc << endl;
 #endif
+
   sequence<sequence<ptOut>> subHulls(numProc);
 
   parallel_for(0, numProc, [&](size_t i) {
 			     size_t s = i * blkSize;
 			     size_t e = min(Q.size(), (i+1) * blkSize);
-			     auto origin = pointOrigin();
-			     auto linkedHull = new _hull<linkedFacet3d<pt>, pt, pointOrigin>(Q.cut(s, e), origin, true);
-			     incrementHull3dSerial<linkedFacet3d<pt>, pt, pointOrigin>(linkedHull);
-			     subHulls[i] = linkedHull->getHullVertices<ptOut>();
-			     //subHulls[i] = hull3dInternalSerial(Q.cut(s, e)); // todo compilation issue
+			     subHulls[i] = hullInternal::hull3dSerialInternal(Q.cut(s, e));
 			   }, 1);
 
   sequence<ptOut> uniquePts = parlay::flatten(subHulls);
-#ifndef SILENT
+#ifdef HULL_CONCURRENT_VERBOSE
   cout << "output-size = " << uniquePts.size() << endl;
   cout << "hull-time = " << t.stop() << endl;
 #endif
 
   // Divide and conquer once seems to be the most efficient for now
   return uniquePts;
-
-  // note can consider recursively calling concurrent hull, did not find fast before
 }
 
-parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dConcurrent(parlay::sequence<pargeo::fpoint<3>> &P, size_t numProc) {
+parlay::sequence<facet3d<pargeo::fpoint<3>>>
+pargeo::hull3dConcurrent(parlay::sequence<pargeo::fpoint<3>> &P, size_t numProc) {
   using namespace std;
   using namespace parlay;
-  using pt = pointVertex;
+  using pt = vertex;
 
   size_t n = P.size();
 
-#ifndef SILENT
+#ifdef HULL_CONCURRENT_VERBOSE
   cout << "#-points = " << n << endl;
   timer t; t.start();
 #endif
@@ -78,27 +92,19 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dConcurrent(parlay::sequence<p
   parallel_for(0, P.size(), [&](size_t i) {
 			      Q[i] = pt(P[i].coords());});
 
-#ifndef SILENT
+#ifdef HULL_CONCURRENT_VERBOSE
   cout << "> concurrent-hull-time = " << t.get_next() << endl;
 #endif
 
   sequence<pt> Q2 = concurrentHull<pt>(Q, numProc);
-  auto origin = pointOrigin();
-  auto finalLinkedHull = new _hull<linkedFacet3d<pt>, pt, pointOrigin>(make_slice(Q2), origin, false);
-  incrementHull3dSerial<linkedFacet3d<pt>, pt, pointOrigin>(finalLinkedHull); // todo parallelize
-  //incrementHull3d<linkedFacet3d<pt>, pt, pointOrigin>(finalLinkedHull, numProc);
-  auto out = sequence<facet3d<pargeo::fpoint<3>>>();
-  finalLinkedHull->getHull<pargeo::fpoint<3>>(out);
 
-#ifndef SILENT
+  //auto out = hull3dSerial(Q2);
+  auto out = hull3dIncrementalInternal(make_slice(Q2));
+
+#ifdef HULL_CONCURRENT_VERBOSE
   cout << "> merge-hull-time = " << t.stop() << endl;
-#endif
-
-#ifndef SILENT
   cout << "hull-size = " << out.size() << endl;
 #endif
 
   return out;
 }
-
-parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dConcurrent(parlay::sequence<pargeo::fpoint<3>> &, size_t);

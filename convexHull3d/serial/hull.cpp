@@ -1,47 +1,40 @@
-#include "parlay/parallel.h"
-#include "parlay/primitives.h"
-#include "parlay/sequence.h"
-#include "pargeo/point.h"
-#include "convexHull3d/incremental.h"
-#include "convexHull3d/hullTopology.h"
-#include "convexHull3d/pointVertex.h"
 #include "convexHull3d/hull.h"
 
-parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dSerial(parlay::sequence<pargeo::fpoint<3>> &P) {
-  using namespace std;
+#include "parlay/parallel.h"
+#include "parlay/sequence.h"
+#include "pargeo/getTime.h"
+#include "pargeo/point.h"
+
+#include "incremental.h"
+#include "serialHull.h"
+#include "vertex.h"
+
+parlay::sequence<pargeo::facet3d<pargeo::fpoint<3>>>
+pargeo::hull3dSerial(parlay::sequence<pargeo::fpoint<3>> &P) {
   using namespace parlay;
-  using floatT = pargeo::fpoint<3>::floatT;
   using pointT = pargeo::fpoint<3>;
-  using facetT = facet3d<pargeo::fpoint<3>>;
+  using floatT = pointT::floatT;
+  using facetT = facet3d<pointT>;
 
   size_t n = P.size();
-#ifndef SILENT
-  cout << "#-points = " << n << endl;
-#endif
-  sequence<pointVertex> Q(P.size());
+
+  sequence<vertex> Q(P.size());
+
   parallel_for(0, P.size(), [&](size_t i) {
-			      Q[i] = pointVertex(P[i].coords());
-			      // Initialize meta data related to the data type
-			      // (pointVertex)
-			      // Nothing here
+			      Q[i] = vertex(P[i].coords());
 			    });
 
-  // Create an initial simplex
   auto origin = pointOrigin();
-  auto linkedHull = new _hull<linkedFacet3d<pointVertex>, pointVertex, pointOrigin>(make_slice(Q), origin, true);
 
-  incrementHull3dSerial<linkedFacet3d<pointVertex>, pointVertex>(linkedHull);
+  auto linkedHull = new serialHull<linkedFacet3d<vertex>, vertex, pointOrigin>(make_slice(Q), origin);
 
-  // linkedHull is translated
-  // getHull will undo the translation
+  incrementHull3dSerial<linkedFacet3d<vertex>, vertex>(linkedHull);
+
   auto out = sequence<facetT>();
+
   linkedHull->getHull<pointT>(out);
 
-#ifndef SILENT
-  cout << out.size() << endl;
-#endif
   delete linkedHull;
+
   return out;
 }
-
-parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dSerial(parlay::sequence<pargeo::fpoint<3>> &);

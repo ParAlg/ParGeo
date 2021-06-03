@@ -1,14 +1,37 @@
-#include "parlay/hash_table.h"
-#include "parlay/parallel.h"
-#include "parlay/primitives.h"
-#include "parlay/sequence.h"
-#include "pargeo/point.h"
-#include "convexHull3d/incremental.h"
-#include "convexHull3d/hullTopology.h"
-#include "convexHull3d/pointVertex.h"
+// This code is part of the Pargeo Library
+// Copyright (c) 2021 Yiqiu Wang and the Pargeo Team
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights (to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 #include "convexHull3d/hull.h"
 
-parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dIncremental(parlay::sequence<pargeo::fpoint<3>> &P, size_t numProc) {
+#include "parlay/sequence.h"
+#include "pargeo/getTime.h"
+#include "pargeo/point.h"
+
+#include "parallelHull.h"
+#include "incremental.h"
+#include "vertex.h"
+
+parlay::sequence<pargeo::facet3d<pargeo::fpoint<3>>>
+pargeo::hull3dIncremental(parlay::sequence<pargeo::fpoint<3>> &P, size_t numProc) {
   using namespace std;
   using namespace parlay;
   using floatT = pargeo::fpoint<3>::floatT;
@@ -16,29 +39,46 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dIncremental(parlay::sequence<
   using facetT = facet3d<pargeo::fpoint<3>>;
 
   size_t n = P.size();
-  cout << "#-points = " << n << endl;
-  cout << "#-procs = " << num_workers() << endl;
 
-  sequence<pointVertex> Q(P.size());
+  sequence<vertex> Q(P.size());
   parallel_for(0, P.size(), [&](size_t i) {
-			      Q[i] = pointVertex(P[i].coords());
+			      Q[i] = vertex(P[i].coords());
 			    });
 
   // Create an initial simplex
   auto origin = pointOrigin();
-  auto linkedHull = new _hull<linkedFacet3d<pointVertex>, pointVertex, pointOrigin>(make_slice(Q), origin, false);
 
-  incrementHull3d<linkedFacet3d<pointVertex>, pointVertex, pointOrigin>(linkedHull, numProc);
+  auto linkedHull = new parallelHull<linkedFacet3d<vertex>, vertex, pointOrigin>(make_slice(Q), origin);
 
-  // linkedHull is translated
-  // getHull will undo the translation
+  incrementHull3d<linkedFacet3d<vertex>, vertex, pointOrigin>(linkedHull, numProc);
+
+  // getHull will undo the translation of linkedHull
   auto out = sequence<facetT>();
   linkedHull->getHull<pointT>(out);
-
-  cout << out.size() << endl;
 
   delete linkedHull;
   return out;
 }
 
-parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dIncremental(parlay::sequence<pargeo::fpoint<3>> &, size_t);
+parlay::sequence<pargeo::facet3d<pargeo::fpoint<3>>>
+pargeo::hull3dIncrementalInternal(parlay::slice<vertex*, vertex*> Q, size_t numProc) {
+  using namespace std;
+  using namespace parlay;
+  using floatT = pargeo::fpoint<3>::floatT;
+  using pointT = pargeo::fpoint<3>;
+  using facetT = facet3d<pargeo::fpoint<3>>;
+
+  // Create an initial simplex
+  auto origin = pointOrigin();
+
+  auto linkedHull = new parallelHull<linkedFacet3d<vertex>, vertex, pointOrigin>(Q, origin);
+
+  incrementHull3d<linkedFacet3d<vertex>, vertex, pointOrigin>(linkedHull, numProc);
+
+  // getHull will undo the translation of linkedHull
+  auto out = sequence<facetT>();
+  linkedHull->getHull<pointT>(out);
+
+  delete linkedHull;
+  return out;
+}

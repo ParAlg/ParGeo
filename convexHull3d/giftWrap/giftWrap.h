@@ -64,10 +64,10 @@ size_t pivotOnFacet(size_t p1, size_t q1, size_t q2, parlay::slice<pt*, pt*> P) 
   return q-P.begin();
 }
 
-parlay::sequence<facet3d<pargeo::fpoint<3>>> giftWrap3d(parlay::sequence<pargeo::fpoint<3>> &P) {
+parlay::sequence<pargeo::facet3d<pargeo::fpoint<3>>> giftWrap3d(parlay::sequence<pargeo::fpoint<3>> &P) {
   using namespace parlay;
   using pt = pargeo::fpoint<3>;
-  using facet3d = facet3d<pt>;
+  using facet3d = pargeo::facet3d<pt>;
 
   struct fc {
     size_t a, b, c;
@@ -155,4 +155,4 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>> giftWrap3d(parlay::sequence<pargeo:
   return sequence<facet3d>(); // todo dummy
 }
 
-parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &);
+// parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &);

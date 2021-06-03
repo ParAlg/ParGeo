@@ -1,5 +1,5 @@
 // This code is part of the Pargeo Library
-// Copyright (c) 2020 Yiqiu Wang and the Pargeo Team
+// Copyright (c) 2021 Yiqiu Wang and the Pargeo Team
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the
@@ -29,9 +29,7 @@
 #include <tuple>
 #include "parlay/sequence.h"
 #include "parlay/hash_table.h"
-#include "pargeo/parlayAddon.h"
 #include "pargeo/point.h"
-#include "pargeo/algebra.h"
 #include "pargeo/getTime.h"
 
 using namespace std;
@@ -57,9 +55,9 @@ struct hash_pointer {
 };
 
 template <class facetT, class vertexT, class originT>
-struct _hull {
+class _hullTopology {
 
-private:
+protected:
 
   // A linked structure for the facets
   facetT* H;
@@ -71,7 +69,7 @@ private:
   */
   template <class F, class G, class H>
   void dfsFacet(facetT* start, F& fVisit, G& fDo, H& fStop) {
-    
+
     hashtable<hash_pointer<facetT*>> V(hSize, hash_pointer<facetT*>());
     auto mark = [&](facetT* f) {V.insert(f);};
     auto visited = [&](facetT* f) {return V.find(f) != nullptr;};
@@ -82,8 +80,8 @@ private:
 
     while (S.size() > 0) {
       _edge e = S.top(); S.pop();
-      if (!visited(e.ff) && fVisit(e)) {
-	fDo(e);
+      if (!visited(e.ff) && fVisit(e.ff)) {
+	fDo(e.ff);
 	mark(e.ff);
 
 	S.emplace(e.ff->a, e.ff->b, e.ff->abFacet, e.ff);
@@ -153,7 +151,8 @@ e.b==e.ff.a    e.a==e.ff.c
     }
   }
 
-public:
+ public:
+
   // An arbitrary coordinate class located within the hull
   // it also contains primitives for visibility test
   originT origin;
@@ -205,7 +204,7 @@ public:
     f->caFacet = findFacet(f->c, f->a);
     linkEdge(f, f->caFacet, f->c, f->a);
   }
-  
+
   /* An edge sub structure for advancing direction in a traversal
 
      ff: forward facet to advance to
@@ -229,338 +228,18 @@ public:
       return e1.a==e2.a && e1.b==e2.b;}
   };
 
-  void setStart(facetT* _H) {H = _H;}
+  void setHull(facetT* _H) {H = _H;}
 
-  facetT* constructorSerial(slice<vertexT*, vertexT*> P) {
+/*   facetT* constructorParallel(slice<vertexT*, vertexT*> P) { */
 
-    // Maximize triangle area based on fixed xMin and xMax
-    size_t X[6];
-    auto xx = minmax_element_serial(P, [&](vertexT i, vertexT j) {return i[0]<j[0];});
-    X[0] = xx.first - &P[0]; X[1] = xx.second - &P[0];
-    auto yy = minmax_element_serial(P, [&](vertexT i, vertexT j) {return i[1]<j[1];});
-    X[2] = yy.first - &P[0]; X[3] = yy.second - &P[0];
-    auto zz = minmax_element_serial(P, [&](vertexT i, vertexT j) {return i[2]<j[2];});
-    X[4] = zz.first - &P[0]; X[5] = zz.second - &P[0];
-
-    size_t xMin, xMax;
-    if (P[X[1]][0]-P[X[0]][0] > P[X[3]][1]-P[X[2]][1] && P[X[1]][0]-P[X[0]][0] > P[X[5]][2]-P[X[4]][2]) {
-      xMin = X[0]; xMax = X[1];
-    } else if (P[X[3]][1]-P[X[2]][1] > P[X[1]][0]-P[X[0]][0] && P[X[3]][1]-P[X[2]][1] > P[X[5]][2]-P[X[4]][2]) {
-      xMin = X[2]; xMax = X[3];
-    } else {
-      xMin = X[4]; xMax = X[5];
-    }
-
-    vertexT x1 = P[xMin];
-    vertexT x2 = P[xMax];
-
-    auto y = max_element_serial(P, [&](vertexT i, vertexT j) {
-			      return crossProduct3d(x1-i, x2-i).length() <
-				crossProduct3d(x1-j, x2-j).length();
-			    });
-    size_t yApex = y - &P[0];
-    vertexT y1 = P[yApex];
-
-    // Maximize simplex volume
-    vertexT area = crossProduct3d(x1-y1, x2-y1);
-    auto z = max_element(P, [&](vertexT i, vertexT j) {
-			      return abs((y1-i).dot(area)) < abs((y1-j).dot(area));
-			    });
-    size_t zApex = z - &P[0];
-
-    size_t c1 = xMin;
-    size_t c2 = xMax;
-    size_t c3 = yApex;
-    size_t c4 = zApex;
-
-    hSize = 4;
-
-    origin.setOrigin((P[c1] + P[c2] + P[c3] + P[c4])/4);
-
-    // Initialize points with visible facet link
-    auto Q = typename facetT::seqT(P.size());
-
-    for (size_t i=0; i<P.size(); ++i)
-      Q[i] = P[i] - origin.get(); // translation
-
-    // Make initial facets
-    auto f0 = new facetT(Q[c1], Q[c2], Q[c3]);
-    auto f1 = new facetT(Q[c1], Q[c2], Q[c4]);
-    auto f2 = new facetT(Q[c3], Q[c4], Q[c2]);
-    auto f3 = new facetT(Q[c3], Q[c4], Q[c1]);
-
-    linkFacet(f0, f1, f2, f3);
-    linkFacet(f1, f0, f2, f3);
-    linkFacet(f2, f1, f0, f3);
-    linkFacet(f3, f1, f2, f0);
-
-#ifdef GRID
-
-    for(size_t i=0; i<Q.size(); i++) {
-      if (origin.visible(f0, Q[i])) {
-	Q[i].attribute.seeFacet = f0;
-	f0->push_visible(Q[i]);
-      } else if (origin.visible(f1, Q[i])) {
-	Q[i].attribute.seeFacet = f1;
-	f1->push_visible(Q[i]);
-      } else if (origin.visible(f2, Q[i])) {
-	Q[i].attribute.seeFacet = f2;
-	f2->push_visible(Q[i]);
-      } else if (origin.visible(f3, Q[i])) {
-	Q[i].attribute.seeFacet = f3;
-	f3->push_visible(Q[i]);
-      } else {
-	Q[i].attribute.seeFacet = nullptr;
-      }
-    }
-
-    for(size_t i=0; i<Q.size(); i++) {
-      if (origin.keep(f0, Q[i])) f0->push_keep(Q[i]);
-      if (origin.keep(f1, Q[i])) f1->push_keep(Q[i]);
-      if (origin.keep(f2, Q[i])) f2->push_keep(Q[i]);
-      if (origin.keep(f3, Q[i])) f3->push_keep(Q[i]);
-    }
-
-    // for(size_t i=0; i<Q.size(); i++) {
-    //   if (origin.keep(f0, Q[i])) f0->push_keep(Q[i]);
-    //   else if (origin.keep(f1, Q[i])) f1->push_keep(Q[i]);
-    //   else if (origin.keep(f2, Q[i])) f2->push_keep(Q[i]);
-    //   else if (origin.keep(f3, Q[i])) f3->push_keep(Q[i]);
-    // }
-
-#else
-
-    for(size_t i=0; i<Q.size(); i++) {
-      if (origin.keep(f0, Q[i])) {
-	Q[i].attribute.seeFacet = f0;
-	f0->push_back(Q[i], &origin);
-      } else if (origin.keep(f1, Q[i])) {
-	Q[i].attribute.seeFacet = f1;
-	f1->push_back(Q[i], &origin);
-      } else if (origin.keep(f2, Q[i])) {
-	Q[i].attribute.seeFacet = f2;
-	f2->push_back(Q[i], &origin);
-      } else if (origin.keep(f3, Q[i])) {
-	Q[i].attribute.seeFacet = f3;
-	f3->push_back(Q[i], &origin);
-      } else {
-	Q[i].attribute.seeFacet = nullptr;
-      }
-    }
-
-#endif
-
-#ifdef VERBOSE
-    cout << "initial-hull:" << endl;
-    cout << " facet 0, area = " << f0->area.length()/2 << " #pts = " << f0->numPts() << endl;
-    cout << " facet 1, area = " << f1->area.length()/2 << " #pts = " << f1->numPts() << endl;
-    cout << " facet 2, area = " << f2->area.length()/2 << " #pts = " << f2->numPts() << endl;
-    cout << " facet 3, area = " << f3->area.length()/2 << " #pts = " << f3->numPts() << endl;
-    cout << " volume = " << abs((f0->a-Q[c4]).dot(f0->area)/6) << endl;
-#endif
-
-    return f0;
-  }
-
-  facetT* constructorParallel(slice<vertexT*, vertexT*> P) {
-
-    // Maximize triangle area based on fixed xMin and xMax
-    size_t X[6]; // extrema
-    auto xx = minmax_element(P, [&](vertexT i, vertexT j) {return i[0]<j[0];});
-    X[0] = xx.first - &P[0]; X[1] = xx.second - &P[0];
-    auto yy = minmax_element(P, [&](vertexT i, vertexT j) {return i[1]<j[1];});
-    X[2] = yy.first - &P[0]; X[3] = yy.second - &P[0];
-    auto zz = minmax_element(P, [&](vertexT i, vertexT j) {return i[2]<j[2];});
-    X[4] = zz.first - &P[0]; X[5] = zz.second - &P[0];
-
-    size_t xMin, xMax;
-    if (P[X[1]][0]-P[X[0]][0] > P[X[3]][1]-P[X[2]][1] && P[X[1]][0]-P[X[0]][0] > P[X[5]][2]-P[X[4]][2]) {
-      xMin = X[0]; xMax = X[1];
-    } else if (P[X[3]][1]-P[X[2]][1] > P[X[1]][0]-P[X[0]][0] && P[X[3]][1]-P[X[2]][1] > P[X[5]][2]-P[X[4]][2]) {
-      xMin = X[2]; xMax = X[3];
-    } else {
-      xMin = X[4]; xMax = X[5];
-    }
-
-    vertexT x1 = P[xMin];
-    vertexT x2 = P[xMax];
-
-    auto y = max_element(P, [&](vertexT i, vertexT j) {
-			      return crossProduct3d(x1-i, x2-i).length() <
-				crossProduct3d(x1-j, x2-j).length();
-			    });
-    size_t yApex = y - &P[0];
-    vertexT y1 = P[yApex];
-
-    // Maximize simplex volume
-    vertexT area = crossProduct3d(x1-y1, x2-y1);
-    auto z = max_element(P, [&](vertexT i, vertexT j) {
-			      return abs((y1-i).dot(area)) < abs((y1-j).dot(area));
-			    });
-    size_t zApex = z - &P[0];
-
-    size_t c1 = xMin;
-    size_t c2 = xMax;
-    size_t c3 = yApex;
-    size_t c4 = zApex;
-  
-    hSize = 4;
-
-    origin.setOrigin((P[c1] + P[c2] + P[c3] + P[c4])/4);
-
-    // Initialize points with visible facet link
-    auto Q = typename facetT::seqT(P.size());
-    parallel_for(0, P.size(), [&](size_t i) {
-				Q[i] = P[i] - origin.get();//translation
-			      });
-
-    // Make initial facets
-    auto f0 = new facetT(Q[c1], Q[c2], Q[c3]);
-    auto f1 = new facetT(Q[c1], Q[c2], Q[c4]);
-    auto f2 = new facetT(Q[c3], Q[c4], Q[c2]);
-    auto f3 = new facetT(Q[c3], Q[c4], Q[c1]);
-
-    linkFacet(f0, f1, f2, f3);
-    linkFacet(f1, f0, f2, f3);
-    linkFacet(f2, f1, f0, f3);
-    linkFacet(f3, f1, f2, f0);
-
-#ifdef GRID
-    throw std::runtime_error("parallel grid redistribution is not implemented");
-#else
-    auto flag = sequence<int>(P.size());
-    parallel_for(0, P.size(), [&](size_t i) {
-				if (origin.keep(f0, Q[i])) {
-				  flag[i] = 0; Q[i].attribute.seeFacet = f0;
-				} else if (origin.keep(f1, Q[i])) {
-				  flag[i] = 1; Q[i].attribute.seeFacet = f1;
-				} else if (origin.keep(f2, Q[i])) {
-				  flag[i] = 2; Q[i].attribute.seeFacet = f2;
-				} else if (origin.keep(f3, Q[i])) {
-				  flag[i] = 3; Q[i].attribute.seeFacet = f3;
-				} else {
-				  flag[i] = 4; Q[i].attribute.seeFacet = nullptr;
-				}
-			      });
-
-    auto chunks = split_k(5, &Q, flag);
-
-    f0->reassign(chunks[0], &origin);
-    f1->reassign(chunks[1], &origin);
-    f2->reassign(chunks[2], &origin);
-    f3->reassign(chunks[3], &origin);
-#endif
-
-#ifdef VERBOSE
-    cout << "initial-hull:" << endl;
-    cout << " facet 0, area = " << f0->area.length()/2 << " #pts = " << f0->numPts() << endl;
-    cout << " facet 1, area = " << f1->area.length()/2 << " #pts = " << f1->numPts() << endl;
-    cout << " facet 2, area = " << f2->area.length()/2 << " #pts = " << f2->numPts() << endl;
-    cout << " facet 3, area = " << f3->area.length()/2 << " #pts = " << f3->numPts() << endl;
-    cout << " volume = " << abs((f0->a-Q[c4]).dot(f0->area)/6) << endl;
-#endif
-
-    return f0;
-  }
+/*     return f0; */
+/*   } */
 
   originT getOrigin() {
     return origin;
   }
 
-  _hull(slice<vertexT*, vertexT*> P, originT _origin, bool serial): origin(_origin) {
-    if (serial) H = constructorSerial(P);
-    else H = constructorParallel(P);
-  }
-
-  /* Choose a random outside vertex visible to some facet
-   */
-  vertexT randomApex() {
-    if (H->size() > 0) return H->at(0);
-    vertexT apex = vertexT();
-    auto fVisit = [&](_edge e) {return true;};
-    auto fDo = [&](_edge e) {
-		 if (e.ff->numVisiblePts() > 0)
-		   apex = e.ff->visiblePts(0);};
-    auto fStop = [&]() {
-		   if (!apex.isEmpty()) return true;
-		   else return false;};
-    dfsFacet(H, fVisit, fDo, fStop);
-    return apex;
-  }
-
-  // If n not supplied, find furthest apexes of all facets
-  sequence<vertexT> randomApexes(size_t n=-1) {
-    sequence<vertexT> apexes;
-
-    auto fVisit = [&](_edge e) {return true;};
-    auto fDo = [&](_edge e) {
-		 if (e.ff->numVisiblePts() > 0) {
-		   auto apex = e.ff->visiblePts(0);
-		   if (!apex.isEmpty()) apexes.push_back(apex);
-		 }
-	       };
-    auto fStop = [&]() {return apexes.size() >= n;};
-    dfsFacet(H, fVisit, fDo, fStop);
-    return apexes;
-  }
-
-  facetT* facetWalk() {
-    facetT* f = H;
-    size_t fSize = f->numVisiblePts();
-
-    auto fVisit = [&](_edge e) {return true;};
-    auto fDo = [&](_edge e) {
-		 if (e.ff->numVisiblePts() > fSize) {
-		   fSize = e.ff->numVisiblePts();
-		   f = e.ff;
-		 }
-	       };
-    auto fStop = [&]() { return false; };
-    dfsFacet(f, fVisit, fDo, fStop);
-    return f;
-  }
-
-  /* Choose the furthest outside vertex visible to a facet f
-   */
-  vertexT furthestApexSerial(facetT *f=nullptr) {
-    vertexT apex = vertexT();
-
-    auto fVisit = [&](_edge e) {return true;};
-    auto fDo = [&](_edge e) {
-		 if (e.ff->numVisiblePts() > 0) apex = e.ff->furthestSerial();
-	       };
-    auto fStop = [&]() { return !apex.isEmpty(); };
-    dfsFacet(f ? f : H, fVisit, fDo, fStop);
-    return apex;
-  }
-
-  vertexT furthestApexParallel(facetT *f=nullptr) {
-    vertexT apex = vertexT();
-
-    auto fVisit = [&](_edge e) {return true;};
-    auto fDo = [&](_edge e) {
-		 if (e.ff->numVisiblePts() > 0) apex = e.ff->furthestParallel();
-	       };
-    auto fStop = [&]() { return !apex.isEmpty(); };
-    dfsFacet(f ? f : H, fVisit, fDo, fStop);
-    return apex;
-  }
-
-  // If n not supplied, find furthest apexes of all facets
-  sequence<vertexT> furthestApexes(size_t n=-1) {
-    sequence<vertexT> apexes;
-
-    auto fVisit = [&](_edge e) {return true;};
-    auto fDo = [&](_edge e) {
-		 if (e.ff->numVisiblePts() > 0) {
-		   auto apex = e.ff->furthestParallel();
-		   if (!apex.isEmpty()) apexes.push_back(apex);
-		 }
-	       };
-    auto fStop = [&]() {return apexes.size() >= n;};
-    dfsFacet(H, fVisit, fDo, fStop);
-    return apexes;
-  }
+ _hullTopology() {}
 
   /* Compute a frontier of edges in the clockwise order
       and facets to delete
@@ -605,206 +284,8 @@ public:
     dfsEdge(apex.attribute.seeFacet, fVisit, fDo, fStop);
     return make_tuple(frontier, facets);
   }
-#ifdef RESERVE
 
-  /* Compute a frontier of edges in the clockwise order
-      and facets to delete
-
-     Meanwhile reserve the facet using min(apex.attribute.seeFacet*)
-   */
-  tuple<sequence<_edge>*, sequence<facetT*>*> computeFrontierAndReserve(vertexT apex) {
-    facetT* fVisible = apex.attribute.seeFacet;
-
-    auto frontier = new sequence<_edge>();
-    auto facets = new sequence<facetT*>();
-    auto facetVisited = [&](facetT* f) {
-			  for (size_t i=0; i<facets->size(); ++i) {
-			    if (f == facets->at(i)) return true;
-			  }
-			  return false;
-			};
-
-    auto fVisit = [&](_edge e) {
-		    // Visit the facet as long as the parent facet is visible to the apex
-		    // e.fb == nullptr for the starting facet (whose parent is nullptr, see dfsEdge(...))
-		    if (e.fb == nullptr || origin.visible(e.fb, apex))
-		      return true;
-		    else
-		      return false;
-		  };
-
-    auto fDo = [&](_edge e) {
-		 // Include the facet for deletion if visible
-		 // Also reserve the facet
-		 bool seeff = origin.visible(e.ff, apex);
-		 if ((seeff || e.fb == nullptr) && !facetVisited(e.ff)) {
-		   facets->push_back(e.ff);
-		   e.ff->reserve(apex);
-		 }
-
-		 if (e.fb == nullptr) return; // Stop for the starting facet
-
-		 // Include an edge joining a visible and an invisible facet as frontier
-		 // Also reserve invisible facet adjacent to a visible one
-		 bool seefb = origin.visible(e.fb, apex);
-		 if (seefb && !seeff) {
-		   frontier->emplace_back(e.a, e.b, e.ff, e.fb);
-		   e.ff->reserve(apex);
-		 }
-	       };
-    auto fStop = [&](){ return false;};
-
-    dfsEdge(apex.attribute.seeFacet, fVisit, fDo, fStop);
-    return make_tuple(frontier, facets);
-  }
-
-  bool confirmReservation(vertexT apex, slice<facetT**, facetT**> toDelete) {
-    bool ok = true;
-    for (auto f: toDelete) {
-      if (!f->reserved(apex) ||
-	  !f->abFacet->reserved(apex) ||
-	  !f->bcFacet->reserved(apex) ||
-	  !f->caFacet->reserved(apex) ) {
-	ok = false;
-      }
-    }
-    return ok;
-  }
-
-  void resetReservation(vertexT apex, slice<facetT**, facetT**> toDelete) {
-    for (auto f: toDelete) {
-      f->reservation = -1;
-      f->abFacet->reservation = -1;
-      f->bcFacet->reservation = -1;
-      f->caFacet->reservation = -1;
-    }
-  }
-
-  bool checkReset() { // todo remove
-    bool ok = true;
-
-    auto fVisit = [&](_edge e) { return true; };
-
-    auto fDo = [&](_edge e) {
-		 if (e.ff->reservation != -1) ok = false;
-	       };
-
-    auto fStop = [&](){ return false; };
-
-    dfsFacet(H, fVisit, fDo, fStop);
-    return ok;
-  }
-#endif // RESERVE
-
-  void redistributeSerial(slice<facetT**, facetT**> facetsBeneath,
-			  slice<facetT**, facetT**> newFacets) {
-
-    hSize += newFacets.size() - facetsBeneath.size();
-
-    // Redistribute the outside points
-
-    int nf = facetsBeneath.size();
-    int nnf = newFacets.size();
-
-    size_t fn = 0;
-    for(int j=0; j<nf; ++j) {
-      fn += facetsBeneath[j]->numPts();
-    }
-
-#ifdef GRID
-    for(int i=0; i<nf; ++i) { // Old facet loop
-      for(size_t j=0; j<facetsBeneath[i]->numVisiblePts(); ++j) { // Point loop
-	facetsBeneath[i]->visiblePts(j).attribute.seeFacet = nullptr;
-	for (int k=0; k<nnf; ++k) { // New facet loop
-	  if (origin.visible(newFacets[k], facetsBeneath[i]->visiblePts(j))) {
-	    facetsBeneath[i]->visiblePts(j).attribute.seeFacet = newFacets[k];
-	    newFacets[k]->push_visible(facetsBeneath[i]->visiblePts(j));
-	    break;
-	  }}}}
-
-    sequence<vertexT> intersection;
-    for(int i=0; i<nf; ++i) { // Old facet loop
-      for(size_t j=0; j<facetsBeneath[i]->numKeepPts(); ++j) { // Point loop
-	intersection.push_back(facetsBeneath[i]->keepPts(j));
-      }}
-    parlay::sort_inplace(intersection);
-    intersection = unique(intersection);
-    for (auto p: intersection) {
-      p.attribute.seeFacet = nullptr;
-      for (int k=0; k<nnf; ++k) { // New facet loop
-	if (origin.keep(newFacets[k], p))
-	  newFacets[k]->push_keep(p);
-      }}
-
-    // for(int i=0; i<nf; ++i) { // Old facet loop
-    //   for(size_t j=0; j<facetsBeneath[i]->numKeepPts(); ++j) { // Point loop
-    // 	facetsBeneath[i]->keepPts(j).attribute.seeFacet = nullptr;
-    // 	for (int k=0; k<nnf; ++k) { // New facet loop
-    // 	  if (origin.keep(newFacets[k], facetsBeneath[i]->keepPts(j))) {
-    // 	    newFacets[k]->push_keep(facetsBeneath[i]->keepPts(j));
-    // 	    break;
-    // 	  }}}}
-
-#else
-    for(int i=0; i<nf; ++i) { // Old facet loop
-      for(size_t j=0; j<facetsBeneath[i]->numPts(); ++j) { // Point loop
-	facetsBeneath[i]->pts(j).attribute.seeFacet = nullptr;
-	for (int k=0; k<nnf; ++k) { // New facet loop
-	  if (origin.keep(newFacets[k], facetsBeneath[i]->pts(j))) {
-	    facetsBeneath[i]->pts(j).attribute.seeFacet = newFacets[k];
-	    newFacets[k]->push_back(facetsBeneath[i]->pts(j), &origin);
-	    break;
-	  }}}}
-#endif
-  }
-
-  void redistributeParallel(slice<facetT**, facetT**> facetsBeneath,
-		    slice<facetT**, facetT**> newFacets) {
-
-    parlay::write_add(&hSize, newFacets.size() - facetsBeneath.size());
-
-    // Redistribute the outside points
-
-    int nf = facetsBeneath.size();
-    int nnf = newFacets.size();
-
-#ifdef GRID
-    throw std::runtime_error("parallel grid redistribution is not implemented");
-#else
-
-    size_t fn = 0;
-    for(int j=0; j<nf; ++j) {
-      fn += facetsBeneath[j]->numPts();
-    }
-
-    auto tmpBuffer = typename facetT::seqT(fn);
-    fn = 0; // Used the second time as an offset counter
-    for(int j=0; j<nf; ++j) {
-      parallel_for(0, facetsBeneath[j]->numPts(),
-		   [&](size_t x){tmpBuffer[fn+x] = facetsBeneath[j]->pts(x);});
-      fn += facetsBeneath[j]->numPts();
-    }
-
-    auto flag = sequence<int>(fn);
-    parallel_for(0, fn, [&](size_t i) {
-			  flag[i] = nnf;
-			  tmpBuffer[i].attribute.seeFacet = nullptr;
-			  for (int j=0; j<nnf; ++j) {
-			    if (origin.keep(newFacets[j], tmpBuffer[i])) {
-			      flag[i] = j;
-			      tmpBuffer[i].attribute.seeFacet = newFacets[j];
-			      break;
-			    }
-			  }
-			});
-
-    auto chunks = split_k(nnf+1, &tmpBuffer, flag);
-    for (int j=0; j<nnf; ++j) {
-      newFacets[j]->reassign(chunks[j], &origin);
-    }
-
-#endif
-  }
+  virtual facetT* initialize(slice<vertexT*, vertexT*> P) = 0;
 
   std::atomic<size_t>& hullSize() {
     return hSize;
@@ -812,8 +293,8 @@ public:
 
   size_t hullSizeDfs(facetT* start=nullptr) {
     size_t s = 0;
-    auto fVisit = [&](_edge e) { return true;};
-    auto fDo = [&](_edge e) { s++;};
+    auto fVisit = [&](facetT* f) { return true;};
+    auto fDo = [&](facetT* f) { s++;};
     auto fStop = [&]() { return false;};
     if (start) dfsFacet(start, fVisit, fDo, fStop);
     else dfsFacet(H, fVisit, fDo, fStop);
@@ -824,14 +305,14 @@ public:
   void printHull(facetT* start=nullptr, bool checker=true) {
     if (checker) printHull(start, false);
     size_t hs = hullSizeDfs();
-    auto fVisit = [&](_edge e) { return true;};
-    auto fDo = [&](_edge e) {
-		 if (checker && hullSizeDfs(e.ff) != hs) {
+    auto fVisit = [&](facetT* f) { return true;};
+    auto fDo = [&](facetT* f) {
+		 if (checker && hullSizeDfs(f) != hs) {
 		   cout << " ..." << endl;
-		   cout << "Erroneous hull size = " << hullSizeDfs(e.ff) << endl;
+		   cout << "Erroneous hull size = " << hullSizeDfs(f) << endl;
 		   throw std::runtime_error("Error, hull inconsistency detected");
 		 }
-		 if (!checker) cout << *e.ff << ":" << e.ff->numVisiblePts() << " ";
+		 if (!checker) cout << *f << ":" << f->numVisiblePts() << " ";
 	       };
     auto fStop = [&]() { return false;};
 
@@ -842,14 +323,25 @@ public:
   }
 
   void checkHull(facetT* start=nullptr) {
-    cout << "check hull" << endl;
-    auto fVisit = [&](_edge e) { return true;};
-    auto fDo = [&](_edge e) {
-		 auto f = e.ff;
+
+    auto isAdjacent = [&](facetT* f1, facetT* f2) {
+      vertexT V[3]; V[0] = f1->a; V[1] = f2->b; V[2] = f2->c;
+      for (int i=0; i<3; ++i) {
+	auto v1 = V[i];
+	auto v2 = V[(i+1)%3];
+	if ( (f2->a == v1 && f2->b == v2) || (f2->a == v2 && f2->b == v1) ) return true;
+	if ( (f2->b == v1 && f2->c == v2) || (f2->b == v2 && f2->c == v1) ) return true;
+	if ( (f2->c == v1 && f2->a == v2) || (f2->c == v2 && f2->a == v1) ) return true;
+      }
+      return false;
+    };
+
+    auto fVisit = [&](facetT* f) { return true;};
+    auto fDo = [&](facetT* f) {
 		 if (!
-		     (f->isAdjacent(f->abFacet) && f->abFacet->isAdjacent(f) &&
-		      f->isAdjacent(f->bcFacet) && f->bcFacet->isAdjacent(f) &&
-		      f->isAdjacent(f->caFacet) && f->caFacet->isAdjacent(f))
+		     (isAdjacent(f, f->abFacet) && isAdjacent(f->abFacet, f) &&
+		      isAdjacent(f, f->bcFacet) && isAdjacent(f->bcFacet, f) &&
+		      isAdjacent(f, f->caFacet) && isAdjacent(f->caFacet, f))
 		     ) {
 		   printHull();
 		   throw std::runtime_error("Hull is not linked correctly.");
@@ -863,11 +355,11 @@ public:
 
   template<class pt, class facet3d>
   void getHull(sequence<facet3d>& out) {
-    auto fVisit = [&](_edge e) { return true;};
-    auto fDo = [&](_edge e) {
-		 out.emplace_back(pt((e.ff->a+origin.get()).coords()),
-				  pt((e.ff->b+origin.get()).coords()),
-				  pt((e.ff->c+origin.get()).coords()));};
+    auto fVisit = [&](facetT* f) { return true;};
+    auto fDo = [&](facetT* f) {
+		 out.emplace_back(pt((f->a+origin.get()).coords()),
+				  pt((f->b+origin.get()).coords()),
+				  pt((f->c+origin.get()).coords()));};
     auto fStop = [&]() { return false;};
 
     dfsFacet(H, fVisit, fDo, fStop);
@@ -876,11 +368,11 @@ public:
   template<class pt>
   sequence<pt> getHullVertices() {
     sequence<pt> out;
-    auto fVisit = [&](_edge e) { return true;};
-    auto fDo = [&](_edge e) {
-  		 out.emplace_back(pt((e.ff->a+origin.get()).coords()));
-  		 out.emplace_back(pt((e.ff->b+origin.get()).coords()));
-  		 out.emplace_back(pt((e.ff->c+origin.get()).coords()));
+    auto fVisit = [&](facetT* f) { return true;};
+    auto fDo = [&](facetT* f) {
+		 out.emplace_back(pt((f->a+origin.get()).coords()));
+		 out.emplace_back(pt((f->b+origin.get()).coords()));
+		 out.emplace_back(pt((f->c+origin.get()).coords()));
   	       };
     auto fStop = [&]() { return false;};
 
@@ -891,9 +383,8 @@ public:
 
   sequence<vertexT> getHullPts() {
     sequence<vertexT> out;
-    auto fVisit = [&](_edge e) { return true;};
-    auto fDo = [&](_edge e) {
-		 auto f = e.ff;
+    auto fVisit = [&](facetT* f) { return true;};
+    auto fDo = [&](facetT* f) {
 		 for (size_t i = 0; i < f->numPts(); ++i) {
 		   out.push_back(f->pts(i) + origin.get());
 		 }
@@ -910,11 +401,11 @@ public:
     auto offset = origin.get();
     ofstream myfile;
     myfile.open(fileName, std::ofstream::trunc);
-    auto fVisit = [&](edgeT e) { return true;};
-    auto fDo = [&](edgeT e) {
-		 myfile << e.ff->a + offset << endl;
-		 myfile << e.ff->b + offset << endl;
-		 myfile << e.ff->c + offset << endl;
+    auto fVisit = [&](facetT* f) { return true;};
+    auto fDo = [&](facetT* f) {
+		 myfile << f->a + offset << endl;
+		 myfile << f->b + offset << endl;
+		 myfile << f->c + offset << endl;
 	       };
     auto fStop = [&]() { return false;};
     dfsFacet(H, fVisit, fDo, fStop);

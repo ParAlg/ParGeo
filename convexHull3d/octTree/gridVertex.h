@@ -1,9 +1,34 @@
+// This code is part of the Pargeo Library
+// Copyright (c) 2021 Yiqiu Wang and the Pargeo Team
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights (to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 #pragma once
 
+#include <vector>
 #include <iostream>
 #include <fstream>
 #include <bitset>
 #include "pargeo/point.h"
+#include "parlay/sequence.h"
+#include "parlay/parallel.h"
 
 class gridAtt3d;
 
@@ -37,11 +62,11 @@ template <class vertexT>
 struct linkedFacet3d {
   static constexpr typename pargeo::fpoint<3>::floatT numericKnob = 1e-5;
 
-#ifdef SERIAL_HULL
-  typedef vector<vertexT> seqT;
-#else
-  typedef sequence<vertexT> seqT;
-#endif
+  //#ifdef SERIAL_HULL
+  //typedef std::vector<vertexT> seqT;
+  //#else
+  typedef parlay::sequence<vertexT> seqT;
+  //#endif
 
   vertexT a, b, c;
   linkedFacet3d *abFacet;
@@ -61,40 +86,9 @@ struct linkedFacet3d {
     return false;
   }
 
-#ifdef RESERVE
-  // Stores the minimum memory address of the seeFacet of the reserving vertices
-  std::atomic<size_t> reservation;
-
-  void reserve(vertexT& p) {
-    parlay::write_min(&reservation, (size_t)p.attribute.seeFacet, std::less<size_t>());
-  }
-
-  bool reserved(vertexT& p) {
-    return reservation == (size_t)p.attribute.seeFacet;
-  }
-#endif
-
   seqT *seeList;
+
   seqT *keepList;
-
-  void reassign(seqT *_seeList, gridOrigin* o) {
-    throw std::runtime_error("should not call reassign for grid impl");
-  //   delete seeList;
-  //   delete keepList;
-
-  //   //todo parallelize
-  //   seeList = new seqT();
-  //   keepList = new seqT();
-  //   for (size_t i=0; i<_seeList->size(); ++i) {
-  //     auto v = _seeList->at(i);
-  //     if (o->visible(this, v) && a != v && b != v && c != v)
-  // 	seeList->push_back(v);
-  //     else
-  // 	keepList->push_back(v);
-  //   }
-
-  //   delete _seeList;
-  }
 
   void reassignVisible(seqT *_seeList) {
     delete seeList;
@@ -151,7 +145,7 @@ struct linkedFacet3d {
     keepList->clear();
   }
 
-  vertexT furthestSerial() {
+  vertexT furthest() {
     auto apex = vertexT();
     typename vertexT::floatT m = numericKnob;
 
@@ -165,27 +159,12 @@ struct linkedFacet3d {
     return apex;
   }
 
-  vertexT furthestParallel() {
-    auto apex = vertexT();
-
-    apex = parlay::max_element(seeList->cut(0, numVisiblePts()),
-			       [&](vertexT aa, vertexT bb) {
-				 return pargeo::signedVolumeX6(a, b, c, aa) <
-				   pargeo::signedVolumeX6(a, b, c, bb);
-			       });
-    return apex;
-  }
-
   linkedFacet3d(vertexT _a, vertexT _b, vertexT _c): a(_a), b(_b), c(_c) {
     if (pargeo::determinant3by3(a, b, c) > numericKnob)
-      swap(b, c);
+      std::swap(b, c);
 
     seeList = new seqT();
     keepList = new seqT();
-
-#ifdef RESERVE
-    reservation = -1; // (unsigned)
-#endif
 
     area = crossProduct3d(b-a, c-a);
   }
@@ -211,6 +190,7 @@ class gridOrigin {
   using vertexT = gridVertex;
   using pt = pargeo::fpoint<3>;
   using floatT = typename pt::floatT;
+
   static constexpr floatT numericKnob = 1e-5;
 
   vertexT o; // translation origin
@@ -258,21 +238,21 @@ public:
     return vt0 + myMin;
   }
 
-  // Input p needs to be untranslated
-  inline void writeCorners(vertexT p, ofstream& os) {
-    if (bSize < 0) {
-      os << p[0] << " " << p[1] << " " << p[2] << " " << 0 << endl;
-    } else {
-      vertexT vt0 = getCorner(p, pMin + o);
-      for (size_t i=0; i<8; ++i) {
-	auto vt = vt0;
-	vt[0] += (i & 1) * bSize;
-	vt[1] += ((i>>1) & 1) * bSize;
-	vt[2] += ((i>>2) & 1) * bSize;
-	os << vt[0] << " " << vt[1] << " " << vt[2] << " " << i << endl;
-      }
-    }
-  }
+  // // Input p needs to be untranslated
+  // inline void writeCorners(vertexT p, std::ofstream& os) {
+  //   if (bSize < 0) {
+  //     os << p[0] << " " << p[1] << " " << p[2] << " " << 0 << std::endl;
+  //   } else {
+  //     vertexT vt0 = getCorner(p, pMin + o);
+  //     for (size_t i=0; i<8; ++i) {
+  // 	auto vt = vt0;
+  // 	vt[0] += (i & 1) * bSize;
+  // 	vt[1] += ((i>>1) & 1) * bSize;
+  // 	vt[2] += ((i>>2) & 1) * bSize;
+  // 	os << vt[0] << " " << vt[1] << " " << vt[2] << " " << i << std::endl;
+  //     }
+  //   }
+  // }
 
   inline bool anyCornerVisible(facetT* f, vertexT p) {
     if (bSize < 0) {

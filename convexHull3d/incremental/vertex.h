@@ -1,63 +1,49 @@
+// This code is part of the Pargeo Library
+// Copyright (c) 2021 Yiqiu Wang and the Pargeo Team
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights (to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 #pragma once
 
 #include <vector>
-#include "incremental.h"
-
-using namespace std;
-
-class vertexAtt;
-
-using pointVertex = pargeo::_point<3, pargeo::fpoint<3>::floatT, pargeo::fpoint<3>::floatT, vertexAtt>;
-
-template <class vertexT> struct linkedFacet3d;
-
-class vertexAtt {
-public:
-  static constexpr typename pargeo::fpoint<3>::floatT numericKnob = 1e-5;
-
-#ifdef VERBOSE
-  size_t i;
-#endif
-  linkedFacet3d<pointVertex> *seeFacet;
-  vertexAtt() {}
-};
-
-static std::ostream& operator<<(std::ostream& os, const pointVertex& v) {
-  for (int i=0; i<v.dim; ++i)
-    os << v.x[i] << " ";
-  return os;
-}
-
-class pointOrigin;
+#include "parlay/sequence.h"
+#include "pargeo/algebra.h"
+#include "convexHull3d/hull.h"
 
 template <class vertexT>
 struct linkedFacet3d {
-
-#ifdef SERIAL_HULL
-  typedef vector<vertexT> seqT;
-#else
+  static constexpr typename pargeo::fpoint<3>::floatT numericKnob = 1e-5;
   typedef sequence<vertexT> seqT;
-#endif
 
   vertexT a, b, c;
+
   linkedFacet3d *abFacet;
+
   linkedFacet3d *bcFacet;
+
   linkedFacet3d *caFacet;
+
   vertexT area;
 
-  bool isAdjacent(linkedFacet3d* f2) {
-    vertexT V[3]; V[0] = a; V[1] = b; V[2] = c;
-    for (int i=0; i<3; ++i) {
-      auto v1 = V[i];
-      auto v2 = V[(i+1)%3];
-      if ( (f2->a == v1 && f2->b == v2) || (f2->a == v2 && f2->b == v1) ) return true;
-      if ( (f2->b == v1 && f2->c == v2) || (f2->b == v2 && f2->c == v1) ) return true;
-      if ( (f2->c == v1 && f2->a == v2) || (f2->c == v2 && f2->a == v1) ) return true;
-    }
-    return false;
-  }
+  seqT *seeList;
 
-#ifdef RESERVE
   // Stores the minimum memory address of the seeFacet of the reserving vertices
   std::atomic<size_t> reservation;
 
@@ -68,19 +54,11 @@ struct linkedFacet3d {
   bool reserved(vertexT& p) {
     return reservation == (size_t)p.attribute.seeFacet;
   }
-#endif
 
-  seqT *seeList;
-
-  void reassign(seqT *_seeList, pointOrigin* o) {
+  void reassign(seqT *_seeList) {
     delete seeList;
     seeList = _seeList;
   }
-
-
-  size_t numVisiblePts() { return seeList->size(); }
-
-  vertexT& visiblePts(size_t i) { return seeList->at(i); }
 
   size_t numPts() { return seeList->size(); }
 
@@ -88,16 +66,16 @@ struct linkedFacet3d {
 
   void clear() { seeList->clear(); }
 
-  void push_back(vertexT v, pointOrigin* o) { seeList->push_back(v); }
+  void push_back(vertexT v) { seeList->push_back(v); }
 
-  vertexT furthestSerial() {
+  vertexT furthest() {
     auto apex = vertexT();
-    typename vertexT::floatT m = apex.attribute.numericKnob;
-    for (size_t i=0; i<numVisiblePts(); ++i) {
-      auto m2 = pargeo::signedVolumeX6(a, b, c, visiblePts(i));
+    typename vertexT::floatT m = numericKnob;
+    for (size_t i=0; i<numPts(); ++i) {
+      auto m2 = (a-pts(i)).dot(crossProduct3d(b-a, c-a));
       if (m2 > m) {
 	m = m2;
-	apex = visiblePts(i);
+	apex = pts(i);
       }
     }
     return apex;
@@ -115,15 +93,9 @@ struct linkedFacet3d {
   }
 
   linkedFacet3d(vertexT _a, vertexT _b, vertexT _c): a(_a), b(_b), c(_c) {
-    if (pargeo::determinant3by3(a, b, c) > _a.attribute.numericKnob)//numericKnob)
-      swap(b, c);
-
+    if (pargeo::determinant3by3(a, b, c) > numericKnob)
+      std::swap(b, c);
     seeList = new seqT();
-
-#ifdef RESERVE
-    reservation = -1; // (unsigned)
-#endif
-
     area = crossProduct3d(b-a, c-a);
   }
 
@@ -135,7 +107,7 @@ struct linkedFacet3d {
 
 template<class vertexT>
 static std::ostream& operator<<(std::ostream& os, const linkedFacet3d<vertexT>& v) {
-#ifdef VERBOSE
+#ifdef HULL_PARALLEL_VERBOSE
   os << "(" << v.a.attribute.i << "," << v.b.attribute.i << "," << v.c.attribute.i << ")";
 #else
   os << "(" << v.a << "," << v.b << "," << v.c << ")";
@@ -145,8 +117,8 @@ static std::ostream& operator<<(std::ostream& os, const linkedFacet3d<vertexT>& 
 
 class pointOrigin {
   static constexpr typename pargeo::fpoint<3>::floatT numericKnob = 1e-5;
-  using facetT = linkedFacet3d<pointVertex>;
-  using vertexT = pointVertex;
+  using facetT = linkedFacet3d<vertex>;
+  using vertexT = vertex;
 
   vertexT o;
 
@@ -164,11 +136,11 @@ public:
   }
 
   inline bool visible(facetT* f, vertexT p) {
-    return pargeo::signedVolumeX6(f->a, p, f->area) > numericKnob;
+    return (f->a - p).dot(f->area) > numericKnob;
   }
 
   inline bool keep(facetT* f, vertexT p) {
-    if (pargeo::signedVolumeX6(f->a, p, f->area) > numericKnob)
+    if ((f->a - p).dot(f->area) > numericKnob)
       return f->a != p && f->b != p && f->c != p;
     else
       return false;

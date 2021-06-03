@@ -1,3 +1,5 @@
+#include "convexHull3d/hull.h"
+
 #include <iostream>
 #include <algorithm>
 #include "pargeo/parseCommandLine.h"
@@ -5,7 +7,6 @@
 #include "pargeo/pointIO.h"
 #include "pargeo/point.h"
 #include "parlay/parallel.h"
-#include "convexHull3d/hull.h"
 
 using namespace std;
 using namespace pargeo;
@@ -19,7 +20,6 @@ void timeHull(parlay::sequence<pt> &P, size_t numProc, int rounds, char const *o
     cout << "round-time = " << t.get_next() << endl;
   }
   t.stop();
-  //if (outFile != NULL) writeIntSeqToFile(I, outFile);
 }
 
 int main(int argc, char* argv[]) {

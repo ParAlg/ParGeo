@@ -7,6 +7,8 @@
 #include "convexHull3d/pointVertex.h"
 #include "convexHull3d/hull.h"
 
+
+
 parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3dParallel(parlay::sequence<pargeo::fpoint<3>> &P) {
   using namespace std;
   using namespace parlay;
