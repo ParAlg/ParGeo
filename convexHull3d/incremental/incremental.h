@@ -30,6 +30,8 @@
 #include "parallelHull.h"
 #include "vertex.h"
 
+//#define HULL_PARALLEL_VERBOSE
+
 template<class linkedFacet3d, class vertex3d, class origin3d>
 void incrementHull3d(parallelHull<linkedFacet3d, vertex3d, origin3d> *context, size_t numProc = 0) {
   using namespace pargeo;
@@ -51,6 +53,9 @@ void incrementHull3d(parallelHull<linkedFacet3d, vertex3d, origin3d> *context, s
 #endif
 
   while (true) {
+
+    //context->stats();
+
 #ifdef HULL_PARALLEL_VERBOSE
     round ++;
 #endif
@@ -217,9 +222,8 @@ void incrementHull3d(parallelHull<linkedFacet3d, vertex3d, origin3d> *context, s
 				   increase[a] = FE[a]->size() - FB[a]->size();
 			       });
 
-      // todo remove
-      // if (!context->checkReset()) {// checking this is expensive O(nh)
-      //   cout << "not reset " << endl; abort();
+      // if (!context->checkReset()) {
+      // 	throw std::runtime_error("Facet not reset properly");
       // }
 
 #ifdef HULL_PARALLEL_VERBOSE

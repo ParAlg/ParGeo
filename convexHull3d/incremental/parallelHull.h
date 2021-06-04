@@ -301,6 +301,7 @@ class parallelHull : public _hullTopology<facetT, vertexT, originT> {
 	  !f->bcFacet->reserved(apex) ||
 	  !f->caFacet->reserved(apex) ) {
 	ok = false;
+	break;
       }
     }
     return ok;
@@ -315,15 +316,47 @@ class parallelHull : public _hullTopology<facetT, vertexT, originT> {
     }
   }
 
-  // bool checkReset() {
-  //   bool ok = true;
-  //   auto fVisit = [&](typename baseT::_edge e) { return true; };
-  //   auto fDo = [&](typename baseT::_edge e) {
-  // 		 if (e.ff->reservation != -1) ok = false;
-  // 	       };
-  //   auto fStop = [&](){ return false; };
-  //   dfsFacet(baseT::H, fVisit, fDo, fStop);
-  //   return ok;
-  // }
+  bool checkReset() {
+    bool ok = true;
+    auto fVisit = [&](facetT* f) { return true; };
+    auto fDo = [&](facetT* f) {
+		 if (f->reservation != -1) ok = false;
+	       };
+    auto fStop = [&](){ return false; };
+    baseT::dfsFacet(baseT::H, fVisit, fDo, fStop);
+    return ok;
+  }
+
+  size_t stats() {
+    double numFacet = 0;
+    double nonEmpty = 0;
+    double totalPts = 0;
+    double minPts = std::numeric_limits<double>::max();
+    double maxPts = std::numeric_limits<double>::lowest();
+
+    auto fVisit = [&](facetT* f) { return true; };
+
+    auto fStat = [&](facetT* f) {
+		   numFacet += 1;
+		   totalPts += f->numPts();
+		   if (f->numPts() > 0) {
+		     minPts = min(minPts, (double)f->numPts());
+		     maxPts = max(maxPts, (double)f->numPts());
+		     nonEmpty += 1;
+		   }
+		 };
+
+    auto fStop = [&](){ return false; };
+
+    baseT::dfsFacet(baseT::H, fVisit, fStat, fStop);
+
+    std::cout << ">>> stats\n";
+    std::cout << " num-facets = " << numFacet << "\n";
+    std::cout << " non-empty-facets = " << nonEmpty << "\n";
+    std::cout << " total-pts = " << totalPts << "\n";
+    std::cout << " min-pts = " << minPts << "\n";
+    std::cout << " max-pts = " << maxPts << "\n";
+    return 0;
+  }
 
 };

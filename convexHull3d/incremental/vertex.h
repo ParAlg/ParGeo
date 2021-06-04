@@ -92,7 +92,8 @@ struct linkedFacet3d {
     return apex;
   }
 
-  linkedFacet3d(vertexT _a, vertexT _b, vertexT _c): a(_a), b(_b), c(_c) {
+  linkedFacet3d(vertexT _a, vertexT _b, vertexT _c):
+    a(_a), b(_b), c(_c), reservation(-1) {
     if (pargeo::determinant3by3(a, b, c) > numericKnob)
       std::swap(b, c);
     seeList = new seqT();

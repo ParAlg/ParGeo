@@ -29,6 +29,8 @@
 
 using namespace pargeo;
 
+// #define HULL_CONCURRENT_VERBOSE
+
 template <typename ptOut>
 parlay::sequence<ptOut>
 concurrentHull(parlay::sequence<vertex> &Q, size_t numProc) {
@@ -92,11 +94,11 @@ pargeo::hull3dConcurrent(parlay::sequence<pargeo::fpoint<3>> &P, size_t numProc)
   parallel_for(0, P.size(), [&](size_t i) {
 			      Q[i] = pt(P[i].coords());});
 
+  sequence<pt> Q2 = concurrentHull<pt>(Q, numProc);
+
 #ifdef HULL_CONCURRENT_VERBOSE
   cout << "> concurrent-hull-time = " << t.get_next() << endl;
 #endif
-
-  sequence<pt> Q2 = concurrentHull<pt>(Q, numProc);
 
   //auto out = hull3dSerial(Q2);
   auto out = hull3dIncrementalInternal(make_slice(Q2));
