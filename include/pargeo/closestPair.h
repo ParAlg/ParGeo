@@ -31,9 +31,11 @@
 #include "parlay/primitives.h"
 #include "parlay/sequence.h"
 
+namespace pargeo {
+
 using namespace std;
 using namespace parlay;
-using namespace pargeo;
+
 static constexpr double floatMax = std::numeric_limits<double>::max();
 
 template<int dim>
@@ -252,7 +254,8 @@ pointPair<dim> divideConquerParallel(slice<point<dim>*,point<dim>*> P, int k) {
 	}}
     }
   } else {
-    cout << "wrong k = " << k << ", abort" << endl; abort();
+    cout << "wrong k = " << k << endl;
+    throw std::runtime_error("wrong k");
   }
 
   if (slabR.dist < better.dist) return slabR;
@@ -274,9 +277,11 @@ pointPair<dim> closestPairDC(sequence<point<dim>>& P, bool serial = false) {
   if (serial) r = divideConquerSerial<dim>(make_slice(Pp), dim-1);
   else r = divideConquerParallel<dim>(make_slice(Pp), dim-1);
 
-  cout << "dist = " << r.dist << endl;
+  //cout << "dist = " << r.dist << endl;
 
   //cout << "brute = " << bruteForceSerial<dim>(make_slice(P)).dist << endl;
   //cout << "brute = " << bruteForceParallel<dim>(make_slice(P)).dist << endl;
   return r;
 }
+
+} // End namespace pargeo

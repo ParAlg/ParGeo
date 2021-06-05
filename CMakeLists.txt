@@ -32,19 +32,34 @@ message(STATUS "CMAKE_INSTALL_PREFIX:           ${CMAKE_INSTALL_PREFIX}" )
 # -------------------------------------------------
 # Add benchmark directories
 
+add_subdirectory(wspd)
+
 add_subdirectory(knnSearch)
 
 add_subdirectory(spatialSort)
 
+add_subdirectory(clustering)
+
+add_subdirectory(rangeSearch)
+
 add_subdirectory(closestPair)
 
 add_subdirectory(convexHull3d)
+
+add_subdirectory(euclideanMst)
 
 add_subdirectory(spatialGraph)
 
 add_subdirectory(delaunayTriangulation)
 
 add_subdirectory(pybindings)
+
+# -------------------------------------------------
+# Testing
+
+enable_testing()
+
+add_subdirectory(test)
 
 # -------------------------------------------------
 # Link pargeolib as a library
