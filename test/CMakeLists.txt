@@ -37,11 +37,22 @@ else()
     set(GTest_LIBRARIES GTest::gtest)
 endif()
 
-add_subdirectory(closestPair)
+include(CTest)
 
-add_subdirectory(kdTree)
+add_executable(kdTree_test kdTree/kdTree_test.cpp)
+target_link_libraries(kdTree_test PRIVATE
+  pargeolib ${GTest_LIBRARIES})
+add_test(NAME kdTree_test COMMAND kdTree_test)
 
-add_subdirectory(wspd)
+add_executable(closestPair_test closestPair/closestPair_test.cpp)
+target_link_libraries(closestPair_test PRIVATE
+  pargeolib ${GTest_LIBRARIES})
+add_test(NAME cloestPair_test COMMAND closestPair_test)
+
+add_executable(wspd_test wspd/wspd_test.cpp)
+target_link_libraries(wspd_test PRIVATE
+  pargeolib ${GTest_LIBRARIES})
+add_test(NAME wspd_test COMMAND wspd_test)
 
 message(STATUS "CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}")
 file(COPY datasets DESTINATION ${CMAKE_BINARY_DIR}/test)
