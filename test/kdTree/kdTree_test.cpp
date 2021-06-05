@@ -50,7 +50,7 @@ TEST(kdTree_structure, testSerial2d) {
   using namespace pargeo;
   using namespace pargeo::pointIO;
 
-  auto filePath = "../datasets/2d_100.txt";
+  auto filePath = "datasets/2d_100.txt";
   int dim = readHeader(filePath);
 
   parlay::sequence<pargeo::point<2>> P =
@@ -63,7 +63,7 @@ TEST(kdTree_structure, testSerial3d) {
   using namespace pargeo;
   using namespace pargeo::pointIO;
 
-  auto filePath = "../datasets/3d_40.txt";
+  auto filePath = "datasets/3d_40.txt";
   int dim = readHeader(filePath);
 
   parlay::sequence<pargeo::point<3>> P =
