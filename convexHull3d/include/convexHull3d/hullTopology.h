@@ -239,7 +239,7 @@ e.b==e.ff.a    e.a==e.ff.c
     return origin;
   }
 
- _hullTopology() {}
+  _hullTopology() {}
 
   /* Compute a frontier of edges in the clockwise order
       and facets to delete

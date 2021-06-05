@@ -16,6 +16,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE ../include)
 
 add_library(${PROJECT_NAME}Lib
   hullInternal.cpp
+  hullInternal2.cpp
   )
 
 target_link_libraries(${PROJECT_NAME}Lib pargeolib)

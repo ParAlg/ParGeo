@@ -100,8 +100,8 @@ pargeo::hull3dConcurrent(parlay::sequence<pargeo::fpoint<3>> &P, size_t numProc)
   cout << "> concurrent-hull-time = " << t.get_next() << endl;
 #endif
 
-  //auto out = hull3dSerial(Q2);
-  auto out = hull3dIncrementalInternal(make_slice(Q2));
+  auto out = hull3dSerialInternal(make_slice(Q2));
+  //auto out = hull3dIncrementalInternal(make_slice(Q2));
 
 #ifdef HULL_CONCURRENT_VERBOSE
   cout << "> merge-hull-time = " << t.stop() << endl;

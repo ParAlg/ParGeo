@@ -30,7 +30,7 @@
 #include "parallelHull.h"
 #include "vertex.h"
 
-//#define HULL_PARALLEL_VERBOSE
+// #define HULL_PARALLEL_VERBOSE
 
 template<class linkedFacet3d, class vertex3d, class origin3d>
 void incrementHull3d(parallelHull<linkedFacet3d, vertex3d, origin3d> *context, size_t numProc = 0) {
@@ -50,13 +50,14 @@ void incrementHull3d(parallelHull<linkedFacet3d, vertex3d, origin3d> *context, s
   double apexTime = 0;
   double frontierTime = 0;
   double splitTime = 0;
+  double totalApex = 0;
+  double succApex = 0;
 #endif
 
   while (true) {
 
-    //context->stats();
-
 #ifdef HULL_PARALLEL_VERBOSE
+    //context->stats();
     round ++;
 #endif
     if (context->hullSize() < 64) {
@@ -119,6 +120,7 @@ void incrementHull3d(parallelHull<linkedFacet3d, vertex3d, origin3d> *context, s
 #ifdef HULL_PARALLEL_VERBOSE
       splitTime += t.stop();
 #endif
+
       // Delete existing facets
       for(int j=0; j<facetsBeneath->size(); ++j)
 	delete facetsBeneath->at(j);
@@ -138,7 +140,8 @@ void incrementHull3d(parallelHull<linkedFacet3d, vertex3d, origin3d> *context, s
 #endif
 
       // todo points chosen are close
-      sequence<vertex3d> apexes0 = context->furthestApexes(numProc); // todo tune
+      sequence<vertex3d> apexes0 = context->furthestApexes(numProc*4); // todo tune
+      //sequence<vertex3d> apexes0 = context->furthestApexesWithSkip(numProc); // todo tune
 
 #ifdef HULL_PARALLEL_VERBOSE
       apexTime += t.get_next();
@@ -193,6 +196,12 @@ void incrementHull3d(parallelHull<linkedFacet3d, vertex3d, origin3d> *context, s
       auto FE = parlay::pack(make_slice(FE0), success);
       auto FB = parlay::pack(make_slice(FB0), success);
       size_t numApex = apexes.size();
+
+#ifdef HULL_PARALLEL_VERBOSE
+      //std::cout << "reservation = " << numApex << " / " << apexes0.size() << "\n";
+      totalApex += apexes0.size();
+      succApex += numApex;
+#endif
 
       sequence<int> increase(numApex, 0);
 
@@ -250,14 +259,20 @@ void incrementHull3d(parallelHull<linkedFacet3d, vertex3d, origin3d> *context, s
 
   }
 #ifdef HULL_PARALLEL_VERBOSE
+  cout << "------\n";
   cout << "apex-time = " << apexTime << endl;
   cout << "frontier-time = " << frontierTime << endl;
   cout << "create-split-time = " << splitTime << endl;
+  cout << "------\n";
   cout << "#-rounds = " << round << endl;
   cout << "#-ser-rounds = " << serRound << endl;
   cout << "ser-time = " << serTime << endl;
   cout << "#-par-rounds = " << round - serRound << endl;
   cout << "par-time = " << parTime << endl;
+  cout << "------\n";
+  cout << "reservation-count = " << totalApex << "\n";
+  cout << "reservation-succ-rate = " << succApex / totalApex << "\n";
+  cout << "------\n";
   cout << "hull-size = " << context->hullSize() << endl;
 #endif
 

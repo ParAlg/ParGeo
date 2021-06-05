@@ -24,7 +24,9 @@
 
 #include "convexHull3d/hullTopology.h"
 
+#include <set>
 #include "parlay/parallel.h"
+#include "parlay/hash_table.h"
 #include "pargeo/algebra.h"
 #include "pargeo/parlayAddon.h"
 
@@ -212,16 +214,52 @@ class parallelHull : public _hullTopology<facetT, vertexT, originT> {
   // If n not supplied, find furthest apexes of all facets
   sequence<vertexT> furthestApexes(size_t n=-1) {
     sequence<vertexT> apexes;
-
     auto fVisit = [&](facetT* f) {return true;};
-    auto fDo = [&](facetT* f) {
-		 if (f->numPts() > 0) {
-		   auto apex = f->furthestParallel();
-		   if (!apex.isEmpty()) apexes.push_back(apex);
-		 }
-	       };
     auto fStop = [&]() {return apexes.size() >= n;};
-    baseT::dfsFacet(baseT::H, fVisit, fDo, fStop);
+
+    auto fFill = [&](facetT* f) {
+		   if (f->numPts() > 0) {
+		     auto apex = f->furthestParallel();
+		     if (!apex.isEmpty()) apexes.push_back(apex);
+		   }
+		 };
+    baseT::dfsFacet(baseT::H, fVisit, fFill, fStop);
+
+    return apexes;
+  }
+
+  // If n not supplied, find furthest apexes of all facets
+  sequence<vertexT> furthestApexesWithSkip(size_t n=-1) {
+    sequence<vertexT> apexes;
+    auto fVisit = [&](facetT* f) {return true;};
+    auto fStop = [&]() {return apexes.size() >= n;};
+
+    hashtable<hash_pointer<facetT*>> V(baseT::hullSize(), hash_pointer<facetT*>());
+    auto mark = [&](facetT* f) {V.insert(f);};
+    auto visited = [&](facetT* f) {return V.find(f) != nullptr;};
+
+    auto fRandPick = [&](facetT* f) {
+		       bool randSkip = parlay::hash64(size_t(f)) % 3;
+		       if (!randSkip && f->numPts() > 0) {
+			 mark(f);
+			 auto apex = f->furthestParallel();
+			 if (!apex.isEmpty()) {
+			   apexes.push_back(apex);
+			 }
+		       }
+		     };
+    baseT::dfsFacet(baseT::H, fVisit, fRandPick, fStop);
+
+    auto fFill = [&](facetT* f) {
+		   if (!visited(f) && f->numPts() > 0) {
+		     auto apex = f->furthestParallel();
+		     if (!apex.isEmpty()) {
+		       apexes.push_back(apex);
+		     }
+		   }
+		 };
+    baseT::dfsFacet(baseT::H, fVisit, fFill, fStop);
+
     return apexes;
   }
 
