@@ -53,25 +53,4 @@ namespace pargeo {
       a[1] * b[0] * c[2] * d[3] + a[0] * b[1] * c[2] * d[3];
   }
 
-  /* Signed volume (times 6) of an oriented tetrahedron (example below is positive).
-     if the area is 2x that of triangle abc
-       d
-       o
-      /|\
-     / | o b
-    o--o/
-     a   c
-
-     x
-     origin
-  */
-  template <class pt>
-  inline typename pt::floatT signedVolumeX6(pt a, pt d, pt area) {
-    return (a-d).dot(area);
-  }
-
-  template <class pt>
-  inline typename pt::floatT signedVolumeX6(pt a, pt b, pt c, pt d) {
-    return (a-d).dot(crossProduct3d(b-a, c-a));
-  }
-}
+} // End namespace

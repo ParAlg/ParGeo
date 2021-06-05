@@ -30,6 +30,29 @@
 #include "parlay/sequence.h"
 #include "parlay/parallel.h"
 
+/* Signed volume (times 6) of an oriented tetrahedron (example below is positive).
+   if the area is 2x that of triangle abc
+       d
+       o
+      /|\
+     / | o b
+    o--o/
+     a   c
+
+     x
+   origin
+*/
+
+template <class pt>
+inline typename pt::floatT signedVolume(pt a, pt d, pt area) {
+  return (a-d).dot(area);
+}
+
+template <class pt>
+inline typename pt::floatT signedVolume(pt a, pt b, pt c, pt d) {
+  return (a-d).dot(crossProduct3d(b-a, c-a));
+}
+
 class gridAtt3d;
 
 using gridVertex = pargeo::_point<3, pargeo::fpoint<3>::floatT, pargeo::fpoint<3>::floatT, gridAtt3d>;
@@ -150,7 +173,7 @@ struct linkedFacet3d {
     typename vertexT::floatT m = numericKnob;
 
     for (size_t i=0; i<numVisiblePts(); ++i) {
-      auto m2 = pargeo::signedVolumeX6(a, b, c, visiblePts(i));
+      auto m2 = signedVolume(a, b, c, visiblePts(i));
       if (m2 > m) {
 	m = m2;
 	apex = visiblePts(i);
@@ -226,7 +249,7 @@ public:
 
   // Point visibility test
   inline bool visible(facetT* f, vertexT p) {
-    return pargeo::signedVolumeX6(f->a, p, f->area) > numericKnob;
+    return signedVolume(f->a, p, f->area) > numericKnob;
   }
 
   vertexT getCorner(vertexT p, vertexT myMin) {

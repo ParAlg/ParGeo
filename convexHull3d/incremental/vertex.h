@@ -81,13 +81,36 @@ struct linkedFacet3d {
     return apex;
   }
 
+  /* Signed volume (times 6) of an oriented tetrahedron (example below is positive).
+     if the area is 2x that of triangle abc
+       d
+       o
+      /|\
+     / | o b
+    o--o/
+     a   c
+
+     x
+     origin
+  */
+
+  template <class pt>
+  inline typename pt::floatT signedVolume(pt a, pt d, pt area) {
+    return (a-d).dot(area);
+  }
+
+  template <class pt>
+  inline typename pt::floatT signedVolume(pt a, pt b, pt c, pt d) {
+    return (a-d).dot(crossProduct3d(b-a, c-a));
+  }
+
   vertexT furthestParallel() {
     auto apex = vertexT();
     typename vertexT::floatT m = apex.attribute.numericKnob;
     apex = parlay::max_element(seeList->cut(0, seeList->size()),
 			       [&](vertexT aa, vertexT bb) {
-				 return pargeo::signedVolumeX6(a, b, c, aa) <
-				   pargeo::signedVolumeX6(a, b, c, bb);
+				 return signedVolume(a, b, c, aa) <
+				   signedVolume(a, b, c, bb);
 			       });
     return apex;
   }
