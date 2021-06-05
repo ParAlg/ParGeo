@@ -34,13 +34,10 @@ using namespace pargeo;
 template <typename ptOut>
 parlay::sequence<ptOut>
 concurrentHull(parlay::sequence<vertex> &Q, size_t numProc) {
-  using namespace std;
   using namespace parlay;
   using pt = vertex;
 
 #ifdef HULL_CONCURRENT_VERBOSE
-  cout << "------------" << endl;
-  cout << "input-size = " << Q.size() << endl;
   timer t; t.start();
 #endif
 
@@ -56,7 +53,7 @@ concurrentHull(parlay::sequence<vertex> &Q, size_t numProc) {
   }
 
 #ifdef HULL_CONCURRENT_VERBOSE
-  cout << "#-subproblems = " << numProc << endl;
+  std::cout << "#-subproblems = " << numProc << "\n";
 #endif
 
   sequence<sequence<ptOut>> subHulls(numProc);
@@ -69,8 +66,8 @@ concurrentHull(parlay::sequence<vertex> &Q, size_t numProc) {
 
   sequence<ptOut> uniquePts = parlay::flatten(subHulls);
 #ifdef HULL_CONCURRENT_VERBOSE
-  cout << "output-size = " << uniquePts.size() << endl;
-  cout << "hull-time = " << t.stop() << endl;
+  std::cout << "#-rem-pts = " << uniquePts.size() << "/" << Q.size() << "\n";
+  std::cout << "hull-time = " << t.stop() << "\n";
 #endif
 
   // Divide and conquer once seems to be the most efficient for now
@@ -86,7 +83,6 @@ pargeo::hull3dConcurrent(parlay::sequence<pargeo::fpoint<3>> &P, size_t numProc)
   size_t n = P.size();
 
 #ifdef HULL_CONCURRENT_VERBOSE
-  cout << "#-points = " << n << endl;
   timer t; t.start();
 #endif
 
@@ -97,15 +93,14 @@ pargeo::hull3dConcurrent(parlay::sequence<pargeo::fpoint<3>> &P, size_t numProc)
   sequence<pt> Q2 = concurrentHull<pt>(Q, numProc);
 
 #ifdef HULL_CONCURRENT_VERBOSE
-  cout << "> concurrent-hull-time = " << t.get_next() << endl;
+  std::cout << "> concurrent-hull-time = " << t.get_next() << "\n";
 #endif
 
   auto out = hull3dSerialInternal(make_slice(Q2));
   //auto out = hull3dIncrementalInternal(make_slice(Q2));
 
 #ifdef HULL_CONCURRENT_VERBOSE
-  cout << "> merge-hull-time = " << t.stop() << endl;
-  cout << "hull-size = " << out.size() << endl;
+  std::cout << "> merge-hull-time = " << t.stop() << "\n";
 #endif
 
   return out;

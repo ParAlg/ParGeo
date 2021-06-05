@@ -169,19 +169,6 @@ e.b==e.ff.a    e.a==e.ff.c
 			   return F[i];
 			 }
 		       }
-#ifdef VERBOSE
-		       cout << "Facets: " << endl;
-		       cout << "linking " << *f << " with " << endl;
-		       cout << *ab << endl;
-		       cout << *bc << endl;
-		       cout << *ca << endl;
-		       for(int i=0; i<3; ++i)
-			 cout << F[i]->a.attribute.i << " "
-			      << F[i]->b.attribute.i << " "
-			      << F[i]->c.attribute.i << endl;
-		       cout << "match v1 = " << v1.attribute.i << endl;
-		       cout << "match v2 = " << v2.attribute.i << endl;
-#endif
 		       throw std::runtime_error("Facet linking failure.");
 		     };
 

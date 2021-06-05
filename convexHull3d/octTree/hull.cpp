@@ -32,17 +32,20 @@
 #include "gridHull.h"
 #include "octTree.h"
 
+// #define GRID_HULL_VERBOSE
+
 using namespace pargeo;
 using namespace parlay;
 
 parlay::sequence<pargeo::fpoint<3>>
 hull3dGridInternal(parlay::slice<pargeo::fpoint<3>*, pargeo::fpoint<3>*> P,
 		   size_t s = 4) {
-  using namespace std;
   using namespace parlay;
   using pointT = pargeo::fpoint<3>;
   using floatT = pointT::floatT;
   using facetT = facet3d<pargeo::fpoint<3>>;
+
+  //timer t; t.start();
 
   auto levels = sequence<size_t>();
   levels.push_back(s);
@@ -50,6 +53,8 @@ hull3dGridInternal(parlay::slice<pargeo::fpoint<3>*, pargeo::fpoint<3>*> P,
   //levels.push_back(4);
   //levels.push_back(2);
   auto tree = octTree<gridVertex>(P, levels);
+
+  //std::cout << "grid-time = " << t.get_next() << "\n";
 
   size_t L = tree.numLevels();
 
@@ -83,44 +88,53 @@ hull3dGridInternal(parlay::slice<pargeo::fpoint<3>*, pargeo::fpoint<3>*> P,
     delete linkedHull;
   }
 
-  return tree.getPoints<pointT>(tree.numLevels()-1, mask);
+  auto remPts = tree.getPoints<pointT>(tree.numLevels()-1, mask);
+
+  //std::cout << "grid-hull-time = " << t.get_next() << "\n";
+
+  return remPts;
 }
 
 parlay::sequence<facet3d<pargeo::fpoint<3>>>
 pargeo::hull3dGrid(parlay::sequence<pargeo::fpoint<3>> &P, size_t s = 4, bool write = false) {
-  using namespace std;
   using namespace parlay;
   using pointT = pargeo::fpoint<3>;
   using floatT = pointT::floatT;
   using facetT = facet3d<pargeo::fpoint<3>>;
 
+#ifdef GRID_HULL_VERBOSE
   pargeo::timer t;
   t.start();
+#endif
 
   auto finalQ = hull3dGridInternal(make_slice(P), s);
 
-  cout << " " << finalQ.size() << " / " << P.size() << endl;
-  cout << "grid-par-time = " << t.get_next() << endl;
+#ifdef GRID_HULL_VERBOSE
+  std::cout << " " << finalQ.size() << " / " << P.size() << "\n";
+  std::cout << "grid-hull-total-time = " << t.get_next() << "\n";
+#endif
 
   // todo change merge hull method here
   auto result = hull3dConcurrent(finalQ);
-  cout << "merge-hull-time = " << t.stop() << endl;
+  //auto result = hull3dIncremental(finalQ);
 
-  cout << "hull-size = " << result.size() << endl;
+#ifdef GRID_HULL_VERBOSE
+  std::cout << "merge-hull-time = " << t.stop() << "\n";
+#endif
   return result;
 }
 
 parlay::sequence<facet3d<pargeo::fpoint<3>>>
 pargeo::hull3dGridConcurrent(parlay::sequence<pargeo::fpoint<3>> &P, size_t s, size_t numProc) {
-  using namespace std;
   using namespace parlay;
   using pointT = pargeo::fpoint<3>;
   using floatT = pointT::floatT;
   using facetT = facet3d<pargeo::fpoint<3>>;
 
+#ifdef GRID_HULL_VERBOSE
   pargeo::timer t;
-
   t.start();
+#endif
 
   if (!numProc) numProc = num_workers();
 
@@ -133,27 +147,30 @@ pargeo::hull3dGridConcurrent(parlay::sequence<pargeo::fpoint<3>> &P, size_t s, s
     blkSize = floor(P.size() / numProc);
   }
 
-  cout << "#-subproblems = " << numProc << endl;
+#ifdef GRID_HULL_VERBOSE
+  std::cout << "#-subproblems = " << numProc << "\n";
+#endif
 
   sequence<sequence<pointT>> subHulls(numProc);
 
   parallel_for(0, numProc, [&](size_t i) {
 			     size_t s = i * blkSize;
 			     size_t e = min(P.size(), (i+1) * blkSize);
-			     cout << s << " -- " << e << endl;
 			     subHulls[i] = hull3dGridInternal(P.cut(s, e));
 			   }, 1);
 
   sequence<pointT> finalQ = parlay::flatten(subHulls);
 
-  cout << " " << finalQ.size() << " / " << P.size() << endl;
-  cout << "grid-par-time = " << t.get_next() << endl;
+#ifdef GRID_HULL_VERBOSE
+  std::cout << " " << finalQ.size() << " / " << P.size() << "\n";
+  std::cout << "grid-par-time = " << t.get_next() << "\n";
+#endif
 
   // todo change merge method here
   auto result = hull3dConcurrent(finalQ);
 
-  cout << "merge-hull-time = " << t.stop() << endl;
-
-  cout << "hull-size = " << result.size() << endl;
+#ifdef GRID_HULL_VERBOSE
+  std::cout << "merge-hull-time = " << t.stop() << "\n";
+#endif
   return result;
 }

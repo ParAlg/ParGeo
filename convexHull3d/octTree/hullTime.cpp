@@ -7,18 +7,18 @@
 #include "pargeo/parseCommandLine.h"
 #include "convexHull3d/hull.h"
 
-using namespace std;
 using namespace pargeo;
 using namespace pargeo::pointIO;
 
 template <class pt>
-void timeHull(parlay::sequence<pt> &P, int s, int rounds, char const *outFile) {
+void timeHull(parlay::sequence<pt> &P, int s, size_t numProc, int rounds, char const *outFile) {
   timer t; t.start();
   bool savePlot = outFile != NULL;
   for(int i=0; i<rounds; ++i) {
-    //hull3dGrid(P, s, savePlot);
-    hull3dGridConcurrent(P);
-    cout << "round-time = " << t.get_next() << endl;
+    auto H = hull3dGrid(P, s, savePlot);
+    // auto H = hull3dGridConcurrent(P, s, numProc);
+    std::cout << "hull-size = " << H.size() << "\n";
+    std::cout << "round-time = " << t.get_next() << "\n";
   }
   t.stop();
   //if (outFile != NULL) writeIntSeqToFile(I, outFile);
@@ -30,13 +30,14 @@ int main(int argc, char* argv[]) {
   char* oFile = P.getOptionValue("-o");
   int rounds = P.getOptionIntValue("-r",1);
   int s = P.getOptionIntValue("-s", 4);
+  int numProc = P.getOptionIntValue("-p", 1);
 
   int dim = readHeader(iFile);
   if (dim != 3) {
-    cout << "Error, convexHull3D only takes 3d inputs, abort." << endl;
+    std::cout << "Error, convexHull3D only takes 3d inputs, abort.\n";
     abort();
   }
 
   parlay::sequence<pargeo::fpoint<3>> Points = readPointsFromFile<pargeo::fpoint<3>>(iFile);
-  timeHull<pargeo::fpoint<3>>(Points, s, rounds, oFile);
+  timeHull<pargeo::fpoint<3>>(Points, s, numProc, rounds, oFile);
 }

@@ -7,7 +7,6 @@
 #include "pargeo/parseCommandLine.h"
 #include "giftWrap.h"
 
-using namespace std;
 using namespace pargeo;
 using namespace pargeo::pointIO;
 
@@ -15,8 +14,9 @@ template <class pt>
 void timeHull(parlay::sequence<pt> &P, size_t numProc, int rounds, char const *outFile) {
   timer t; t.start();
   for(int i=0; i<rounds; ++i) {
-    giftWrap3d(P);
-    cout << "round-time = " << t.get_next() << endl;
+    auto H = giftWrap3d(P);
+    std::cout << "hull-time = " << H.size() << "\n";
+    std::cout << "round-time = " << t.get_next() << "\n";
   }
   t.stop();
 }
@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
 
   int dim = readHeader(iFile);
   if (dim != 3) {
-    cout << "Error, convexHull3D only takes 3d inputs, abort." << endl;
+    std::cout << "Error, convexHull3D only takes 3d inputs, abort.\n";
     abort();
   }
 

@@ -150,9 +150,6 @@ parlay::sequence<pargeo::facet3d<pargeo::fpoint<3>>> giftWrap3d(parlay::sequence
     }
   }
 
-  cout << "hull size = " << H.size() << endl;
-
-  return sequence<facet3d>(); // todo dummy
+  return parlay::tabulate(H.size(),
+			  [&](size_t i){return facet3d(P[H[i].a], P[H[i].b], P[H[i].c]);});
 }
-
-// parlay::sequence<facet3d<pargeo::fpoint<3>>> hull3d(parlay::sequence<pargeo::fpoint<3>> &);

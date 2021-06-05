@@ -212,7 +212,7 @@ public:
 
   template <typename pIn>
   floatT zorderSort(slice<pIn*, pIn*> _P) {
-    timer t; t.start();
+    //timer t; t.start();
     std::atomic<floatT> extrema[6];
     for (int i=0; i<3; ++i) {
       extrema[i*2] = _P[0][i];
@@ -242,14 +242,14 @@ public:
 				P[i].attribute = gridAtt3d();
 				P[i].attribute.id = computeId(_P[i], pMin, bSize);
 			      });
-    cout << "grid-init-time = " << t.get_next() << endl;
+    //cout << "grid-init-time = " << t.get_next() << endl;
 
     parlay::sort_inplace(make_slice(P), [&](pt const& a, pt const& b){
 					  return a.attribute.id < b.attribute.id;});
     parallel_for(0, P.size(), [&](size_t i){
 				P[i].attribute.i = i;
 			      });
-    cout << "grid-sort-time = " << t.stop() << endl;
+    //cout << "grid-sort-time = " << t.stop() << endl;
     return bSize;
   }
 
@@ -292,7 +292,7 @@ public:
       timer t; t.start();
 
       boxSizes[lIdx] = s;
-      cout << "--- level " << l << ": " << s << endl;
+      //cout << "--- level " << l << ": " << s << endl;
       s *= 2;
 
       flag[0] = 1;
@@ -306,7 +306,7 @@ public:
       size_t numGrids = parlay::scan_inplace(flag.cut(0, levelSize(lIdx+1)));
 
       flag[levelSize(lIdx+1)] = numGrids;
-      cout << " scanning-time = " << t.get_next() << endl;
+      //cout << " scanning-time = " << t.get_next() << endl;
 
       pointers[lIdx] = new sequence<size_t>(numGrids+1);
       parallel_for(0, levelSize(lIdx+1), [&](size_t i){
@@ -315,8 +315,8 @@ public:
 					}
 				      });
       pointers[lIdx]->at(numGrids) = levelSize(lIdx+1);
-      cout << " pointing-time =  " << t.stop() << endl;
-      cout << " num-grids = " << numGrids << endl;
+      // cout << " pointing-time =  " << t.stop() << endl;
+      // cout << " num-grids = " << numGrids << endl;
 
       lIdx --;
     }

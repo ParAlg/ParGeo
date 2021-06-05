@@ -8,7 +8,6 @@
 #include "pargeo/point.h"
 #include "parlay/parallel.h"
 
-using namespace std;
 using namespace pargeo;
 using namespace pargeo::pointIO;
 
@@ -16,8 +15,9 @@ template <class pt>
 void timeHull(parlay::sequence<pt> &P, size_t numProc, int rounds, char const *outFile) {
   timer t; t.start();
   for(int i=0; i<rounds; ++i) {
-    hull3dConcurrent(P, numProc);
-    cout << "round-time = " << t.get_next() << endl;
+    auto H = hull3dConcurrent(P, numProc);
+    std::cout << "hull-size = " << H.size() << "\n";
+    std::cout << "round-time = " << t.get_next() << "\n";
   }
   t.stop();
 }
@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
 
   int dim = readHeader(iFile);
   if (dim != 3) {
-    cout << "Error, convexHull3D only takes 3d inputs, abort." << endl;
+    std::cout << "Error, convexHull3D only takes 3d inputs, abort." << endl;
     abort();
   }
 

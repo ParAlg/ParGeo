@@ -22,24 +22,16 @@
 
 #pragma once
 
-//#include "parlay/hash_table.h"
-//#include "parlay/parallel.h"
-//#include "parlay/primitives.h"
 #include "parlay/sequence.h"
-//#include "pargeo/point.h"
 #include "pargeo/getTime.h"
 #include "convexHull3d/hull.h"
 #include "gridVertex.h"
 #include "gridHull.h"
-//#include "octTree.h"
-/* #include <iostream> */
-/* #include <fstream> */
 
 template<class linkedFacet3d, class vertex3d, class origin3d>
 void incrementHull3dSerial(gridHull<linkedFacet3d, vertex3d, origin3d> *context) {
   using namespace pargeo;
   using namespace parlay;
-  //using namespace parlay::internal;
 
   while (true) {
 
