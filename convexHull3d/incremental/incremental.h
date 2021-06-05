@@ -139,9 +139,9 @@ void incrementHull3d(parallelHull<linkedFacet3d, vertex3d, origin3d> *context, s
       t.start();
 #endif
 
-      // todo points chosen are close
-      sequence<vertex3d> apexes0 = context->furthestApexes(numProc*4); // todo tune
-      //sequence<vertex3d> apexes0 = context->furthestApexesWithSkip(numProc); // todo tune
+      sequence<vertex3d> apexes0 = context->furthestApexes(numProc*8); // todo tune
+      //sequence<vertex3d> apexes0 = context->randomApexes(numProc*8); // not as good
+      //sequence<vertex3d> apexes0 = context->furthestApexesWithSkip(numProc*8); // not as good
 
 #ifdef HULL_PARALLEL_VERBOSE
       apexTime += t.get_next();
@@ -226,7 +226,7 @@ void incrementHull3d(parallelHull<linkedFacet3d, vertex3d, origin3d> *context, s
 
 				   context->setHull(newFacets[0]); // todo data race
 
-				   context->redistributeSerial(FB[a]->cut(0, FB[a]->size()), make_slice(newFacets));
+				   context->redistributeParallel(FB[a]->cut(0, FB[a]->size()), make_slice(newFacets));
 
 				   increase[a] = FE[a]->size() - FB[a]->size();
 			       });

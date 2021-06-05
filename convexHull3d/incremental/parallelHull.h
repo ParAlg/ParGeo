@@ -26,6 +26,7 @@
 
 #include <set>
 #include "parlay/parallel.h"
+#include "parlay/utilities.h"
 #include "parlay/hash_table.h"
 #include "pargeo/algebra.h"
 #include "pargeo/parlayAddon.h"
@@ -220,6 +221,23 @@ class parallelHull : public _hullTopology<facetT, vertexT, originT> {
     auto fFill = [&](facetT* f) {
 		   if (f->numPts() > 0) {
 		     auto apex = f->furthestParallel();
+		     if (!apex.isEmpty()) apexes.push_back(apex);
+		   }
+		 };
+    baseT::dfsFacet(baseT::H, fVisit, fFill, fStop);
+
+    return apexes;
+  }
+
+  // If n not supplied, find furthest apexes of all facets
+  sequence<vertexT> randomApexes(size_t n=-1) {
+    sequence<vertexT> apexes;
+    auto fVisit = [&](facetT* f) {return true;};
+    auto fStop = [&]() {return apexes.size() >= n;};
+
+    auto fFill = [&](facetT* f) {
+		   if (f->numPts() > 0) {
+		     auto apex = f->pts(parlay::hash64(f->numPts()) % f->numPts());
 		     if (!apex.isEmpty()) apexes.push_back(apex);
 		   }
 		 };
