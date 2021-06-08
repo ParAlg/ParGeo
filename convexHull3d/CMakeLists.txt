@@ -12,6 +12,8 @@ add_library(${PROJECT_NAME}
   bruteforce/hull.cpp
   pseudoHull/hull.cpp
   incremental/hull.cpp
+  sampling/hull.cpp
+  sampling/hullTest.cpp
   )
 
 add_subdirectory(incremental)
