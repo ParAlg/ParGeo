@@ -32,8 +32,8 @@ inline void testKdTree(parlay::sequence<pargeo::point<dim>>& P) {
 
 	// Check if box sizes are consistent
 	for (size_t d = 0; d < node->dim; ++ d) {
-	  EXPECT_FLOAT_EQ(max(node->L()->getMax(d),
-			      node->R()->getMax(d)),
+	  EXPECT_FLOAT_EQ(std::max(node->L()->getMax(d),
+				   node->R()->getMax(d)),
 			  node->getMax(d));
 	}
       }

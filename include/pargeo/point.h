@@ -8,7 +8,6 @@
 #include "parlay/primitives.h"
 
 namespace pargeo {
-  using namespace std;
 
   struct _empty {
     int arr[0]; // todo this produces a struct of size 0 but seems dangerous, need to check
@@ -16,7 +15,7 @@ namespace pargeo {
 
   template <int _dim, class _tData, class _tFloat, class _tAtt> class _point {
 
-    static constexpr _tData empty = numeric_limits<_tData>::max();
+    static constexpr _tData empty = std::numeric_limits<_tData>::max();
 
   public:
 

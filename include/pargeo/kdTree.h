@@ -56,12 +56,12 @@ namespace pargeo {
 
     inline void minCoords(pointT& _pMin, pointT& p) {
       for(int i=0; i<_pMin.dim; ++i)
-	_pMin[i] = min(_pMin[i], p[i]);
+	_pMin[i] = std::min(_pMin[i], p[i]);
     }
 
     inline void maxCoords(pointT& _pMax, pointT& p) {
       for(int i=0; i<_pMax.dim; ++i)
-	_pMax[i] = max(_pMax[i], p[i]);
+	_pMax[i] = std::max(_pMax[i], p[i]);
     }
 
     inline void boundingBoxSerial() {
@@ -84,7 +84,7 @@ namespace pargeo {
       parlay::parallel_for(0, P,
 			   [&](intT p) {
 			     intT s = p*blockSize;
-			     intT e = min((intT)(p+1)*blockSize, size());
+			     intT e = std::min((intT)(p+1)*blockSize, size());
 			     for (intT j=s; j<e; ++j) {
 			       minCoords(localMin[p], items[j][0]);
 			       maxCoords(localMax[p], items[j][0]);}
@@ -107,7 +107,7 @@ namespace pargeo {
 	    rPt--;
 	  }
 	  if (lPt < rPt) {
-	    swap(items[lPt], items[rPt]);
+	    std::swap(items[lPt], items[rPt]);
 	    rPt--; }
 	  else { break;}
 	}
@@ -305,9 +305,9 @@ namespace pargeo {
 	// disjoint at dim d, and intersect on dim < d
 	floatT rsqr = 0;
 	for (int dd = d; dd < n1->dim; ++ dd) {
-	  floatT tmp = max(n1->getMin(dd) - n2->getMax(dd),
-			   n2->getMin(dd) - n1->getMax(dd));
-	  tmp = max(tmp, (floatT)0);
+	  floatT tmp = std::max(n1->getMin(dd) - n2->getMax(dd),
+				n2->getMin(dd) - n1->getMax(dd));
+	  tmp = std::max(tmp, (floatT)0);
 	  rsqr += tmp*tmp;
 	}
 	return sqrt(rsqr);
@@ -321,7 +321,7 @@ namespace pargeo {
     using floatT = typename nodeT::objT::floatT;
     floatT result = 0;
     for (int d = 0; d < n1->dim; ++ d) {
-      floatT tmp = max(n1->getMax(d), n2->getMax(d)) - min(n1->getMin(d), n2->getMin(d));
+      floatT tmp = std::max(n1->getMax(d), n2->getMax(d)) - std::min(n1->getMin(d), n2->getMin(d));
       result += tmp * tmp;
     }
     return sqrt(result);

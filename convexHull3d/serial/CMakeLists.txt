@@ -16,8 +16,10 @@ target_include_directories(${PROJECT_NAME} PRIVATE ../include)
 # set(CMAKE_CXX_FLAGS "-DHOMEGROWN -pthread -mcx16 -O3 -DNDEBUG ${EXTRA_FLAGS}")
 
 add_library(${PROJECT_NAME}Lib
+  hull.cpp
   hullInternal.cpp
   hullInternal2.cpp
+  hullInternal3.cpp
   )
 
 target_link_libraries(${PROJECT_NAME}Lib pargeolib)

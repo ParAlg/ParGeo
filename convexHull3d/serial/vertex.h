@@ -55,7 +55,8 @@ struct linkedFacet3d {
     auto apex = vertexT();
     typename vertexT::floatT m = numericKnob;
     for (size_t i=0; i<numPts(); ++i) {
-      auto m2 = (a-pts(i)).dot(crossProduct3d(b-a, c-a));
+      //auto m2 = (a-pts(i)).dot(crossProduct3d(b-a, c-a));
+      auto m2 = (a-pts(i)).dot(area);
       if (m2 > m) {
 	m = m2;
 	apex = pts(i);

@@ -11,6 +11,7 @@ add_library(${PROJECT_NAME}
   )
 
 add_subdirectory(incremental)
+add_subdirectory(pseudoHull)
 add_subdirectory(concurrent)
 add_subdirectory(giftWrap)
 add_subdirectory(octTree)
@@ -19,4 +20,4 @@ add_subdirectory(serial)
 target_link_libraries(${PROJECT_NAME} pargeolib)
 
 target_include_directories(${PROJECT_NAME}
-    PUBLIC ${PROJECT_SOURCE_DIR}/include)
+  PUBLIC ${PROJECT_SOURCE_DIR}/include)

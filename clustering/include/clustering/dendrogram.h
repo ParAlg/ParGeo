@@ -7,7 +7,7 @@
 
 namespace pargeo {
 
-  typedef tuple<size_t, size_t, double, size_t> dendroNode;
+  typedef std::tuple<size_t, size_t, double, size_t> dendroNode;
 
   parlay::sequence<dendroNode> dendrogram(parlay::sequence<pargeo::wghEdge> &, size_t);
 

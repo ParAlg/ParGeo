@@ -57,6 +57,9 @@ namespace pargeo {
   parlay::sequence<facet3d<pargeo::fpoint<3>>>
   hull3dSerial(parlay::sequence<pargeo::fpoint<3>> &);
 
+  parlay::sequence<pargeo::fpoint<3>>
+  hull3dSerialInternal(parlay::sequence<pargeo::fpoint<3>> &);
+
   parlay::sequence<facet3d<pargeo::fpoint<3>>>
   hull3dSerialInternal(parlay::slice<vertex*, vertex*>);
 
@@ -74,5 +77,8 @@ namespace pargeo {
 
   parlay::sequence<facet3d<pargeo::fpoint<3>>>
   hull3dGridConcurrent(parlay::sequence<pargeo::fpoint<3>> &, size_t s = 4, size_t numProc = 0);
+
+  parlay::sequence<facet3d<pargeo::fpoint<3>>>
+  hull3dPseudo(parlay::sequence<pargeo::fpoint<3>> &);
 
 }; // End namespace
