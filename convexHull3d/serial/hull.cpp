@@ -16,7 +16,7 @@ pargeo::hull3dSerial(parlay::sequence<pargeo::fpoint<3>> &P) {
   using floatT = pointT::floatT;
   using facetT = facet3d<pointT>;
 
-  size_t n = P.size();
+  if (P.size() < 10) return hull3dBruteforce(P);
 
   sequence<vertex> Q(P.size());
 

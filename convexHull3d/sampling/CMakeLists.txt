@@ -1,4 +1,4 @@
-project(bruteforceHull3d)
+project(samplingHull3d)
 
 #------------------- Compile as executable
 
@@ -12,8 +12,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE ../include)
 
 add_library(${PROJECT_NAME}Lib
   hull.cpp
+  hullTest.cpp
   )
 
-target_link_libraries(${PROJECT_NAME}Lib pargeolib)
+target_link_libraries(${PROJECT_NAME}Lib pargeolib serialHull3dLib)
 
 target_include_directories(${PROJECT_NAME}Lib PRIVATE ../include)

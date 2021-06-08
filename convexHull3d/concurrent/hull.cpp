@@ -29,7 +29,7 @@
 
 using namespace pargeo;
 
-// #define HULL_CONCURRENT_VERBOSE
+#define HULL_CONCURRENT_VERBOSE
 
 template <typename ptOut>
 parlay::sequence<ptOut>
@@ -46,7 +46,6 @@ concurrentHull(parlay::sequence<vertex> &Q, size_t numProc) {
   numProc *= 8;
 
   size_t blkSize = floor(Q.size() / numProc);
-  std::cout << blkSize << "\n";
 
   while (blkSize < 10) {
     numProc -= 1;
@@ -89,22 +88,35 @@ pargeo::hull3dConcurrent(parlay::sequence<pargeo::fpoint<3>> &P, size_t numProc)
   timer t; t.start();
 #endif
 
-  sequence<pt> Q(P.size());
-  parallel_for(0, P.size(), [&](size_t i) {
-			      Q[i] = pt(P[i].coords());});
-
-  sequence<pt> Q2 = concurrentHull<pt>(Q, numProc);
+  // the fraction of points on the hull by sampling
+  double frac = testHull(P, 0.01);
 
 #ifdef HULL_CONCURRENT_VERBOSE
-  std::cout << "> concurrent-hull-time = " << t.get_next() << "\n";
+  std::cout << "> sampling-time = " << t.get_next() << "\n";
 #endif
 
-  auto out = hull3dSerialInternal(make_slice(Q2));
-  //auto out = hull3dIncrementalInternal(make_slice(Q2));
+  if (frac < 0.8) {
+
+    sequence<pt> Q(P.size());
+    parallel_for(0, P.size(), [&](size_t i) {
+				Q[i] = pt(P[i].coords());});
+
+    sequence<pt> Q2 = concurrentHull<pt>(Q, numProc);
 
 #ifdef HULL_CONCURRENT_VERBOSE
-  std::cout << "> merge-hull-time = " << t.stop() << "\n";
+    std::cout << "> concurrent-hull-time = " << t.get_next() << "\n";
 #endif
 
-  return out;
+    return hull3dSerialInternal(make_slice(Q2));
+    // return hull3dIncrementalInternal(make_slice(Q2));
+
+#ifdef HULL_CONCURRENT_VERBOSE
+    std::cout << "> merge-hull-time = " << t.stop() << "\n";
+#endif
+
+  } else {
+
+    return hull3dSerial(P);
+
+  }
 }
