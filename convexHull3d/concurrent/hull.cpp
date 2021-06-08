@@ -46,8 +46,9 @@ concurrentHull(parlay::sequence<vertex> &Q, size_t numProc) {
   numProc *= 8;
 
   size_t blkSize = floor(Q.size() / numProc);
+  std::cout << blkSize << "\n";
 
-  while (blkSize < 100) {
+  while (blkSize < 10) {
     numProc -= 1;
     blkSize = floor(Q.size() / numProc);
   }
@@ -79,6 +80,8 @@ pargeo::hull3dConcurrent(parlay::sequence<pargeo::fpoint<3>> &P, size_t numProc)
   using namespace std;
   using namespace parlay;
   using pt = vertex;
+
+  if (P.size() < 1000) return hull3dSerial(P);
 
   size_t n = P.size();
 

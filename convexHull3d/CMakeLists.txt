@@ -3,14 +3,19 @@ cmake_minimum_required(VERSION 3.10)
 project(convexHull3d)
 
 add_library(${PROJECT_NAME}
-  concurrent/hull.cpp
-  concurrent/hullTime.cpp
-  giftWrap/hullTime.cpp
+  serial/hull.cpp
+  serial/hullInternal.cpp
+  serial/hullInternal2.cpp
+  serial/hullInternal3.cpp
   octTree/hull.cpp
-  octTree/hullTime.cpp
+  concurrent/hull.cpp
+  bruteforce/hull.cpp
+  pseudoHull/hull.cpp
+  incremental/hull.cpp
   )
 
 add_subdirectory(incremental)
+add_subdirectory(bruteforce)
 add_subdirectory(pseudoHull)
 add_subdirectory(concurrent)
 add_subdirectory(giftWrap)

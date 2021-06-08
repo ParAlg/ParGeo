@@ -54,5 +54,10 @@ target_link_libraries(wspd_test PRIVATE
   pargeolib ${GTest_LIBRARIES})
 add_test(NAME wspd_test COMMAND wspd_test)
 
+add_executable(hull_test hull/hull_test.cpp)
+target_link_libraries(hull_test PRIVATE
+  pargeolib convexHull3d ${GTest_LIBRARIES})
+add_test(NAME hull_test COMMAND hull_test)
+
 message(STATUS "CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}")
 file(COPY datasets DESTINATION ${CMAKE_BINARY_DIR}/test)

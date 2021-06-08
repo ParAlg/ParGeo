@@ -81,4 +81,7 @@ namespace pargeo {
   parlay::sequence<facet3d<pargeo::fpoint<3>>>
   hull3dPseudo(parlay::sequence<pargeo::fpoint<3>> &);
 
+  parlay::sequence<facet3d<pargeo::fpoint<3>>>
+  hull3dBruteforce(parlay::sequence<pargeo::fpoint<3>> &);
+
 }; // End namespace
