@@ -23,13 +23,14 @@
 #pragma once
 
 #include <vector>
+#include "convexHull3d/hull.h"
 #include "parlay/sequence.h"
 #include "pargeo/algebra.h"
 
 template <class vertexT>
 struct linkedFacet3d {
   static constexpr typename pargeo::fpoint<3>::floatT numericKnob = 1e-5;
-  typedef vector<vertexT> seqT;
+  typedef std::vector<vertexT> seqT;
 
   vertexT a, b, c;
 

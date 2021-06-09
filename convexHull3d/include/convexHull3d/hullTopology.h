@@ -59,11 +59,12 @@ class _hullTopology {
 
 protected:
 
-  // A linked structure for the facets
-  facetT* H;
-
   // The number of facets in H
   std::atomic<size_t> hSize;
+
+public:
+  // A linked structure for the facets
+  facetT* H;
 
   /* Depth-first hull traversal (no facet repeat)
   */
@@ -150,8 +151,6 @@ e.b==e.ff.a    e.a==e.ff.c
       if (fStop()) break;
     }
   }
-
- public:
 
   // An arbitrary coordinate class located within the hull
   // it also contains primitives for visibility test
