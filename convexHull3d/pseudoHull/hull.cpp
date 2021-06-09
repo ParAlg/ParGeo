@@ -83,7 +83,7 @@ pseudoHullHelper(internalFacet<vertexT> f,
 
   vertexT apex = f.furthest(make_slice(Q)); //todo parallel
 
-  auto interiorPt = (f.a, f.b, f.c, apex)/4;
+  auto interiorPt = (f.a + f.b + f.c + apex)/4;
 
   /////////////////////
   auto f0 = facetT(f.a-interiorPt, f.b-interiorPt, apex-interiorPt);
