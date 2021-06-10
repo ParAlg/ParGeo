@@ -8,18 +8,6 @@
 #include "pargeo/point.h"
 #include "pargeo/parlayAddon.h"
 
-// struct att {
-//   size_t i;
-// };
-
-// using vt = pargeo::_point<3, float, float, att>;
-
-// static std::ostream& operator<<(std::ostream& os, const vt v) {
-//   for (int i=0; i<v.dim; ++i)
-//     os << v.x[i] << " ";
-//   return os;
-// }
-
 template <class vertexT>
 struct internalFacet {
   static constexpr typename vertexT::floatT numericKnob = 1e-5;
@@ -49,6 +37,9 @@ struct internalFacet {
   }
 
   vertexT furthestParallel(parlay::slice<vertexT*, vertexT*> P) {
+    if (P.size() < 1000)
+      return furthest(P);
+
     auto apex = vertexT();
     typename vertexT::floatT m = numericKnob;
     apex = parlay::max_element(P, [&](vertexT aa, vertexT bb) {
@@ -81,15 +72,14 @@ pseudoHullHelper(internalFacet<vertexT> f,
   if (Q.size() < 4) {
     return Q;}
 
-  vertexT apex = f.furthest(make_slice(Q)); //todo parallel
+  vertexT apex = f.furthestParallel(make_slice(Q)); //todo parallel
 
   auto interiorPt = (f.a + f.b + f.c + apex)/4;
 
-  /////////////////////
   auto f0 = facetT(f.a-interiorPt, f.b-interiorPt, apex-interiorPt);
   auto f1 = facetT(f.b-interiorPt, f.c-interiorPt, apex-interiorPt);
   auto f2 = facetT(f.c-interiorPt, f.a-interiorPt, apex-interiorPt);
-  for (size_t i = 0; i < Q.size(); ++ i) Q[i] = Q[i]-interiorPt;
+  parallel_for (0, Q.size(), [&](size_t i) {Q[i] = Q[i]-interiorPt;}, 1000);
 
   auto flag = sequence<int>(Q.size());
   parallel_for(0, Q.size(), [&](size_t i) {
@@ -97,58 +87,23 @@ pseudoHullHelper(internalFacet<vertexT> f,
 			      else if (f1.visible(Q[i])) flag[i] = 1;
 			      else if (f2.visible(Q[i])) flag[i] = 2;
 			      else flag[i] = 3;
-			    });
+			    }, 1000);
 
   auto chunks = split_k_2(4, Q, flag);
 
-  // size_t sum = 0;
-  // for (auto chunk: chunks) sum += chunk.size();
-  // if (sum != Q.size()) {
-  //   throw std::runtime_error("sum mismatch");
-  // }
-
-  // // see if the three vertices of the facets are in the set being processed
-  // bool have0 = 0;
-  // bool have1 = 0;
-  // bool have2 = 0;
-  // bool have3 = 0;
-  // for (size_t i=0; i<chunks.size()-1; ++i) {
-  //   auto chunk = chunks[i];
-  //   for (auto p: chunk) {
-  //     if (p.attribute.i == apex.attribute.i) have0 = 1;
-  //     if (p.attribute.i == f.a.attribute.i) have1 = 1;
-  //     if (p.attribute.i == f.b.attribute.i) have2 = 1;
-  //     if (p.attribute.i == f.c.attribute.i) have3 = 1;
-  //   }
-  // }
-
   auto filtered = sequence<sequence<vertexT>>(3);
-  filtered[0] = pseudoHullHelper<vertexT>(f0, chunks[0]);
-  filtered[1] = pseudoHullHelper<vertexT>(f1, chunks[1]);
-  filtered[2] = pseudoHullHelper<vertexT>(f2, chunks[2]);
+
+  parallel_for(0, 3, [&](size_t i) {
+		       if (i == 0)
+			 filtered[0] = pseudoHullHelper<vertexT>(f0, chunks[0]);
+		       else if (i == 1)
+			 filtered[1] = pseudoHullHelper<vertexT>(f1, chunks[1]);
+		       else
+			 filtered[2] = pseudoHullHelper<vertexT>(f2, chunks[2]);
+		     }, 1);
 
   auto Q2 = parlay::flatten(filtered);
-  for (size_t i = 0; i < Q2.size(); ++ i)
-    Q2[i] = Q2[i] + interiorPt;
-  //////////////////////////////////////////////
-
-  // bool found0 = 0;
-  // bool found1 = 0;
-  // bool found2 = 0;
-  // bool found3 = 0;
-  // for (auto p: Q2) {
-  //   if (p.attribute.i == apex.attribute.i) found0 = 1;
-  //   if (p.attribute.i == f.a.attribute.i) found1 = 1;
-  //   if (p.attribute.i == f.b.attribute.i) found2 = 1;
-  //   if (p.attribute.i == f.c.attribute.i) found3 = 1;
-  // }
-  // if (found0!=have0 || found1!=have1 || found2!=have2 || found3!=have3) {
-  //   if (found0!=have0) std::cout << apex.attribute.i << " is missing\n";
-  //   if (found1!=have1) std::cout << f.a.attribute.i << " is missing\n";
-  //   if (found2!=have2) std::cout << f.b.attribute.i << " is missing\n";
-  //   if (found3!=have3) std::cout << f.c.attribute.i << " is missing\n";
-  //   throw std::runtime_error("facet vertices not in flattened result");
-  // }
+  parallel_for (0, Q2.size(), [&](size_t i) {Q2[i] = Q2[i] + interiorPt;}, 1000);
 
   return Q2;
 }
@@ -224,11 +179,17 @@ pseudoHull(parlay::slice<vertexT*, vertexT*> P) {
   auto chunks = split_k_2(5, Q, flag);
 
   auto filtered = sequence<sequence<vertexT>>(4);
-  filtered[0] = pseudoHullHelper<vertexT>(f0, chunks[0]);
-  filtered[1] = pseudoHullHelper<vertexT>(f1, chunks[1]);
-  filtered[2] = pseudoHullHelper<vertexT>(f2, chunks[2]);
-  filtered[3] = pseudoHullHelper<vertexT>(f3, chunks[3]);
 
+  parallel_for(0, 4, [&](size_t i) {
+		       if (i == 0)
+			 filtered[0] = pseudoHullHelper<vertexT>(f0, chunks[0]);
+		       else if (i == 1)
+			 filtered[1] = pseudoHullHelper<vertexT>(f1, chunks[1]);
+		       else if (i == 2)
+			 filtered[2] = pseudoHullHelper<vertexT>(f2, chunks[2]);
+		       else
+			 filtered[3] = pseudoHullHelper<vertexT>(f3, chunks[3]);
+		     }, 1);
   auto Q2 = parlay::flatten(filtered);
 
   return parlay::tabulate(Q2.size(), [&](size_t i) {
@@ -245,57 +206,12 @@ pargeo::hull3dPseudo(parlay::sequence<pargeo::fpoint<3>> &P) {
 
   timer t; t.start();
 
-  // std::ofstream myfile;
-  // myfile.open("point.txt", std::ofstream::trunc);
-  // for (auto p: P) {
-  //   if (rand()%1000 == 0)
-  //     myfile << p << "\n";
-  // }
-  // myfile.close();
-
-  // sequence<vt> vtx = parlay::tabulate(P.size(), [&](size_t i){
-  // 						  vt p = vt(P[i].coords());
-  // 						  p.attribute.i = i;
-  // 						  return p;
-  // 						});
-  // auto Q = pseudoHull<vt>(make_slice(vtx));
-
   auto Q = pseudoHull<pointT>(make_slice(P));
   std::cout << "pseudohull-time = " << t.get_next() << "\n";
 
   std::cout << Q.size() << "\n";
 
-  //   std::ofstream myfilep;
-  // myfilep.open("red.txt", std::ofstream::trunc);
-  // for (auto p: Q) {
-  //   myfilep << p << "\n";
-  // }
-  // myfilep.close();
-
-  // sequence<pointT> Q2= tabulate(Q.size(), [&](size_t i){
-  // 					    size_t ii = Q[i].attribute.i;
-  // 					    return P[ii];
-  // 					  });
-
-  // std::cout << "filtered-pts = " << Q2.size() << "\n";
-
   auto H = hull3dSerial(Q);
-
-  // auto Q3 = hull3dSerialInternal(P);
-  // std::ofstream myfile;
-  // myfile.open("point.txt", std::ofstream::trunc);
-  // for (auto p: Q3) {
-  //   bool found = false;
-  //   for (auto q: Q2) {
-  //     if (p[0] == q[0] &&
-  // 	  p[1] == q[1] &&
-  // 	  p[2] == q[2]) {
-  // 	found = true;
-  //     }
-  //   }
-  //   if (!found) myfile << p << "\n";
-  // }
-  // myfile.close();
 
   std::cout << "hull-time = " << t.get_next() << "\n";
 
