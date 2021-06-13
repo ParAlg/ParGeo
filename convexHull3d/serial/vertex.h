@@ -42,15 +42,20 @@ struct linkedFacet3d {
 
   vertexT area;
 
-  seqT *seeList;
+  // seqT *seeList;
+  seqT seeList;
 
-  size_t numPts() { return seeList->size(); }
+  //size_t numPts() { return seeList->size(); }
+  size_t numPts() { return seeList.size(); }
 
-  vertexT& pts(size_t i) { return seeList->at(i); }
+  //vertexT& pts(size_t i) { return seeList->at(i); }
+  vertexT& pts(size_t i) { return seeList.at(i); }
 
-  void clear() { seeList->clear(); }
+  //void clear() { seeList->clear(); }
+  void clear() { seeList.clear(); }
 
-  void push_back(vertexT v) { seeList->push_back(v); }
+  //void push_back(vertexT v) { seeList->push_back(v); }
+  void push_back(vertexT v) { seeList.push_back(v); }
 
   vertexT furthest() {
     auto apex = vertexT();
@@ -70,13 +75,14 @@ struct linkedFacet3d {
     if (pargeo::determinant3by3(a, b, c) > numericKnob)
       std::swap(b, c);
 
-    seeList = new seqT();
+    //seeList = new seqT();
+    seeList = seqT();
 
     area = crossProduct3d(b-a, c-a);
   }
 
   ~linkedFacet3d() {
-    delete seeList;
+    //delete seeList;
   }
 
 };

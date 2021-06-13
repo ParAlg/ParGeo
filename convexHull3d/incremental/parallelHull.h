@@ -122,7 +122,8 @@ class parallelHull : public _hullTopology<facetT, vertexT, originT> {
 				}
 			      });
 
-    auto chunks = split_k(5, &Q, flag);
+    //auto chunks = split_k(5, &Q, flag);
+    auto chunks = split_k_2(5, Q, flag);
 
     f0->reassign(chunks[0]);
     f1->reassign(chunks[1]);
@@ -194,7 +195,8 @@ class parallelHull : public _hullTopology<facetT, vertexT, originT> {
 			  }
 			});
 
-    auto chunks = split_k(nnf+1, &tmpBuffer, flag);
+    //auto chunks = split_k(nnf+1, &tmpBuffer, flag);
+    auto chunks = split_k_2(nnf+1, tmpBuffer, flag);
     for (int j=0; j<nnf; ++j) {
       newFacets[j]->reassign(chunks[j]);
     }
@@ -302,15 +304,18 @@ class parallelHull : public _hullTopology<facetT, vertexT, originT> {
 
      Meanwhile reserve the facet using min(apex.attribute.seeFacet*)
    */
-  tuple<sequence<typename baseT::_edge>*, sequence<facetT*>*> computeFrontierAndReserve(vertexT apex) {
+  //tuple<sequence<typename baseT::_edge>*, sequence<facetT*>*> computeFrontierAndReserve(vertexT apex) {
+  tuple<sequence<typename baseT::_edge>, sequence<facetT*>> computeFrontierAndReserve(vertexT apex) {
     using fwEdge = typename baseT::_edge;
     facetT* fVisible = apex.attribute.seeFacet;
 
-    auto frontier = new sequence<fwEdge>();
-    auto facets = new sequence<facetT*>();
+    // auto frontier = new sequence<fwEdge>();
+    // auto facets = new sequence<facetT*>();
+    auto frontier = sequence<fwEdge>();
+    auto facets = sequence<facetT*>();
     auto facetVisited = [&](facetT* f) {
-			  for (size_t i=0; i<facets->size(); ++i) {
-			    if (f == facets->at(i)) return true;
+			  for (size_t i=0; i<facets.size(); ++i) {
+			    if (f == facets.at(i)) return true;
 			  }
 			  return false;
 			};
@@ -329,7 +334,7 @@ class parallelHull : public _hullTopology<facetT, vertexT, originT> {
 		 // Also reserve the facet
 		 bool seeff = baseT::origin.visible(e.ff, apex);
 		 if ((seeff || e.fb == nullptr) && !facetVisited(e.ff)) {
-		   facets->push_back(e.ff);
+		   facets.push_back(e.ff);
 		   e.ff->reserve(apex);
 		 }
 
@@ -339,7 +344,7 @@ class parallelHull : public _hullTopology<facetT, vertexT, originT> {
 		 // Also reserve invisible facet adjacent to a visible one
 		 bool seefb = baseT::origin.visible(e.fb, apex);
 		 if (seefb && !seeff) {
-		   frontier->emplace_back(e.a, e.b, e.ff, e.fb);
+		   frontier.emplace_back(e.a, e.b, e.ff, e.fb);
 		   e.ff->reserve(apex);
 		 }
 	       };

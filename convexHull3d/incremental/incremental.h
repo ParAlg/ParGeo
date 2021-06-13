@@ -149,15 +149,15 @@ void incrementHull3d(parallelHull<linkedFacet3d, vertex3d, origin3d> *context, s
       if (apexes0.size() <= 0) break;
 
       size_t numApex0 = apexes0.size();
-      sequence<sequence<typename parallelHull<linkedFacet3d, vertex3d, origin3d>::_edge>*> FE0(numApex0);
-      sequence<sequence<linkedFacet3d*>*> FB0(numApex0);
+      sequence<sequence<typename parallelHull<linkedFacet3d, vertex3d, origin3d>::_edge>> FE0(numApex0);
+      sequence<sequence<linkedFacet3d*>> FB0(numApex0);
 
       // Compute frontier and reserve facets
       parallel_for(0, numApex0, [&](size_t a) {
 				 auto frontier = context->computeFrontierAndReserve(apexes0[a]);
 
-				 sequence<typename parallelHull<linkedFacet3d, vertex3d, origin3d>::_edge>* frontierEdges = get<0>(frontier);
-				 sequence<linkedFacet3d*>* facetsBeneath = get<1>(frontier);
+				 sequence<typename parallelHull<linkedFacet3d, vertex3d, origin3d>::_edge> frontierEdges = get<0>(frontier);
+				 sequence<linkedFacet3d*> facetsBeneath = get<1>(frontier);
 				 FE0[a] = frontierEdges;
 				 FB0[a] = facetsBeneath;
 			       });
@@ -171,16 +171,16 @@ void incrementHull3d(parallelHull<linkedFacet3d, vertex3d, origin3d> *context, s
       parallel_for(0, numApex0, [&](size_t a) {
 
 				 // Check reservation
-				 if (!context->confirmReservation( apexes0[a], FB0[a]->cut(0, FB0[a]->size()) )) {
+				 if (!context->confirmReservation( apexes0[a], FB0[a].cut(0, FB0[a].size()) )) {
 				   success[a] = false;
 				 } else {
 				   success[a] = true;
 				 }
 
 				 // Check for numerical errors in the frontier
-				 for(size_t i=0; i<FE0[a]->size(); ++i) {
-				   auto nv = FE0[a]->at((i+1)%FE0[a]->size());
-				   auto cv = FE0[a]->at(i);
+				 for(size_t i=0; i<FE0[a].size(); ++i) {
+				   auto nv = FE0[a].at((i+1)%FE0[a].size());
+				   auto cv = FE0[a].at(i);
 				   if (cv.b != nv.a) {
 				     apexes0[a].attribute.seeFacet->clear();
 				     success[a] = false;
@@ -189,7 +189,7 @@ void incrementHull3d(parallelHull<linkedFacet3d, vertex3d, origin3d> *context, s
 
 				});
       parallel_for(0, numApex0, [&](size_t a) {
-				 context->resetReservation(apexes0[a], FB0[a]->cut(0, FB0[a]->size()));
+				 context->resetReservation(apexes0[a], FB0[a].cut(0, FB0[a].size()));
 			       });
 
       auto apexes = parlay::pack(make_slice(apexes0), success);
@@ -208,27 +208,27 @@ void incrementHull3d(parallelHull<linkedFacet3d, vertex3d, origin3d> *context, s
       // Process the successful points
       parallel_for(0, numApex, [&](size_t a) {
 				   // Create new facets
-				   auto newFacets = sequence<linkedFacet3d*>(FE[a]->size());
+				   auto newFacets = sequence<linkedFacet3d*>(FE[a].size());
 
-				   for (size_t i=0; i<FE[a]->size(); ++i) {
-				     typename parallelHull<linkedFacet3d, vertex3d, origin3d>::_edge e = FE[a]->at(i);
+				   for (size_t i=0; i<FE[a].size(); ++i) {
+				     typename parallelHull<linkedFacet3d, vertex3d, origin3d>::_edge e = FE[a].at(i);
 				     newFacets[i] = new linkedFacet3d(e.a, e.b, apexes[a]);
 				   }
 
 				   // Connect new facets
-				   for (size_t i=0; i<FE[a]->size(); ++i) {
+				   for (size_t i=0; i<FE[a].size(); ++i) {
 				     context->linkFacet(newFacets[i],
-					       newFacets[(i+1)%FE[a]->size()],
-					       FE[a]->at(i).ff,
-					       newFacets[(i-1+FE[a]->size())%FE[a]->size()]
+					       newFacets[(i+1)%FE[a].size()],
+					       FE[a].at(i).ff,
+					       newFacets[(i-1+FE[a].size())%FE[a].size()]
 					       );
 				   }
 
 				   context->setHull(newFacets[0]); // todo data race
 
-				   context->redistributeParallel(FB[a]->cut(0, FB[a]->size()), make_slice(newFacets));
+				   context->redistributeParallel(FB[a].cut(0, FB[a].size()), make_slice(newFacets));
 
-				   increase[a] = FE[a]->size() - FB[a]->size();
+				   increase[a] = FE[a].size() - FB[a].size();
 			       });
 
       // if (!context->checkReset()) {
@@ -243,12 +243,12 @@ void incrementHull3d(parallelHull<linkedFacet3d, vertex3d, origin3d> *context, s
       parallel_for(0, numApex0, [&](size_t a) {
 				 if (success[a]) {
 				   // Delete existing facets
-				   for(int j=0; j<FB0[a]->size(); ++j)
-				     delete FB0[a]->at(j);
+				   for(int j=0; j<FB0[a].size(); ++j)
+				     delete FB0[a].at(j);
 				 }
 
-				 delete FE0[a];
-				 delete FB0[a];
+				 // delete FE0[a];
+				 // delete FB0[a];
 			       });
 
 #ifdef HULL_PARALLEL_VERBOSE

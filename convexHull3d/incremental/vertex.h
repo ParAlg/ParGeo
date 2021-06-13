@@ -42,7 +42,8 @@ struct linkedFacet3d {
 
   vertexT area;
 
-  seqT *seeList;
+  //seqT *seeList;
+  seqT seeList;
 
   // Stores the minimum memory address of the seeFacet of the reserving vertices
   std::atomic<size_t> reservation;
@@ -55,18 +56,25 @@ struct linkedFacet3d {
     return reservation == (size_t)p.attribute.seeFacet;
   }
 
-  void reassign(seqT *_seeList) {
-    delete seeList;
+  // void reassign(seqT *_seeList) {
+  //   delete seeList;
+  //   seeList = _seeList;
+  // }
+  void reassign(seqT _seeList) {
     seeList = _seeList;
   }
 
-  size_t numPts() { return seeList->size(); }
+  //size_t numPts() { return seeList->size(); }
+  size_t numPts() { return seeList.size(); }
 
-  vertexT& pts(size_t i) { return seeList->at(i); }
+  //vertexT& pts(size_t i) { return seeList->at(i); }
+  vertexT& pts(size_t i) { return seeList.at(i); }
 
-  void clear() { seeList->clear(); }
+  //void clear() { seeList->clear(); }
+  void clear() { seeList.clear(); }
 
-  void push_back(vertexT v) { seeList->push_back(v); }
+  //void push_back(vertexT v) { seeList->push_back(v); }
+  void push_back(vertexT v) { seeList.push_back(v); }
 
   template <class pt>
   inline typename pt::floatT signedVolume(pt d) {
@@ -90,7 +98,8 @@ struct linkedFacet3d {
   vertexT furthestParallel() {
     auto apex = vertexT();
     typename vertexT::floatT m = apex.attribute.numericKnob;
-    apex = parlay::max_element(seeList->cut(0, seeList->size()),
+    //apex = parlay::max_element(seeList->cut(0, seeList->size()),
+    apex = parlay::max_element(seeList.cut(0, seeList.size()),
 			       [&](vertexT aa, vertexT bb) {
 				 return signedVolume(aa) <
 				   signedVolume(bb);
@@ -102,12 +111,13 @@ struct linkedFacet3d {
     a(_a), b(_b), c(_c), reservation(-1) {
     if (pargeo::determinant3by3(a, b, c) > numericKnob)
       std::swap(b, c);
-    seeList = new seqT();
+    //seeList = new seqT();
+    seeList = seqT();
     area = crossProduct3d(b-a, c-a);
   }
 
   ~linkedFacet3d() {
-    delete seeList;
+    //delete seeList;
   }
 
 };
