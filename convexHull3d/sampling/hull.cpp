@@ -34,16 +34,50 @@ pargeo::hull3dSampling(parlay::sequence<pargeo::fpoint<3>> &P, double fraction) 
   using namespace std;
   using namespace parlay;
   using pt = vertex;
+  using floatT = typename pargeo::fpoint<3>::floatT;
+  using pointT = pargeo::fpoint<3>;
 
   if (P.size() < 1000) return hull3dSerial(P);
 
   timer t; t.start();
 
   size_t sampleSize = P.size() * fraction;
+  sampleSize = std::max(sampleSize, size_t(5));
 
-  auto out = hull3dSerial(P);
+  auto sample = parlay::tabulate(sampleSize, [&](size_t i) {
+					       return P[parlay::hash64(i) % P.size()];
+					     });
 
-  std::cout << "hull-time = " << t.stop() << "\n";
+  parlay::sequence<facet3d<pointT>> sampleHull = hull3dSerial(sample);
+  std::cout << "precompute-time = " << t.get_next() << "\n";
+  std::cout << "h = " << sampleHull.size() << "\n";
 
-  return out;
+  auto interiorPt = (sampleHull[0].a + sampleHull[sampleSize % sampleHull.size()].a) / 2;
+
+  sequence<pointT> area(sampleHull.size());
+  parallel_for(0, sampleHull.size(),
+	       [&](size_t i){
+		 auto f = sampleHull[i];
+		 area[i] = pargeo::crossProduct3d(f.b-f.a, f.c-f.a);
+	       });
+
+  auto isOut = [&](pointT p) {
+		 for (size_t i = 0; i < sampleHull.size(); ++i) {
+		   auto f = sampleHull[i];
+		   if (((f.a - interiorPt) - (p - interiorPt)).dot(area[i]) > 0) {
+		     return true;
+		   }
+		 }
+		 return false;
+	       };
+
+  auto remain = parlay::filter(make_slice(P), isOut);
+  std::cout << "filter-time = " << t.get_next() << "\n";
+
+  std::cout << "f = " << double(remain.size())/P.size() << "\n";
+
+  auto hull = hull3dSerial(remain);
+  std::cout << "final-hull-time = " << t.stop() << "\n";
+
+  return hull;
 }
