@@ -60,8 +60,8 @@ struct linkedFacet3d {
   //   delete seeList;
   //   seeList = _seeList;
   // }
-  void reassign(seqT _seeList) {
-    seeList = _seeList;
+  void reassign(seqT &_seeList) {
+    seeList = std::move(_seeList);
   }
 
   //size_t numPts() { return seeList->size(); }

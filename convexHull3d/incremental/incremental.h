@@ -156,10 +156,10 @@ void incrementHull3d(parallelHull<linkedFacet3d, vertex3d, origin3d> *context, s
       parallel_for(0, numApex0, [&](size_t a) {
 				 auto frontier = context->computeFrontierAndReserve(apexes0[a]);
 
-				 sequence<typename parallelHull<linkedFacet3d, vertex3d, origin3d>::_edge> frontierEdges = get<0>(frontier);
-				 sequence<linkedFacet3d*> facetsBeneath = get<1>(frontier);
-				 FE0[a] = frontierEdges;
-				 FB0[a] = facetsBeneath;
+				 sequence<typename parallelHull<linkedFacet3d, vertex3d, origin3d>::_edge> frontierEdges = std::move(get<0>(frontier));
+				 sequence<linkedFacet3d*> facetsBeneath = std::move(get<1>(frontier));
+				 FE0[a] = std::move(frontierEdges);
+				 FB0[a] = std::move(facetsBeneath);
 			       });
 #ifdef HULL_PARALLEL_VERBOSE
       frontierTime += t.get_next();
@@ -192,9 +192,9 @@ void incrementHull3d(parallelHull<linkedFacet3d, vertex3d, origin3d> *context, s
 				 context->resetReservation(apexes0[a], FB0[a].cut(0, FB0[a].size()));
 			       });
 
-      auto apexes = parlay::pack(make_slice(apexes0), success);
-      auto FE = parlay::pack(make_slice(FE0), success);
-      auto FB = parlay::pack(make_slice(FB0), success);
+      auto apexes = parlay::pack(make_slice(apexes0), make_slice(success));
+      auto FE = parlay::pack(make_slice(FE0), make_slice(success));
+      auto FB = parlay::pack(make_slice(FB0), make_slice(success));
       size_t numApex = apexes.size();
 
 #ifdef HULL_PARALLEL_VERBOSE

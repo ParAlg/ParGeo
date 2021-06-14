@@ -351,7 +351,7 @@ class parallelHull : public _hullTopology<facetT, vertexT, originT> {
     auto fStop = [&](){ return false;};
 
     baseT::dfsEdge(apex.attribute.seeFacet, fVisit, fDo, fStop);
-    return make_tuple(frontier, facets);
+    return make_tuple(std::move(frontier), std::move(facets));
   }
 
   bool confirmReservation(vertexT apex, slice<facetT**, facetT**> toDelete) {
