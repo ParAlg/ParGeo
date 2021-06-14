@@ -122,8 +122,7 @@ class parallelHull : public _hullTopology<facetT, vertexT, originT> {
 				}
 			      });
 
-    //auto chunks = split_k(5, &Q, flag);
-    auto chunks = split_k_2(5, Q, flag);
+    auto chunks = split_k(5, Q, flag);
 
     f0->reassign(chunks[0]);
     f1->reassign(chunks[1]);
@@ -195,8 +194,7 @@ class parallelHull : public _hullTopology<facetT, vertexT, originT> {
 			  }
 			});
 
-    //auto chunks = split_k(nnf+1, &tmpBuffer, flag);
-    auto chunks = split_k_2(nnf+1, tmpBuffer, flag);
+    auto chunks = split_k(nnf+1, tmpBuffer, flag);
     for (int j=0; j<nnf; ++j) {
       newFacets[j]->reassign(chunks[j]);
     }
@@ -304,13 +302,10 @@ class parallelHull : public _hullTopology<facetT, vertexT, originT> {
 
      Meanwhile reserve the facet using min(apex.attribute.seeFacet*)
    */
-  //tuple<sequence<typename baseT::_edge>*, sequence<facetT*>*> computeFrontierAndReserve(vertexT apex) {
   tuple<sequence<typename baseT::_edge>, sequence<facetT*>> computeFrontierAndReserve(vertexT apex) {
     using fwEdge = typename baseT::_edge;
     facetT* fVisible = apex.attribute.seeFacet;
 
-    // auto frontier = new sequence<fwEdge>();
-    // auto facets = new sequence<facetT*>();
     auto frontier = sequence<fwEdge>();
     auto facets = sequence<facetT*>();
     auto facetVisited = [&](facetT* f) {

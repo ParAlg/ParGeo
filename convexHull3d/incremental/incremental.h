@@ -246,9 +246,6 @@ void incrementHull3d(parallelHull<linkedFacet3d, vertex3d, origin3d> *context, s
 				   for(int j=0; j<FB0[a].size(); ++j)
 				     delete FB0[a].at(j);
 				 }
-
-				 // delete FE0[a];
-				 // delete FB0[a];
 			       });
 
 #ifdef HULL_PARALLEL_VERBOSE

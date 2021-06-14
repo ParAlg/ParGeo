@@ -89,7 +89,7 @@ pseudoHullHelper(internalFacet<vertexT> f,
 			      else flag[i] = 3;
 			    }, 1000);
 
-  auto chunks = split_k_2(4, Q, flag);
+  auto chunks = split_k(4, Q, flag);
 
   auto filtered = sequence<sequence<vertexT>>(3);
 
@@ -177,7 +177,7 @@ pseudoHull(parlay::slice<vertexT*, vertexT*> P) {
 			      else flag[i] = 4;
 			    });
 
-  auto chunks = split_k_2(5, Q, flag);
+  auto chunks = split_k(5, Q, flag);
 
   auto filtered = sequence<sequence<vertexT>>(4);
 
