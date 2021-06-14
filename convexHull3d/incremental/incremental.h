@@ -79,17 +79,17 @@ void incrementHull3d(parallelHull<linkedFacet3d, vertex3d, origin3d> *context, s
       if (apex.isEmpty()) break;
 
       auto frontier = context->computeFrontier(apex);
-      auto frontierEdges = get<0>(frontier);
-      auto facetsBeneath = get<1>(frontier);
+      auto frontierEdges = std::move(get<0>(frontier));
+      auto facetsBeneath = std::move(get<1>(frontier));
 
 #ifdef HULL_PARALLEL_VERBOSE
       frontierTime += t.get_next();
 #endif
 
       // Check for frontier error, usually caused by numerical errors in rare cases
-      for(size_t i=0; i<frontierEdges->size(); ++i) {
-	auto nv = frontierEdges->at((i+1)%frontierEdges->size());
-	auto cv = frontierEdges->at(i);
+      for(size_t i=0; i<frontierEdges.size(); ++i) {
+	auto nv = frontierEdges.at((i+1)%frontierEdges.size());
+	auto cv = frontierEdges.at(i);
 	if (cv.b != nv.a) {
 	  apex.attribute.seeFacet->clear();
 	  goto loopStart;
@@ -97,36 +97,33 @@ void incrementHull3d(parallelHull<linkedFacet3d, vertex3d, origin3d> *context, s
       }
 
       // Create new facets
-      auto newFacets = sequence<linkedFacet3d*>(frontierEdges->size());
+      auto newFacets = sequence<linkedFacet3d*>(frontierEdges.size());
 
-      for (size_t i=0; i<frontierEdges->size(); ++i) {
-	typename parallelHull<linkedFacet3d, vertex3d, origin3d>::_edge e = frontierEdges->at(i);
+      for (size_t i=0; i<frontierEdges.size(); ++i) {
+	typename parallelHull<linkedFacet3d, vertex3d, origin3d>::_edge e = frontierEdges.at(i);
 	newFacets[i] = new linkedFacet3d(e.a, e.b, apex);
       }
 
       // Connect new facets
-      for (size_t i=0; i<frontierEdges->size(); ++i) {
+      for (size_t i=0; i<frontierEdges.size(); ++i) {
 	context->linkFacet(newFacets[i],
-		  newFacets[(i+1)%frontierEdges->size()],
-		  frontierEdges->at(i).ff,
-		  newFacets[(i-1+frontierEdges->size())%frontierEdges->size()]
+		  newFacets[(i+1)%frontierEdges.size()],
+		  frontierEdges.at(i).ff,
+		  newFacets[(i-1+frontierEdges.size())%frontierEdges.size()]
 		  );
       }
 
       context->setHull(newFacets[0]);
 
-      context->redistributeParallel(facetsBeneath->cut(0, facetsBeneath->size()), make_slice(newFacets));
+      context->redistributeParallel(make_slice(facetsBeneath), make_slice(newFacets));
 
 #ifdef HULL_PARALLEL_VERBOSE
       splitTime += t.stop();
 #endif
 
       // Delete existing facets
-      for(int j=0; j<facetsBeneath->size(); ++j)
-	delete facetsBeneath->at(j);
-
-      delete frontierEdges;
-      delete facetsBeneath;
+      for(int j=0; j<facetsBeneath.size(); ++j)
+	delete facetsBeneath.at(j);
 
 #ifdef HULL_PARALLEL_VERBOSE
       serTime += tr.stop();

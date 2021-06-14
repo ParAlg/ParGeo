@@ -230,14 +230,14 @@ e.b==e.ff.a    e.a==e.ff.c
   /* Compute a frontier of edges in the clockwise order
       and facets to delete
    */
-  tuple<sequence<_edge>*, sequence<facetT*>*> computeFrontier(vertexT apex) {
+  tuple<sequence<_edge>, sequence<facetT*>> computeFrontier(vertexT apex) {
     facetT* fVisible = apex.attribute.seeFacet;
 
-    auto frontier = new sequence<_edge>();
-    auto facets = new sequence<facetT*>();
+    auto frontier = sequence<_edge>();
+    auto facets = sequence<facetT*>();
     auto facetVisited = [&](facetT* f) {
-			  for (size_t i=0; i<facets->size(); ++i) {
-			    if (f == facets->at(i)) return true;
+			  for (size_t i=0; i<facets.size(); ++i) {
+			    if (f == facets.at(i)) return true;
 			  }
 			  return false;
 			};
@@ -255,20 +255,20 @@ e.b==e.ff.a    e.a==e.ff.c
 		 // Include the facet for deletion if visible
 		 bool seeff = origin.visible(e.ff, apex);
 		 if ((seeff || e.fb == nullptr) && !facetVisited(e.ff))
-		   facets->push_back(e.ff);
+		   facets.push_back(e.ff);
 
 		 if (e.fb == nullptr) return; // Stop for the starting facet
 
 		 // Include an edge joining a visible and an invisible facet as frontier
 		 bool seefb = origin.visible(e.fb, apex);
 		 if (seefb && !seeff) {
-  		   frontier->emplace_back(e.a, e.b, e.ff, e.fb);
+		   frontier.emplace_back(e.a, e.b, e.ff, e.fb);
 		 }
   	       };
     auto fStop = [&](){ return false;};
 
     dfsEdge(apex.attribute.seeFacet, fVisit, fDo, fStop);
-    return make_tuple(frontier, facets);
+    return make_tuple(std::move(frontier), std::move(facets));
   }
 
   virtual facetT* initialize(slice<vertexT*, vertexT*> P) = 0;

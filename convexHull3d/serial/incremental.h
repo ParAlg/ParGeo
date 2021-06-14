@@ -66,16 +66,16 @@ void incrementHull3dSerial(serialHull<linkedFacet3d, vertex3d, origin3d> *contex
 #endif
 
     auto frontier = context->computeFrontier(apex);
-    auto frontierEdges = get<0>(frontier);
-    auto facetsBeneath = get<1>(frontier);
+    auto frontierEdges = std::move(get<0>(frontier));
+    auto facetsBeneath = std::move(get<1>(frontier));
 
 #ifdef HULL_SERIAL_VERBOSE
     frontierTime += t.get_next();
 #endif
 
-    for(size_t i=0; i<frontierEdges->size(); ++i) {
-      auto nv = frontierEdges->at((i+1)%frontierEdges->size());
-      auto cv = frontierEdges->at(i);
+    for(size_t i=0; i<frontierEdges.size(); ++i) {
+      auto nv = frontierEdges.at((i+1)%frontierEdges.size());
+      auto cv = frontierEdges.at(i);
       if (cv.b != nv.a) {
 	apex.attribute.seeFacet->clear();
 
@@ -88,19 +88,19 @@ void incrementHull3dSerial(serialHull<linkedFacet3d, vertex3d, origin3d> *contex
     }
 
     // Create new facets
-    auto newFacets = sequence<linkedFacet3d*>(frontierEdges->size());
+    auto newFacets = sequence<linkedFacet3d*>(frontierEdges.size());
 
-    for (size_t i=0; i<frontierEdges->size(); ++i) {
-      typename _hullTopology<linkedFacet3d, vertex3d, origin3d>::_edge e = frontierEdges->at(i);
+    for (size_t i=0; i<frontierEdges.size(); ++i) {
+      typename _hullTopology<linkedFacet3d, vertex3d, origin3d>::_edge e = frontierEdges.at(i);
       newFacets[i] = new linkedFacet3d(e.a, e.b, apex);
     }
 
     // Connect new facets
-    for (size_t i=0; i<frontierEdges->size(); ++i) {
+    for (size_t i=0; i<frontierEdges.size(); ++i) {
       context->linkFacet(newFacets[i],
-		newFacets[(i+1)%frontierEdges->size()],
-		frontierEdges->at(i).ff,
-		newFacets[(i-1+frontierEdges->size())%frontierEdges->size()]
+		newFacets[(i+1)%frontierEdges.size()],
+		frontierEdges.at(i).ff,
+		newFacets[(i-1+frontierEdges.size())%frontierEdges.size()]
 		);
     }
 
@@ -110,18 +110,15 @@ void incrementHull3dSerial(serialHull<linkedFacet3d, vertex3d, origin3d> *contex
     createTime += t.get_next();
 #endif
 
-    context->redistribute(facetsBeneath->cut(0, facetsBeneath->size()), make_slice(newFacets));
+    context->redistribute(make_slice(facetsBeneath), make_slice(newFacets));
 
 #ifdef HULL_SERIAL_VERBOSE
     splitTime += t.stop();
 #endif
 
     // Delete existing facets
-    for(int j=0; j<facetsBeneath->size(); ++j)
-      delete facetsBeneath->at(j);
-
-    delete frontierEdges;
-    delete facetsBeneath;
+    for(int j=0; j<facetsBeneath.size(); ++j)
+      delete facetsBeneath.at(j);
   }
 
 #ifdef HULL_SERIAL_VERBOSE
