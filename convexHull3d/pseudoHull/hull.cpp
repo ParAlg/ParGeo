@@ -70,7 +70,7 @@ pseudoHullHelper(internalFacet<vertexT> f,
   using facetT = internalFacet<vertexT>;
 
   if (Q.size() < 4) {
-    return Q;}
+    return std::move(Q);}
 
   vertexT apex = f.furthestParallel(make_slice(Q)); //todo parallel
 
@@ -94,18 +94,19 @@ pseudoHullHelper(internalFacet<vertexT> f,
   auto filtered = sequence<sequence<vertexT>>(3);
 
   parallel_for(0, 3, [&](size_t i) {
-		       if (i == 0)
-			 filtered[0] = pseudoHullHelper<vertexT>(f0, chunks[0]);
-		       else if (i == 1)
-			 filtered[1] = pseudoHullHelper<vertexT>(f1, chunks[1]);
-		       else
-			 filtered[2] = pseudoHullHelper<vertexT>(f2, chunks[2]);
+		       if (i == 0) {
+			 filtered[0] = std::move(pseudoHullHelper<vertexT>(f0, chunks[0]));
+		       } else if (i == 1) {
+			 filtered[1] = std::move(pseudoHullHelper<vertexT>(f1, chunks[1]));
+		       } else {
+			 filtered[2] = std::move(pseudoHullHelper<vertexT>(f2, chunks[2]));
+		       }
 		     }, 1);
 
   auto Q2 = parlay::flatten(filtered);
   parallel_for (0, Q2.size(), [&](size_t i) {Q2[i] = Q2[i] + interiorPt;}, 1000);
 
-  return Q2;
+  return std::move(Q2);
 }
 
 template<class vertexT>
@@ -182,13 +183,13 @@ pseudoHull(parlay::slice<vertexT*, vertexT*> P) {
 
   parallel_for(0, 4, [&](size_t i) {
 		       if (i == 0)
-			 filtered[0] = pseudoHullHelper<vertexT>(f0, chunks[0]);
+			 filtered[0] = std::move(pseudoHullHelper<vertexT>(f0, chunks[0]));
 		       else if (i == 1)
-			 filtered[1] = pseudoHullHelper<vertexT>(f1, chunks[1]);
+			 filtered[1] = std::move(pseudoHullHelper<vertexT>(f1, chunks[1]));
 		       else if (i == 2)
-			 filtered[2] = pseudoHullHelper<vertexT>(f2, chunks[2]);
+			 filtered[2] = std::move(pseudoHullHelper<vertexT>(f2, chunks[2]));
 		       else
-			 filtered[3] = pseudoHullHelper<vertexT>(f3, chunks[3]);
+			 filtered[3] = std::move(pseudoHullHelper<vertexT>(f3, chunks[3]));
 		     }, 1);
   auto Q2 = parlay::flatten(filtered);
 

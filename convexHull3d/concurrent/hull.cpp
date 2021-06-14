@@ -61,7 +61,8 @@ concurrentHull(parlay::sequence<vertex> &Q, size_t numProc) {
   parallel_for(0, numProc, [&](size_t i) {
 			     size_t s = i * blkSize;
 			     size_t e = std::min(Q.size(), (i+1) * blkSize);
-			     subHulls[i] = hullInternal::hull3dSerialInternal(Q.cut(s, e));
+			     subHulls[i] =
+			       std::move(hullInternal::hull3dSerialInternal(Q.cut(s, e)));
 			   }, 1);
 
   sequence<ptOut> uniquePts = parlay::flatten(subHulls);
