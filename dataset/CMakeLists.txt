@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.10)
 project(dataset)
 
 add_library(${PROJECT_NAME}
-  uniform/uniform.cpp
+  uniform/generator.cpp
   )
 
 add_subdirectory(uniform)
