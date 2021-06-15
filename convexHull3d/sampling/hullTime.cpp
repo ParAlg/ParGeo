@@ -31,8 +31,7 @@ int main(int argc, char* argv[]) {
 
   int dim = readHeader(iFile);
   if (dim != 3) {
-    std::cout << "Error, convexHull3D only takes 3d inputs, abort." << endl;
-    abort();
+    throw std::runtime_error("Error, convexHull3D only takes 3d inputs");
   }
 
   parlay::sequence<pargeo::fpoint<3>> Points = readPointsFromFile<pargeo::fpoint<3>>(iFile);
