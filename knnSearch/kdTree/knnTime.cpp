@@ -10,6 +10,7 @@
 using namespace std;
 using namespace pargeo;
 using namespace pargeo::pointIO;
+using namespace pargeo::IO;
 
 template<int dim>
 void timeKnn(parlay::sequence<pargeo::point<dim>> &P, size_t k, int rounds, char const *outFile) {
