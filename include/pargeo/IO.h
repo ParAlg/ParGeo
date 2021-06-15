@@ -25,7 +25,6 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <string>
 #include <cstring>
 #include "pargeo/point.h"
 #include "parlay/primitives.h"
@@ -123,12 +122,12 @@ namespace IO {
   inline void xToString(char* s, char* a) { sprintf(s,"%s",a);}
 
   template <class A, class B>
-  inline int xToStringLen(pair<A,B> a) { 
+  inline int xToStringLen(std::pair<A,B> a) {
     return xToStringLen(a.first) + xToStringLen(a.second) + 1;
   }
 
   template <class A, class B>
-  inline void xToString(char* s, pair<A,B> a) { 
+  inline void xToString(char* s, std::pair<A,B> a) {
     int l = xToStringLen(a.first);
     xToString(s, a.first);
     s[l] = ' ';
@@ -181,47 +180,45 @@ namespace IO {
   }
 
   template <class T>
-  void writeSeqToStream(ofstream& os, parlay::sequence<T> const &A) {
+  void writeSeqToStream(std::ofstream& os, parlay::sequence<T> const &A) {
     size_t bsize = 10000000;
     size_t offset = 0;
     size_t n = A.size();
     while (offset < n) {
       // Generates a string for a sequence of size at most bsize
       // and then wrties it to the output stream
-      parlay::sequence<char> S = seqToString(A.cut(offset, min(offset + bsize, n)));
+      parlay::sequence<char> S = seqToString(A.cut(offset, std::min(offset + bsize, n)));
       os.write(S.begin(), S.size()-1);
       offset += bsize;
     }
   }
 
   template <class T>
-  int writeSeqToFile(string header,
+  int writeSeqToFile(std::string header,
 		     parlay::sequence<T> const &A,
 		     char const *fileName) {
     auto a = A[0];
-    //xToStringLena(a);
-    ofstream file (fileName, ios::out | ios::binary);
+
+    std::ofstream file (fileName, std::ios::out | std::ios::binary);
     if (!file.is_open()) {
-      std::cout << "Unable to open file: " << fileName << std::endl;
-      return 1;
+      throw std::runtime_error("Unable to open file");
     }
-    if (header.size() > 0) file << header << endl;
+    if (header.size() > 0) file << header << std::endl;
     writeSeqToStream(file, A);
     file.close();
     return 0;
   }
 
   template <class T1, class T2>
-  int write2SeqToFile(string header,
+  int write2SeqToFile(std::string header,
 		      parlay::sequence<T1> const &A,
 		      parlay::sequence<T2> const &B,
 		      char const *fileName) {
-    ofstream file (fileName, ios::out | ios::binary);
+    std::ofstream file (fileName, std::ios::out | std::ios::binary);
     if (!file.is_open()) {
-      std::cout << "Unable to open file: " << fileName << std::endl;
-      return 1;
+      throw std::runtime_error("Unable to open file");
     }
-    file << header << endl;
+    file << header << std::endl;
     writeSeqToStream(file, A);
     writeSeqToStream(file, B);
     file.close();
@@ -229,13 +226,12 @@ namespace IO {
   }
 
   parlay::sequence<char> readStringFromFile(char const *fileName) {
-    ifstream file (fileName, ios::in | ios::binary | ios::ate);
+    std::ifstream file (fileName, std::ios::in | std::ios::binary | std::ios::ate);
     if (!file.is_open()) {
-      std::cout << "filename: " << fileName << std::endl;
       throw std::runtime_error("Unable to open file");
     }
     long end = file.tellg();
-    file.seekg (0, ios::beg);
+    file.seekg (0, std::ios::beg);
     long n = end - file.tellg();
     parlay::sequence<char> bytes(n, (char) 0);
     file.read (bytes.begin(), n);
@@ -243,7 +239,7 @@ namespace IO {
     return bytes;
   }
 
-  string intHeaderIO = "sequenceInt";
+  std::string intHeaderIO = "sequenceInt";
 
   template <class T>
   int writeIntSeqToFile(parlay::sequence<T> const &A, char const *fileName) {
@@ -263,10 +259,9 @@ namespace IO {
   template <class T>
   parlay::sequence<T> readIntSeqFromFile(char const *fileName) {
     auto W = get_tokens(fileName);
-    string header(W[0].begin(),W[0].end());
+    std::string header(W[0].begin(),W[0].end());
     if (header != intHeaderIO) {
-      cout << "readIntSeqFromFile: bad input" << endl;
-      abort();
+      throw std::runtime_error("readIntSeqFromFile: bad input");
     }
     long n = W.size()-1;
     auto A = parlay::tabulate(n, [&] (long i) -> T {
