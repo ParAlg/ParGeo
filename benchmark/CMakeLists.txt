@@ -37,3 +37,10 @@ target_link_libraries(spatialGraph_bench PRIVATE
   dataset
   spatialGraph
   benchmark_main)
+
+add_executable(hull_bench hull_bench.cpp)
+target_link_libraries(hull_bench PRIVATE
+  pargeolib
+  dataset
+  convexHull3d
+  benchmark_main)

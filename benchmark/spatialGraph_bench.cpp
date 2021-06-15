@@ -1,6 +1,6 @@
 #include <benchmark/benchmark.h>
 
-#include "dataset/dataset.h"
+#include "dataset/uniform.h"
 #include "spatialGraph/spatialGraph.h"
 
 static parlay::sequence<pargeo::point<2>> P;
