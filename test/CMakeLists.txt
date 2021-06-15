@@ -64,5 +64,10 @@ target_link_libraries(hullTopology_test PRIVATE
   pargeolib convexHull3d ${GTest_LIBRARIES})
 add_test(NAME hullTopology_test COMMAND hullTest_test)
 
+add_executable(dataset_test dataset/dataset_test.cpp)
+target_link_libraries(dataset_test PRIVATE
+  pargeolib dataset ${GTest_LIBRARIES})
+add_test(NAME dataset_test COMMAND dataset_test)
+
 message(STATUS "CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}")
 file(COPY datasets DESTINATION ${CMAKE_BINARY_DIR}/test)

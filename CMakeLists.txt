@@ -54,12 +54,19 @@ add_subdirectory(delaunayTriangulation)
 
 add_subdirectory(pybindings)
 
+add_subdirectory(dataset)
+
 # -------------------------------------------------
 # Testing
 
 enable_testing()
 
 add_subdirectory(test)
+
+# -------------------------------------------------
+# Benchmark
+
+add_subdirectory(benchmark)
 
 # -------------------------------------------------
 # Link pargeolib as a library
