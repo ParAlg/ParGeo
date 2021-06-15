@@ -52,6 +52,8 @@ add_subdirectory(delaunayTriangulation)
 
 add_subdirectory(pybindings)
 
+add_subdirectory(dataset)
+
 # -------------------------------------------------
 # Testing
 

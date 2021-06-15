@@ -54,5 +54,10 @@ target_link_libraries(wspd_test PRIVATE
   pargeolib ${GTest_LIBRARIES})
 add_test(NAME wspd_test COMMAND wspd_test)
 
+add_executable(dataset_test dataset/dataset_test.cpp)
+target_link_libraries(dataset_test PRIVATE
+  pargeolib dataset ${GTest_LIBRARIES})
+add_test(NAME dataset_test COMMAND dataset_test)
+
 message(STATUS "CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}")
 file(COPY datasets DESTINATION ${CMAKE_BINARY_DIR}/test)
