@@ -62,6 +62,11 @@ enable_testing()
 add_subdirectory(test)
 
 # -------------------------------------------------
+# Benchmark
+
+add_subdirectory(benchmark)
+
+# -------------------------------------------------
 # Link pargeolib as a library
 
 project(pargeolib)
