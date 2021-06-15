@@ -29,7 +29,7 @@ namespace pargeo {
 
   namespace pointIO {
 
-  string pbbsHeader(int dim) {
+  std::string pbbsHeader(int dim) {
     if (dim < 2 || dim > 9) {
       throw std::runtime_error("Error, unsupported dimension");
     }
@@ -59,7 +59,7 @@ namespace pargeo {
 
   // returns dim
   int readHeader(const char* fileName) {
-    ifstream file (fileName);
+    std::ifstream file (fileName);
     if (!file.is_open())
       throw std::runtime_error("Unable to open file");
 
@@ -74,7 +74,7 @@ namespace pargeo {
 
   // todo deprecate
   int readDimensionFromFile(char* const fileName) {
-    cout << "warning: using deprecated function readDimensionFromFile" << endl;
+    std::cout << "warning: using deprecated function readDimensionFromFile\n";
     return readHeader(fileName);
   }
 
@@ -86,7 +86,7 @@ namespace pargeo {
 
   template <class pointT>
  int writePointsToFilePbbs(parlay::sequence<pointT> const &P, char const *fname) {
-    string Header = pbbsHeader(pointT::dim);
+    std::string Header = pbbsHeader(pointT::dim);
     int r = pargeo::IO::writeSeqToFile(Header, P, fname);
     return r;
   }
