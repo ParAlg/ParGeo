@@ -30,6 +30,8 @@
 #include "topology.h"
 #include "neighbors.h"
 
+#define SILENT
+
 namespace pbbsbench {
 
 using parlay::parallel_for;

@@ -28,13 +28,13 @@ parlay::sequence<pargeo::wghEdge> pargeo::euclideanMst(parlay::sequence<pargeo::
     throw std::runtime_error("need more than 2 points");
   }
 
-  timer t0;
-  t0.start();
+  // timer t0;
+  // t0.start();
   bool paraTree = true;
 
   nodeT* tree = buildKdt<dim, point<dim>>(S, true, true);
 
-  cout << "build-tree-time = " << t0.get_next() << endl;
+  // cout << "build-tree-time = " << t0.get_next() << endl;
 
   floatT rhoLo = -0.1;
   floatT beta = 2;
@@ -45,20 +45,20 @@ parlay::sequence<pargeo::wghEdge> pargeo::euclideanMst(parlay::sequence<pargeo::
   floatT markTime = 0;
   edgeUnionFind<long> UF(S.size());
 
-  t0.stop();
+  // t0.stop();
 
   while (UF.numEdge() < S.size() - 1) {
 
-    t0.start();
+    // t0.start();
 
     floatT rhoHi;
     auto bccps = filterWspdParallel<nodeT>(beta, rhoLo, rhoHi, tree, &UF);
 
-    wspdTime += t0.get_next();
+    // wspdTime += t0.get_next();
 
-    cout << "---" << endl;
-    cout << " beta = " << beta << endl;
-    cout << " rho = " << rhoLo << " -- " << rhoHi << endl;
+    // cout << "---" << endl;
+    // cout << " beta = " << beta << endl;
+    // cout << " rho = " << rhoLo << " -- " << rhoHi << endl;
 
     numEdges += bccps.size();
 
@@ -67,7 +67,7 @@ parlay::sequence<pargeo::wghEdge> pargeo::euclideanMst(parlay::sequence<pargeo::
       rhoLo = rhoHi;
       continue;}
 
-    cout << " edges = " << bccps.size() << endl;
+    // cout << " edges = " << bccps.size() << endl;
 
     struct wEdge {
       size_t u,v;
@@ -85,11 +85,11 @@ parlay::sequence<pargeo::wghEdge> pargeo::euclideanMst(parlay::sequence<pargeo::
       });
 
     batchKruskal(edges, S.size(), UF);
-    cout << " mst-edges = " << UF.numEdge() << endl;
-    kruskalTime += t0.get_next();
+    // cout << " mst-edges = " << UF.numEdge() << endl;
+    // kruskalTime += t0.get_next();
 
     mark<nodeT, pointT, edgeUnionFind<long>>(tree, &UF, S.data());
-    markTime += t0.stop();
+    // markTime += t0.stop();
 
     beta *= 2;
     rhoLo = rhoHi;
@@ -101,9 +101,9 @@ parlay::sequence<pargeo::wghEdge> pargeo::euclideanMst(parlay::sequence<pargeo::
   //   sum += S[e.u].dist(S[e.v]);
   // cout << "edge-sum = " << sum << endl;
 
-  cout << "wspd-time = " << wspdTime << endl;
-  cout << "kruskal-time = " << kruskalTime << endl;
-  cout << "mark-time = " << markTime << endl;
+  // cout << "wspd-time = " << wspdTime << endl;
+  // cout << "kruskal-time = " << kruskalTime << endl;
+  // cout << "mark-time = " << markTime << endl;
   return UF.getEdge();
 }
 

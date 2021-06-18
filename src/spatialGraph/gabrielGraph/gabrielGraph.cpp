@@ -7,6 +7,8 @@
 #include "spatialGraph/spatialGraph.h"
 #include "delaunayTriangulation/delaunay.h"
 
+#define SILENT
+
 template<int dim>
 parlay::sequence<pargeo::edge> pargeo::gabrielGraph(parlay::sequence<pargeo::point<dim>> &P) {
   using namespace parlay;

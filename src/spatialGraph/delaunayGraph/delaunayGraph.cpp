@@ -8,6 +8,8 @@
 #include "delaunayTriangulation/delaunay.h"
 #include "delaunayTriangulation/geometry.h"
 
+#define SILENT
+
 template<int dim>
 parlay::sequence<pargeo::edge> pargeo::delaunayGraph(parlay::sequence<pargeo::point<dim>> &P) {
   using namespace pbbsbench;

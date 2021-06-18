@@ -5,6 +5,8 @@
 #include "pargeo/kdTreeKnn.h"
 #include "spatialGraph/spatialGraph.h"
 
+#define SILENT
+
 using namespace std;
 
 template<int dim>

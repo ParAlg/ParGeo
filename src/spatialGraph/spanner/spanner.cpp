@@ -16,22 +16,22 @@ parlay::sequence<pargeo::edge> pargeo::spanner(parlay::sequence<pargeo::point<di
   using nodeT = kdNode<dim, pointT>;
   using pairT = wsp<nodeT>;
 
-  cout << t << "-spanner of " << S.size() << ", dim " << dim << " points" << endl;
+  // cout << t << "-spanner of " << S.size() << ", dim " << dim << " points" << endl;
   if (S.size() < 2) abort();
 
   double s = 4*((double)t+1)/((double)t-1);
-  cout << "separation-constant = " << s << endl;
+  // cout << "separation-constant = " << s << endl;
 
-  if (s > 10) cout << "WARNING: very large separation constant, try a smaller t if crashed" << endl;
+  if (s > 10) std::cout << "WARNING: very large separation constant, try a smaller t if crashed\n";
 
   timer t0;
   t0.start();
 
   nodeT* tree = buildKdt<dim, point<dim>>(S, true, true);
-  cout << "build-tree-time = " << t0.get_next() << endl;
+  // cout << "build-tree-time = " << t0.get_next() << endl;
 
   auto wspd = wspdParallel<dim>(tree, s);
-  cout << "decomposition-time = " << t0.get_next() << endl;
+  // cout << "decomposition-time = " << t0.get_next() << endl;
 
   auto edges = sequence<edge>(wspd.size());
   pointT* base = S.data();
@@ -41,7 +41,7 @@ parlay::sequence<pargeo::edge> pargeo::spanner(parlay::sequence<pargeo::point<di
       edges[i] = edge(pt1, pt2);
     });
 
-  cout << "edge-count = " << edges.size() << endl;
+  // cout << "edge-count = " << edges.size() << endl;
 
   return edges;
 }

@@ -7,6 +7,8 @@
 #include "spatialGraph/spatialGraph.h"
 #include "kdt.h"
 
+#define SILENT
+
 template<int dim>
 parlay::sequence<pargeo::edge> pargeo::betaSkeleton(parlay::sequence<pargeo::point<dim>> &P, double beta) {
   using namespace parlay;
