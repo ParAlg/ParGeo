@@ -1,7 +1,5 @@
 #include "spatialGraph/spatialGraph.h"
 #include "euclideanMst/euclideanMst.h"
-#include "clustering/hdbscan.h"
-#include "clustering/dendrogram.h"
 #include "pargeo/pointIO.h"
 #include "pargeo/graphIO.h"
 #include <string>
@@ -482,55 +480,6 @@ py::array_t<float> py_wghEmst(py::array_t<double, py::array::c_style | py::array
     return castWghEdgeList<float>(result_vec);
 }
 
-py::array_t<double> py_hdbscan(py::array_t<double, py::array::c_style | py::array::forcecast> array, size_t minPts) {
-  if (array.ndim() != 2)
-    throw std::runtime_error("Input should be 2-D NumPy array");
-
-  if (sizeof(pargeo::point<2>) != 16)
-    throw std::runtime_error("sizeof(pargeo::point<2>) != 16, check point.h");
-
-  int dim = array.shape()[1];
-  size_t n = array.size() / dim;
-  parlay::sequence<pargeo::dirEdge> result_vec;
-
-  sequence<pargeo::wghEdge> E;
-  if (dim == 2) {
-    parlay::sequence<pargeo::point<2>> P(n);
-    std::memcpy(P.data(), array.data(), array.size() * sizeof(double));
-    E = pargeo::hdbscan<2>(P, minPts);
-  } else if (dim == 3) {
-    parlay::sequence<pargeo::point<3>> P(n);
-    std::memcpy(P.data(), array.data(), array.size() * sizeof(double));
-    E = pargeo::hdbscan<3>(P, minPts);
-  } else if (dim == 4) {
-    parlay::sequence<pargeo::point<4>> P(n);
-    std::memcpy(P.data(), array.data(), array.size() * sizeof(double));
-    E = pargeo::hdbscan<4>(P, minPts);
-  } else if (dim == 5) {
-    parlay::sequence<pargeo::point<5>> P(n);
-    std::memcpy(P.data(), array.data(), array.size() * sizeof(double));
-    E = pargeo::hdbscan<5>(P, minPts);
-  } else if (dim == 6) {
-    parlay::sequence<pargeo::point<6>> P(n);
-    std::memcpy(P.data(), array.data(), array.size() * sizeof(double));
-    E = pargeo::hdbscan<6>(P, minPts);
-  } else if (dim == 7) {
-    parlay::sequence<pargeo::point<7>> P(n);
-    std::memcpy(P.data(), array.data(), array.size() * sizeof(double));
-    E = pargeo::hdbscan<7>(P, minPts);
-  } else {
-    throw std::runtime_error("Only dimensions 2-7 is supported at the moment");
-  }
-  sequence<pargeo::dendroNode> dendro = pargeo::dendrogram(E, n);
-  sequence<double> A(dendro.size()*4);
-  parlay::parallel_for(0, dendro.size(), [&](size_t i){
-					   A[i*4+0] = get<0>(dendro[i]);
-					   A[i*4+1] = get<1>(dendro[i]);
-					   A[i*4+2] = get<2>(dendro[i]);
-					   A[i*4+3] = get<3>(dendro[i]);});
-  return wrapArray2d<double>(A, 4);
-}
-
 PYBIND11_MODULE(pypargeo, m)
 {
   m.doc() = "Pargeo: a library for parallel computational geometry.";
@@ -603,9 +552,4 @@ PYBIND11_MODULE(pypargeo, m)
 	&py_wghEmst,
 	"Weighted Euclidean MST.",
 	py::arg("array"));
-
-  m.def("HDBSCAN",
-	&py_hdbscan,
-	"Hierarchical DBSCAN*.",
-	py::arg("array"), py::arg("minPts"));
 }

@@ -67,7 +67,7 @@ namespace pargeo {
     }
     circleDiam_u = sqrt(circleDiam_u);
     circleDiam_v = sqrt(circleDiam_v);
-    floatT myRadius = max(circleDiam_u, circleDiam_v)/2;
+    floatT myRadius = std::max(circleDiam_u, circleDiam_v)/2;
     circleDistance = sqrt(circleDistance) - circleDiam_u/2 - circleDiam_v/2;
     return circleDistance >= (s * myRadius);
   }

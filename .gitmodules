@@ -1,6 +1,6 @@
-[submodule "parlaylib"]
-	path = parlaylib
+[submodule "external/parlaylib"]
+	path = external/parlaylib
 	url = https://github.com/cmuparlay/parlaylib.git
-[submodule "pybind11"]
-	path = pybind11
+[submodule "external/pybind11"]
+	path = external/pybind11
 	url = https://github.com/pybind/pybind11.git
