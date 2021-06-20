@@ -29,7 +29,7 @@
 
 using namespace pargeo;
 
-#define HULL_CONCURRENT_VERBOSE
+// #define HULL_CONCURRENT_VERBOSE
 
 template <typename ptOut>
 parlay::sequence<ptOut>

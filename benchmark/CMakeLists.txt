@@ -1,7 +1,3 @@
-cmake_minimum_required(VERSION 3.10)
-
-project(pargeo_benchmark)
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
@@ -26,7 +22,7 @@ if(NOT benchmark_POPULATED)
 endif()
 
 # Include benchmark targets
-message(STATUS "benchmarks: Enabled")
+# message(STATUS "benchmarks: Enabled")
 
 add_executable(spatialGraph_bench spatialGraph_bench.cpp)
 target_link_libraries(spatialGraph_bench PRIVATE
@@ -52,6 +48,12 @@ target_link_libraries(spatialSearch_bench PRIVATE
 
 add_executable(hull_bench hull_bench.cpp)
 target_link_libraries(hull_bench PRIVATE
+  pargeoLib
+  convexHull3dLib
+  benchmark_main)
+
+add_executable(hull_compare hull_compare.cpp)
+target_link_libraries(hull_compare PRIVATE
   pargeoLib
   convexHull3dLib
   benchmark_main)
