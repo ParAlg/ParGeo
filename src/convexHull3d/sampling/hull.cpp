@@ -29,6 +29,8 @@
 
 using namespace pargeo;
 
+// #define SAMPLE_HULL_VERBOSE
+
 parlay::sequence<facet3d<pargeo::fpoint<3>>>
 pargeo::hull3dSampling(parlay::sequence<pargeo::fpoint<3>> &P, double fraction) {
   using namespace std;
@@ -39,7 +41,9 @@ pargeo::hull3dSampling(parlay::sequence<pargeo::fpoint<3>> &P, double fraction) 
 
   if (P.size() < 1000) return hull3dSerial(P);
 
+#ifdef SAMPLE_HULL_VERBOSE
   timer t; t.start();
+#endif
 
   size_t sampleSize = P.size() * fraction;
   sampleSize = std::max(sampleSize, size_t(5));
@@ -49,8 +53,11 @@ pargeo::hull3dSampling(parlay::sequence<pargeo::fpoint<3>> &P, double fraction) 
 					     });
 
   parlay::sequence<facet3d<pointT>> sampleHull = hull3dSerial(sample);
+
+#ifdef SAMPLE_HULL_VERBOSE
   std::cout << "precompute-time = " << t.get_next() << "\n";
   std::cout << "h = " << sampleHull.size() << "\n";
+#endif
 
   auto interiorPt = (sampleHull[0].a + sampleHull[sampleSize % sampleHull.size()].a) / 2;
 
@@ -72,12 +79,16 @@ pargeo::hull3dSampling(parlay::sequence<pargeo::fpoint<3>> &P, double fraction) 
 	       };
 
   auto remain = parlay::filter(make_slice(P), isOut);
-  std::cout << "filter-time = " << t.get_next() << "\n";
 
+#ifdef SAMPLE_HULL_VERBOSE
+  std::cout << "filter-time = " << t.get_next() << "\n";
   std::cout << "f = " << double(remain.size())/P.size() << "\n";
+#endif
 
   auto hull = hull3dSerial(remain);
-  std::cout << "final-hull-time = " << t.stop() << "\n";
 
+#ifdef SAMPLE_HULL_VERBOSE
+  std::cout << "final-hull-time = " << t.stop() << "\n";
+#endif
   return hull;
 }

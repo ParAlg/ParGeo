@@ -140,4 +140,8 @@ BENCHMARK(BM_hull3dPseudo_inSphere_1m)->UseRealTime()->Unit(benchmark::kMillisec
 BENCHMARK(BM_hull3dPseudo_onSphere_1m)->UseRealTime()->Unit(benchmark::kMillisecond);
 BENCHMARK(BM_hull3dPseudo_inCube_1m)->UseRealTime()->Unit(benchmark::kMillisecond);
 
+BENCHMARK(BM_hull3dSampling_inSphere_1m)->UseRealTime()->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_hull3dSampling_onSphere_1m)->UseRealTime()->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_hull3dSampling_inCube_1m)->UseRealTime()->Unit(benchmark::kMillisecond);
+
 BENCHMARK_MAIN();
