@@ -122,7 +122,7 @@ namespace IO {
   inline void xToString(char* s, char* a) { sprintf(s,"%s",a);}
 
   template <class A, class B>
-  inline int xToStringLen(std::pair<A,B> a) {
+  inline int xToStringLen(std::pair<A,B> a) { 
     return xToStringLen(a.first) + xToStringLen(a.second) + 1;
   }
 

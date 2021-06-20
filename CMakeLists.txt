@@ -30,49 +30,25 @@ message(STATUS "CMAKE_EXE_LINKER_FLAGS          ${CMAKE_CXX_LINKER_FLAGS}")
 message(STATUS "CMAKE_INSTALL_PREFIX:           ${CMAKE_INSTALL_PREFIX}" )
 
 # -------------------------------------------------
-# Add benchmark directories
+# Add sub directories
 
-add_subdirectory(wspd)
+add_subdirectory(src)
 
-add_subdirectory(knnSearch)
-
-add_subdirectory(spatialSort)
-
-add_subdirectory(clustering)
-
-add_subdirectory(rangeSearch)
-
-add_subdirectory(closestPair)
-
-add_subdirectory(convexHull3d)
-
-add_subdirectory(euclideanMst)
-
-add_subdirectory(spatialGraph)
-
-add_subdirectory(delaunayTriangulation)
+add_subdirectory(executable)
 
 add_subdirectory(pybindings)
 
-add_subdirectory(dataset)
-
-# -------------------------------------------------
-# Testing
+add_subdirectory(benchmark)
 
 enable_testing()
 
 add_subdirectory(test)
 
 # -------------------------------------------------
-# Benchmark
+# Expose pargeoLib
 
-add_subdirectory(benchmark)
+project(pargeoLib)
 
-# -------------------------------------------------
-# Link pargeolib as a library
+add_library(pargeoLib INTERFACE)
 
-project(pargeolib)
-
-add_library(pargeolib INTERFACE)
-
-target_include_directories(pargeolib INTERFACE include)
+target_include_directories(pargeoLib INTERFACE include)

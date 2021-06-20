@@ -39,34 +39,34 @@ endif()
 
 include(CTest)
 
-add_executable(kdTree_test kdTree/kdTree_test.cpp)
+add_executable(kdTree_test kdTree_test.cpp)
 target_link_libraries(kdTree_test PRIVATE
-  pargeolib ${GTest_LIBRARIES})
+  pargeoLib ${GTest_LIBRARIES})
 add_test(NAME kdTree_test COMMAND kdTree_test)
 
-add_executable(closestPair_test closestPair/closestPair_test.cpp)
+add_executable(closestPair_test closestPair_test.cpp)
 target_link_libraries(closestPair_test PRIVATE
-  pargeolib ${GTest_LIBRARIES})
+  pargeoLib ${GTest_LIBRARIES})
 add_test(NAME cloestPair_test COMMAND closestPair_test)
 
-add_executable(wspd_test wspd/wspd_test.cpp)
+add_executable(wspd_test wspd_test.cpp)
 target_link_libraries(wspd_test PRIVATE
-  pargeolib ${GTest_LIBRARIES})
+  pargeoLib ${GTest_LIBRARIES})
 add_test(NAME wspd_test COMMAND wspd_test)
 
-add_executable(hull_test hull/hull_test.cpp)
+add_executable(hull_test hull_test.cpp)
 target_link_libraries(hull_test PRIVATE
   pargeolib convexHull3d ${GTest_LIBRARIES})
 add_test(NAME hull_test COMMAND hull_test)
 
-add_executable(hullTopology_test hull/hullTopology_test.cpp)
+add_executable(hullTopology_test hullTopology_test.cpp)
 target_link_libraries(hullTopology_test PRIVATE
   pargeolib convexHull3d ${GTest_LIBRARIES})
 add_test(NAME hullTopology_test COMMAND hullTest_test)
 
-add_executable(dataset_test dataset/dataset_test.cpp)
+add_executable(dataset_test dataset_test.cpp)
 target_link_libraries(dataset_test PRIVATE
-  pargeolib dataset ${GTest_LIBRARIES})
+  pargeoLib ${GTest_LIBRARIES})
 add_test(NAME dataset_test COMMAND dataset_test)
 
 message(STATUS "CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}")
