@@ -43,46 +43,38 @@ struct linkedFacet3d {
   vertexT area;
 
   // seqT *seeList;
-  seqT seeList;
+  seqT seeList; // todo can remove
   bool hasVisible;
 
-  //size_t numPts() { return seeList->size(); }
   size_t numPts() {
-    abort();
     return seeList.size(); }
 
-  //vertexT& pts(size_t i) { return seeList->at(i); }
   vertexT& pts(size_t i) {
-    abort();
     return seeList.at(i); }
 
-  //void clear() { seeList->clear(); }
   void clear() {
-    abort();
     seeList.clear(); }
 
-  //void push_back(vertexT v) { seeList->push_back(v); }
   void push_back(vertexT v) {
-    abort();
     seeList.push_back(v); }
 
   float getVolume(vertexT p) { // todo type
     return (a-p).dot(area);
   }
 
-  // vertexT furthest() {
-  //   auto apex = vertexT();
-  //   typename vertexT::floatT m = numericKnob;
-  //   for (size_t i=0; i<numPts(); ++i) {
-  //     //auto m2 = (a-pts(i)).dot(crossProduct3d(b-a, c-a));
-  //     auto m2 = (a-pts(i)).dot(area);
-  //     if (m2 > m) {
-  // 	m = m2;
-  // 	apex = pts(i);
-  //     }
-  //   }
-  //   return apex;
-  // }
+  vertexT furthest() {
+    auto apex = vertexT();
+    typename vertexT::floatT m = numericKnob;
+    for (size_t i=0; i<numPts(); ++i) {
+      //auto m2 = (a-pts(i)).dot(crossProduct3d(b-a, c-a));
+      auto m2 = (a-pts(i)).dot(area);
+      if (m2 > m) {
+	m = m2;
+	apex = pts(i);
+      }
+    }
+    return apex;
+  }
 
   linkedFacet3d(vertexT _a, vertexT _b, vertexT _c): a(_a), b(_b), c(_c) {
     if (pargeo::determinant3by3(a, b, c) > numericKnob)
@@ -90,7 +82,7 @@ struct linkedFacet3d {
 
     hasVisible = true;
     //seeList = new seqT();
-    seeList = seqT(); //todo
+    seeList = seqT(); // todo can remove
 
     area = crossProduct3d(b-a, c-a);
   }

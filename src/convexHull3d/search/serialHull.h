@@ -203,6 +203,7 @@ class serialHull : public _hullTopology<facetT, vertexT, originT> {
     - r keeps the furthest distance found for any visible points
    */
   void searchHelper(nodeT* r, facetT* f, float& d, vertexT& apex, size_t& counter) {
+    counter ++;
 
     auto vols = nodeVol(r, f);
     floatT volMin = std::get<0>(vols);
@@ -219,6 +220,7 @@ class serialHull : public _hullTopology<facetT, vertexT, originT> {
 	searchHelper(r->L(), f, d, apex, counter);
 	searchHelper(r->R(), f, d, apex, counter);
       } else {
+	counter --;
 	for (size_t i = 0; i < r->size(); ++ i) {
 	  counter ++;
 	  auto pVol = f->getVolume(*r->at(i));
@@ -232,6 +234,7 @@ class serialHull : public _hullTopology<facetT, vertexT, originT> {
     } else {
       // node visible
       //std::cout << "visible\n";
+      counter --;
       for (size_t i = 0; i < r->size(); ++ i) {
 	counter ++;
         auto pVol = f->getVolume(*r->at(i));
@@ -244,10 +247,10 @@ class serialHull : public _hullTopology<facetT, vertexT, originT> {
 
   }
 
-  vertexT searchVisible(facetT* f) {
+  // counter = touched points
+  vertexT searchVisible(facetT* f, size_t& counter) {
     floatT d = 1e-5;
     vertexT apex;
-    size_t counter = 0;
     apex.setEmpty();
     searchHelper(tree, f, d, apex, counter);
     if (f->a == apex ||
@@ -259,8 +262,8 @@ class serialHull : public _hullTopology<facetT, vertexT, originT> {
     return apex;
   }
 
-  vertexT searchBrute(facetT* f) {
-    size_t counter = 0;
+  // counter = visible points
+  vertexT searchBrute(facetT* f, size_t& counter) {
     floatT d = 1e-5;
     vertexT apex;
     apex.setEmpty();
@@ -271,12 +274,10 @@ class serialHull : public _hullTopology<facetT, vertexT, originT> {
 	  f->a != p &&
 	  f->b != p &&
 	  f->c != p) {
-	//std::cout << "assign " << pVol << " from " << p << " \n";
 	d = pVol;
 	apex = p;
       }
     }
-    std::cout << "brute counter = " << counter << "\n";
     return apex;
   }
 
@@ -286,36 +287,29 @@ class serialHull : public _hullTopology<facetT, vertexT, originT> {
     //std::cout << "compute apex\n";
     auto fVisit = [&](facetT* f) {return true;};
     auto fDo = [&](facetT* f) {
-		 // todo call a tree query here instead
-		 // if (f->numPts() > 0) {
-		 //   apex = f->furthest();
-		 //   std::cout << apex << ": " << f->getVolume(apex) << "\n";
-		 //   auto apex2 = searchBrute(f);
-		 //   std::cout << apex2 << ": " << f->getVolume(apex2) << "\n";
-		 //   auto apex3 = searchVisible(f);
-		 //   std::cout << apex3 << ": " << f->getVolume(apex3) << "\n";
-		 //   abort();
-		 // }
-		 //std::cout << "search " << f << "\n";
-		 // apex = searchBrute(f);
-		 // auto apex2 = searchVisible(f);
-		 // if (apex != apex2) {
-		 //   std::cout << "search diff: \n";
-		 //   std::cout << *f << "\n";
-		 //   std::cout << "brute = " << apex << ": " << f->getVolume(apex) << "\n";
-		 //   std::cout << "tree = " << apex2 << ": " << f->getVolume(apex2) << "\n";
-		 //   abort();
-		 // }
 		 if (f->hasVisible) {
-		   //auto apexBrute = searchBrute(f);
-		   apex = searchVisible(f);
-		   // std::cout << "\n";
+
+		   // size_t countVisible = 0;
+		   // auto apexBrute = searchBrute(f, countVisible);
+
+		   // pargeo::timer t; t.start();
+
+		   // apex = f->furthest();
+		   // std::cout << "store-count = " << f->numPts() << "\n";
+		   // std::cout << "store-time = " << t.get_next()*1000 << " ms\n";
+
+		   size_t countTouch = 0;
+		   apex = searchVisible(f, countTouch);
+
+		   // std::cout << "search-time = " << t.stop()*1000 << " ms\n";
+		   // std::cout << "search touches " << countTouch << "/" << countVisible << "\n\n";
+
 		   if (!apex.isEmpty()) {
-		     //std::cout << apex << ": " << f->getVolume(apex) << "\n";
 		     apex.attribute.seeFacet = f;
 		   } else {
 		     f->hasVisible = false;
 		   }
+
 		 }
 	       };
     auto fStop = [&]() { return !apex.isEmpty(); };
