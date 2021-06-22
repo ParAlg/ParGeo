@@ -71,7 +71,7 @@ namespace pargeo {
 
     typedef int intT;
     typedef double floatT;
-    typedef pargeo::point<_dim> pointT;
+    typedef _objT pointT;
     typedef kdNode<_dim, _objT> nodeT;
 
     // Data fields
