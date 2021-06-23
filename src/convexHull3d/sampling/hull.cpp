@@ -82,7 +82,8 @@ pargeo::hull3dSampling(parlay::sequence<pargeo::fpoint<3>> &P, double fraction) 
 
 #ifdef SAMPLE_HULL_VERBOSE
   std::cout << "filter-time = " << t.get_next() << "\n";
-  std::cout << "f = " << double(remain.size())/P.size() << "\n";
+  std::cout << "remain = " << remain.size() << "\n";
+  std::cout << "fraction = " << double(remain.size())/P.size() << "\n";
 #endif
 
   auto hull = hull3dSerial(remain);

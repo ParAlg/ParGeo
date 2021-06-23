@@ -8,6 +8,8 @@
 #include "pargeo/point.h"
 #include "pargeo/parlayAddon.h"
 
+// #define PSEUDO_HULL_VERBOSE
+
 template <class vertexT>
 struct internalFacet {
   static constexpr typename vertexT::floatT numericKnob = 1e-5;
@@ -205,16 +207,22 @@ pargeo::hull3dPseudo(parlay::sequence<pargeo::fpoint<3>> &P) {
   using floatT = pointT::floatT;
   using facetT = facet3d<pointT>;
 
-  // timer t; t.start();
+#ifdef PSEUDO_HULL_VERBOSE
+  timer t; t.start();
+#endif
 
   auto Q = pseudoHull<pointT>(make_slice(P));
-  // std::cout << "pseudohull-time = " << t.get_next() << "\n";
 
-  // std::cout << Q.size() << "\n";
+#ifdef PSEUDO_HULL_VERBOSE
+  std::cout << "pseudohull-time = " << t.get_next() << "\n";
+  std::cout << Q.size() << "\n";
+#endif
 
   auto H = hull3dSerial(Q);
 
-  // std::cout << "hull-time = " << t.get_next() << "\n";
+#ifdef PSEUDO_HULL_VERBOSE
+  std::cout << "hull-time = " << t.get_next() << "\n";
+#endif
 
   return H;
 }

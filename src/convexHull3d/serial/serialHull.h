@@ -158,6 +158,7 @@ class serialHull : public _hullTopology<facetT, vertexT, originT> {
 
     auto fVisit = [&](facetT* f) {return true;};
     auto fDo = [&](facetT* f) {
+		 //if (f->numPts() > 0) apex = f->furthestSample(1000);
 		 if (f->numPts() > 0) apex = f->furthest();
 	       };
     auto fStop = [&]() { return !apex.isEmpty(); };

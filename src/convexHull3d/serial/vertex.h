@@ -71,6 +71,20 @@ struct linkedFacet3d {
     return apex;
   }
 
+  vertexT furthestSample(size_t s) {
+    auto apex = vertexT();
+    typename vertexT::floatT m = numericKnob;
+    for (size_t i=0; i<std::min(numPts(), s); ++i) {
+      size_t ii = parlay::hash64(i) % numPts();
+      auto m2 = (a-pts(ii)).dot(area);
+      if (m2 > m) {
+	m = m2;
+	apex = pts(ii);
+      }
+    }
+    return apex;
+  }
+
   linkedFacet3d(vertexT _a, vertexT _b, vertexT _c): a(_a), b(_b), c(_c) {
     if (pargeo::determinant3by3(a, b, c) > numericKnob)
       std::swap(b, c);
