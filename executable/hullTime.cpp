@@ -16,6 +16,9 @@ void timeHull(parlay::sequence<pt> &P, int rounds, char const *outFile) {
   timer t; t.start();
   for(int i=0; i<rounds; ++i) {
     auto H = hull3dSearch(P);
+    std::cout << "search ok\n";
+    auto H1 = hull3dSerial(P);
+    std::cout << "serial ok\n";
     std::cout << " hull-size = " << H.size() << "\n";
     std::cout << " round-time = " << t.get_next() << "\n";
   }

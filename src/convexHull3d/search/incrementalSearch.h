@@ -30,7 +30,7 @@
 #include "serialHull.h"
 #include "vertex.h"
 
-#define HULL_SERIAL_VERBOSE
+// #define HULL_SERIAL_VERBOSE
 
 template<class linkedFacet3d, class vertex3d, class origin3d>
 void incrementHull3dSerial(serialHull<linkedFacet3d, vertex3d, origin3d> *context) {
