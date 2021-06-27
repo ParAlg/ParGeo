@@ -1,5 +1,6 @@
 add_library(convexHull3dLib
   serial/hull.cpp
+  search/hull.cpp
   serial/hullInternal.cpp
   serial/hullInternal2.cpp
   serial/hullInternal3.cpp
@@ -10,6 +11,7 @@ add_library(convexHull3dLib
   incremental/hull.cpp
   sampling/hull.cpp
   sampling/hullTest.cpp
+  quadTree/hull.cpp
   )
 
 # add_subdirectory(incremental)

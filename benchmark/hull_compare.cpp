@@ -3,145 +3,155 @@
 #include "dataset/uniform.h"
 #include "convexHull3d/hull.h"
 
-static parlay::sequence<pargeo::fpoint<3>> P[3];
+long maxThreads = 12;
+long defaultN = 1000000;
 
-/* types:
-   - 0: sphere-in
-   - 1: sphere-on thickness 0.05
-   - 2: cube-in
- */
-parlay::sequence<pargeo::fpoint<3>> data(size_t type) {
-  size_t i = type;
-  if (type == 0) {
-    if (P[i].size() == 0)
-      P[i] = std::move(pargeo::uniformInPolyPoints<3, pargeo::fpoint<3>>(1000000, 0));
-  }
-  else if (type == 1) {
-    if (P[i].size() == 0)
-      P[i] = std::move(pargeo::uniformOnPolyPoints<3, pargeo::fpoint<3>>(1000000, 0, 0.05));
-  }
-  else if (type == 2) {
-    if (P[i].size() == 0)
-      P[i] = std::move(pargeo::uniformInPolyPoints<3, pargeo::fpoint<3>>(1000000, 1));
-  }
-  else {
-    throw std::runtime_error("test data not implemented yet");
-  }
-  return P[i];
+// in sphere
+parlay::sequence<pargeo::fpoint<3>> data0(size_t n) {
+  return pargeo::uniformInPolyPoints<3, pargeo::fpoint<3>>(n, 0);
 }
 
-static void BM_hull3dSerial_inSphere_1m(benchmark::State& state) {
-  auto P = data(0);
+// on sphere
+parlay::sequence<pargeo::fpoint<3>> data1(size_t n) {
+  return pargeo::uniformInPolyPoints<3, pargeo::fpoint<3>>(n, 0, 0.05);
+}
+
+// in cube
+parlay::sequence<pargeo::fpoint<3>> data2(size_t n) {
+  return pargeo::uniformInPolyPoints<3, pargeo::fpoint<3>>(n, 1);
+}
+
+static void serial_inSphere(benchmark::State& state) {
+  auto P = data0(state.range(0));
   for (auto _ : state) hull3dSerial(P);
 }
 
-static void BM_hull3dSerial_onSphere_1m(benchmark::State& state) {
-  auto P = data(1);
+static void serial_onSphere(benchmark::State& state) {
+  auto P = data1(state.range(0));
   for (auto _ : state) hull3dSerial(P);
 }
 
-static void BM_hull3dSerial_inCube_1m(benchmark::State& state) {
-  auto P = data(2);
+static void serial_inCube(benchmark::State& state) {
+  auto P = data2(state.range(0));
   for (auto _ : state) hull3dSerial(P);
 }
 
-static void BM_hull3dIncremental_inSphere_1m(benchmark::State& state) {
-  auto P = data(0);
-  for (auto _ : state) hull3dIncremental(P, state.range(0));
+static void incremental_inSphere(benchmark::State& state) {
+  auto P = data0(state.range(0));
+  for (auto _ : state) hull3dIncremental(P, state.range(1));
 }
 
-static void BM_hull3dIncremental_onSphere_1m(benchmark::State& state) {
-  auto P = data(1);
-  for (auto _ : state) hull3dIncremental(P, state.range(0));
+static void incremental_onSphere(benchmark::State& state) {
+  auto P = data1(state.range(0));
+  for (auto _ : state) hull3dIncremental(P, state.range(1));
 }
 
-static void BM_hull3dIncremental_inCube_1m(benchmark::State& state) {
-  auto P = data(2);
-  for (auto _ : state) hull3dIncremental(P, state.range(0));
+static void incremental_inCube(benchmark::State& state) {
+  auto P = data2(state.range(0));
+  for (auto _ : state) hull3dIncremental(P, state.range(1));
 }
 
-static void BM_hull3dConcurrent_inSphere_1m(benchmark::State& state) {
-  auto P = data(0);
-  for (auto _ : state) hull3dConcurrent(P, state.range(0));
+static void concurrent_inSphere(benchmark::State& state) {
+  auto P = data0(state.range(0));
+  for (auto _ : state) hull3dConcurrent(P, state.range(1));
 }
 
-static void BM_hull3dConcurrent_onSphere_1m(benchmark::State& state) {
-  auto P = data(1);
-  for (auto _ : state) hull3dConcurrent(P, state.range(0));
+static void concurrent_onSphere(benchmark::State& state) {
+  auto P = data1(state.range(0));
+  for (auto _ : state) hull3dConcurrent(P, state.range(1));
 }
 
-static void BM_hull3dConcurrent_inCube_1m(benchmark::State& state) {
-  auto P = data(2);
-  for (auto _ : state) hull3dConcurrent(P, state.range(0));
+static void concurrent_inCube(benchmark::State& state) {
+  auto P = data2(state.range(0));
+  for (auto _ : state) hull3dConcurrent(P, state.range(1));
 }
 
-static void BM_hull3dGrid_inSphere_1m(benchmark::State& state) {
-  auto P = data(0);
+static void grid_inSphere(benchmark::State& state) {
+  auto P = data0(state.range(0));
   for (auto _ : state) hull3dGrid(P, 4, false);
 }
 
-static void BM_hull3dGrid_onSphere_1m(benchmark::State& state) {
-  auto P = data(1);
+static void grid_onSphere(benchmark::State& state) {
+  auto P = data1(state.range(0));
   for (auto _ : state) hull3dGrid(P, 4, false);
 }
 
-static void BM_hull3dGrid_inCube_1m(benchmark::State& state) {
-  auto P = data(2);
+static void grid_inCube(benchmark::State& state) {
+  auto P = data2(state.range(0));
   for (auto _ : state) hull3dGrid(P, 4, false);
 }
 
-static void BM_hull3dPseudo_inSphere_1m(benchmark::State& state) {
-  auto P = data(0);
+static void pseudo_inSphere(benchmark::State& state) {
+  auto P = data0(state.range(0));
   for (auto _ : state) hull3dPseudo(P);
 }
 
-static void BM_hull3dPseudo_onSphere_1m(benchmark::State& state) {
-  auto P = data(1);
+static void pseudo_onSphere(benchmark::State& state) {
+  auto P = data1(state.range(0));
   for (auto _ : state) hull3dPseudo(P);
 }
 
-static void BM_hull3dPseudo_inCube_1m(benchmark::State& state) {
-  auto P = data(2);
+static void pseudo_inCube(benchmark::State& state) {
+  auto P = data2(state.range(0));
   for (auto _ : state) hull3dPseudo(P);
 }
 
-static void BM_hull3dSampling_inSphere_1m(benchmark::State& state) {
-  auto P = data(0);
+static void sampling_inSphere(benchmark::State& state) {
+  auto P = data0(state.range(0));
   for (auto _ : state) hull3dSampling(P, 0.01);
 }
 
-static void BM_hull3dSampling_onSphere_1m(benchmark::State& state) {
-  auto P = data(1);
+static void sampling_onSphere(benchmark::State& state) {
+  auto P = data1(state.range(0));
   for (auto _ : state) hull3dSampling(P, 0.01);
 }
 
-static void BM_hull3dSampling_inCube_1m(benchmark::State& state) {
-  auto P = data(2);
+static void sampling_inCube(benchmark::State& state) {
+  auto P = data2(state.range(0));
   for (auto _ : state) hull3dSampling(P, 0.01);
 }
 
-BENCHMARK(BM_hull3dSerial_inSphere_1m)->UseRealTime()->Unit(benchmark::kMillisecond);
-BENCHMARK(BM_hull3dSerial_onSphere_1m)->UseRealTime()->Unit(benchmark::kMillisecond);
-BENCHMARK(BM_hull3dSerial_inCube_1m)->UseRealTime()->Unit(benchmark::kMillisecond);
+static void search_inSphere(benchmark::State& state) {
+  auto P = data0(state.range(0));
+  for (auto _ : state) hull3dSearch(P);
+}
 
-BENCHMARK(BM_hull3dIncremental_inSphere_1m)->UseRealTime()->Unit(benchmark::kMillisecond)->Arg(12)->Arg(1);
-BENCHMARK(BM_hull3dIncremental_onSphere_1m)->UseRealTime()->Unit(benchmark::kMillisecond)->Arg(12)->Arg(1);
-BENCHMARK(BM_hull3dIncremental_inCube_1m)->UseRealTime()->Unit(benchmark::kMillisecond)->Arg(12)->Arg(1);
+static void search_onSphere(benchmark::State& state) {
+  auto P = data1(state.range(0));
+  for (auto _ : state) hull3dSearch(P);
+}
 
-BENCHMARK(BM_hull3dConcurrent_inSphere_1m)->UseRealTime()->Unit(benchmark::kMillisecond)->Arg(12)->Arg(1);
-BENCHMARK(BM_hull3dConcurrent_onSphere_1m)->UseRealTime()->Unit(benchmark::kMillisecond)->Arg(12)->Arg(1);
-BENCHMARK(BM_hull3dConcurrent_inCube_1m)->UseRealTime()->Unit(benchmark::kMillisecond)->Arg(12)->Arg(1);
+static void search_inCube(benchmark::State& state) {
+  auto P = data2(state.range(0));
+  for (auto _ : state) hull3dSearch(P);
+}
 
-BENCHMARK(BM_hull3dGrid_inSphere_1m)->UseRealTime()->Unit(benchmark::kMillisecond);
-BENCHMARK(BM_hull3dGrid_onSphere_1m)->UseRealTime()->Unit(benchmark::kMillisecond);
-BENCHMARK(BM_hull3dGrid_inCube_1m)->UseRealTime()->Unit(benchmark::kMillisecond);
+BENCHMARK(search_inSphere)->Unit(benchmark::kMillisecond)->Arg(1000);
+BENCHMARK(search_onSphere)->Unit(benchmark::kMillisecond)->Arg(defaultN);
+BENCHMARK(search_inCube)->Unit(benchmark::kMillisecond)->Arg(defaultN);
 
-BENCHMARK(BM_hull3dPseudo_inSphere_1m)->UseRealTime()->Unit(benchmark::kMillisecond);
-BENCHMARK(BM_hull3dPseudo_onSphere_1m)->UseRealTime()->Unit(benchmark::kMillisecond);
-BENCHMARK(BM_hull3dPseudo_inCube_1m)->UseRealTime()->Unit(benchmark::kMillisecond);
+// BENCHMARK(serial_inSphere)->Unit(benchmark::kMillisecond)->Arg(defaultN);
+// BENCHMARK(serial_onSphere)->Unit(benchmark::kMillisecond)->Arg(defaultN);
+// BENCHMARK(serial_inCube)->Unit(benchmark::kMillisecond)->Arg(defaultN);
 
-BENCHMARK(BM_hull3dSampling_inSphere_1m)->UseRealTime()->Unit(benchmark::kMillisecond);
-BENCHMARK(BM_hull3dSampling_onSphere_1m)->UseRealTime()->Unit(benchmark::kMillisecond);
-BENCHMARK(BM_hull3dSampling_inCube_1m)->UseRealTime()->Unit(benchmark::kMillisecond);
+// BENCHMARK(incremental_inSphere)->Unit(benchmark::kMillisecond)->Args({defaultN, maxThreads});
+// BENCHMARK(incremental_onSphere)->Unit(benchmark::kMillisecond)->Args({defaultN, maxThreads});
+// BENCHMARK(incremental_inCube)->Unit(benchmark::kMillisecond)->Args({defaultN, maxThreads});
+
+// BENCHMARK(concurrent_inSphere)->Unit(benchmark::kMillisecond)->Args({defaultN, maxThreads});
+// BENCHMARK(concurrent_onSphere)->Unit(benchmark::kMillisecond)->Args({defaultN, maxThreads});
+// BENCHMARK(concurrent_inCube)->Unit(benchmark::kMillisecond)->Args({defaultN, maxThreads});
+
+// // BENCHMARK(grid_inSphere)->Unit(benchmark::kMillisecond)->Arg(defaultN);
+// // BENCHMARK(grid_onSphere)->Unit(benchmark::kMillisecond)->Arg(defaultN);
+// // BENCHMARK(grid_inCube)->Unit(benchmark::kMillisecond)->Arg(defaultN);
+
+// BENCHMARK(pseudo_inSphere)->Unit(benchmark::kMillisecond)->Arg(defaultN);
+// BENCHMARK(pseudo_onSphere)->Unit(benchmark::kMillisecond)->Arg(defaultN);
+// BENCHMARK(pseudo_inCube)->Unit(benchmark::kMillisecond)->Arg(defaultN);
+
+// BENCHMARK(sampling_inSphere)->Unit(benchmark::kMillisecond)->Arg(defaultN);
+// BENCHMARK(sampling_onSphere)->Unit(benchmark::kMillisecond)->Arg(defaultN);
+// BENCHMARK(sampling_inCube)->Unit(benchmark::kMillisecond)->Arg(defaultN);
 
 BENCHMARK_MAIN();

@@ -57,6 +57,12 @@ namespace pargeo {
   parlay::sequence<facet3d<pargeo::fpoint<3>>>
   hull3dSerial(parlay::sequence<pargeo::fpoint<3>> &);
 
+  parlay::sequence<facet3d<pargeo::fpoint<3>>>
+  hull3dSearch(parlay::sequence<pargeo::fpoint<3>> &);
+
+  parlay::sequence<facet3d<pargeo::fpoint<3>>>
+  hull3dQuadTree(parlay::sequence<pargeo::fpoint<3>> &);
+
   parlay::sequence<pargeo::fpoint<3>>
   hull3dSerialInternal(parlay::sequence<pargeo::fpoint<3>> &);
 
