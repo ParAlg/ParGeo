@@ -34,8 +34,5 @@ target_link_libraries(zorder pargeoLib)
 add_executable(uniformData uniformData.cpp)
 target_link_libraries(uniformData pargeoLib)
 
-add_executable(hull hullTime.cpp)
+add_executable(hull hull.cpp)
 target_link_libraries(hull pargeoLib convexHull3dLib)
-
-add_executable(hull2 hullTime2.cpp)
-target_link_libraries(hull2 pargeoLib convexHull3dLib)
