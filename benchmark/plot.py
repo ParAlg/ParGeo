@@ -55,7 +55,8 @@ def plotBar(data, title):
     plt.legend(methods)
     plt.title(title)
 
-    plt.show()
+    #plt.show()
+    plt.savefig(title + ".png")
 
 def main():
     file1 = ' '.join(sys.argv[1:])
