@@ -26,6 +26,7 @@
 #include "parlay/sequence.h"
 #include "pargeo/algebra.h"
 #include "convexHull3d/hull.h"
+#include "convexHull3d/vertex.h"
 
 template <class vertexT>
 struct linkedFacet3d {
@@ -134,8 +135,8 @@ static std::ostream& operator<<(std::ostream& os, const linkedFacet3d<vertexT>& 
 
 class pointOrigin {
   static constexpr typename pargeo::fpoint<3>::floatT numericKnob = 1e-5;
-  using facetT = linkedFacet3d<vertex>;
-  using vertexT = vertex;
+  using vertexT = pargeo::hullInternal::vertex;
+  using facetT = linkedFacet3d<vertexT>;
 
   vertexT o;
 

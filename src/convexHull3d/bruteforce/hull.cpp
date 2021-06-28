@@ -1,4 +1,5 @@
-#include "convexHull3d/hull.h"
+// #include "convexHull3d/hull.h"
+#include "convexHull3d/bruteforceHull.h"
 
 #include <iostream>
 #include <fstream>

@@ -20,7 +20,9 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include "convexHull3d/hull.h"
+#include "convexHull3d/concurrentHull.h"
+#include "convexHull3d/serialHull.h"
+#include "convexHull3d/gridHull.h"
 
 #include "parlay/parallel.h"
 #include "parlay/sequence.h"
@@ -96,7 +98,7 @@ hull3dGridInternal(parlay::slice<pargeo::fpoint<3>*, pargeo::fpoint<3>*> P,
 }
 
 parlay::sequence<facet3d<pargeo::fpoint<3>>>
-pargeo::hull3dGrid(parlay::sequence<pargeo::fpoint<3>> &P, size_t s = 4, bool write = false) {
+pargeo::hull3dGrid(parlay::sequence<pargeo::fpoint<3>> &P, size_t s, bool write) {
   using namespace parlay;
   using pointT = pargeo::fpoint<3>;
   using floatT = pointT::floatT;

@@ -20,7 +20,11 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include "convexHull3d/hull.h"
+// #include "convexHull3d/hull.h"
+#include "convexHull3d/vertex.h"
+#include "convexHull3d/serialHull.h"
+#include "convexHull3d/samplingHull.h"
+#include "convexHull3d/concurrentHull.h"
 
 #include "parlay/parallel.h"
 #include "parlay/sequence.h"
@@ -33,9 +37,9 @@ using namespace pargeo;
 
 template <typename ptOut>
 parlay::sequence<ptOut>
-concurrentHull(parlay::sequence<vertex> &Q, size_t numProc) {
+concurrentHull(parlay::sequence<pargeo::hullInternal::vertex> &Q, size_t numProc) {
   using namespace parlay;
-  using pt = vertex;
+  using pt = pargeo::hullInternal::vertex;
 
 #ifdef HULL_CONCURRENT_VERBOSE
   timer t; t.start();
@@ -62,7 +66,7 @@ concurrentHull(parlay::sequence<vertex> &Q, size_t numProc) {
 			     size_t s = i * blkSize;
 			     size_t e = std::min(Q.size(), (i+1) * blkSize);
 			     subHulls[i] =
-			       std::move(hullInternal::hull3dSerialInternal(Q.cut(s, e)));
+			       std::move(hullInternal::hull3dSerialInternal1(Q.cut(s, e)));
 			   }, 1);
 
   sequence<ptOut> uniquePts = parlay::flatten(subHulls);
@@ -75,11 +79,11 @@ concurrentHull(parlay::sequence<vertex> &Q, size_t numProc) {
   return uniquePts;
 }
 
-parlay::sequence<facet3d<pargeo::fpoint<3>>>
+parlay::sequence<pargeo::facet3d<pargeo::fpoint<3>>>
 pargeo::hull3dConcurrent(parlay::sequence<pargeo::fpoint<3>> &P, size_t numProc) {
   using namespace std;
   using namespace parlay;
-  using pt = vertex;
+  using pt = pargeo::hullInternal::vertex;
 
   if (P.size() < 1000) return hull3dSerial(P);
 
@@ -108,7 +112,7 @@ pargeo::hull3dConcurrent(parlay::sequence<pargeo::fpoint<3>> &P, size_t numProc)
     std::cout << "> concurrent-hull-time = " << t.get_next() << "\n";
 #endif
 
-    return hull3dSerialInternal(make_slice(Q2));
+    return hullInternal::hull3dSerialInternal2(make_slice(Q2));
     // return hull3dIncrementalInternal(make_slice(Q2));
 
 #ifdef HULL_CONCURRENT_VERBOSE

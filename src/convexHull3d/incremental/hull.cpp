@@ -20,7 +20,8 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include "convexHull3d/hull.h"
+#include "convexHull3d/incrementalHull.h"
+// #include "convexHull3d/serialHull.h"
 
 #include "parlay/sequence.h"
 #include "pargeo/getTime.h"
@@ -37,20 +38,21 @@ pargeo::hull3dIncremental(parlay::sequence<pargeo::fpoint<3>> &P, size_t numProc
   using floatT = pargeo::fpoint<3>::floatT;
   using pointT = pargeo::fpoint<3>;
   using facetT = facet3d<pargeo::fpoint<3>>;
+  using vertexT = pargeo::hullInternal::vertex;
 
   size_t n = P.size();
 
-  sequence<vertex> Q(P.size());
+  sequence<vertexT> Q(P.size());
   parallel_for(0, P.size(), [&](size_t i) {
-			      Q[i] = vertex(P[i].coords());
+			      Q[i] = vertexT(P[i].coords());
 			    });
 
   // Create an initial simplex
   auto origin = pointOrigin();
 
-  auto linkedHull = new parallelHull<linkedFacet3d<vertex>, vertex, pointOrigin>(make_slice(Q), origin);
+  auto linkedHull = new parallelHull<linkedFacet3d<vertexT>, vertexT, pointOrigin>(make_slice(Q), origin);
 
-  incrementHull3d<linkedFacet3d<vertex>, vertex, pointOrigin>(linkedHull, numProc);
+  incrementHull3d<linkedFacet3d<vertexT>, vertexT, pointOrigin>(linkedHull, numProc);
 
   // getHull will undo the translation of linkedHull
   auto out = sequence<facetT>();
@@ -61,19 +63,24 @@ pargeo::hull3dIncremental(parlay::sequence<pargeo::fpoint<3>> &P, size_t numProc
 }
 
 parlay::sequence<pargeo::facet3d<pargeo::fpoint<3>>>
-pargeo::hull3dIncrementalInternal(parlay::slice<vertex*, vertex*> Q, size_t numProc) {
+pargeo::hull3dIncrementalInternal(parlay::slice<
+				  pargeo::hullInternal::vertex*,
+				  pargeo::hullInternal::vertex*
+				  > Q,
+				  size_t numProc) {
   using namespace std;
   using namespace parlay;
   using floatT = pargeo::fpoint<3>::floatT;
   using pointT = pargeo::fpoint<3>;
   using facetT = facet3d<pargeo::fpoint<3>>;
+  using vertexT = pargeo::hullInternal::vertex;
 
   // Create an initial simplex
   auto origin = pointOrigin();
 
-  auto linkedHull = new parallelHull<linkedFacet3d<vertex>, vertex, pointOrigin>(Q, origin);
+  auto linkedHull = new parallelHull<linkedFacet3d<vertexT>, vertexT, pointOrigin>(Q, origin);
 
-  incrementHull3d<linkedFacet3d<vertex>, vertex, pointOrigin>(linkedHull, numProc);
+  incrementHull3d<linkedFacet3d<vertexT>, vertexT, pointOrigin>(linkedHull, numProc);
 
   // getHull will undo the translation of linkedHull
   auto out = sequence<facetT>();

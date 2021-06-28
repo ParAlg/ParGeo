@@ -20,7 +20,9 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include "convexHull3d/hull.h"
+#include "convexHull3d/vertex.h"
+#include "convexHull3d/serialHull.h"
+#include "convexHull3d/samplingHull.h"
 
 #include "parlay/parallel.h"
 #include "parlay/sequence.h"
@@ -35,7 +37,7 @@ parlay::sequence<facet3d<pargeo::fpoint<3>>>
 pargeo::hull3dSampling(parlay::sequence<pargeo::fpoint<3>> &P, double fraction) {
   using namespace std;
   using namespace parlay;
-  using pt = vertex;
+  using pt = pargeo::hullInternal::vertex;
   using floatT = typename pargeo::fpoint<3>::floatT;
   using pointT = pargeo::fpoint<3>;
 

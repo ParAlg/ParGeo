@@ -1,4 +1,5 @@
-#include "convexHull3d/hull.h"
+#include "convexHull3d/bruteforceHull.h"
+#include "convexHull3d/searchHull.h"
 
 #include "parlay/parallel.h"
 #include "parlay/sequence.h"
@@ -16,7 +17,9 @@ pargeo::hull3dSearch(parlay::sequence<pargeo::fpoint<3>> &P) {
   using floatT = pointT::floatT;
   using facetT = facet3d<pointT>;
 
-  if (P.size() < 10) return hull3dBruteforce(P);
+  if (P.size() < 10) {
+    return hull3dBruteforce(P);
+  }
 
   sequence<vertex> Q(P.size());
 

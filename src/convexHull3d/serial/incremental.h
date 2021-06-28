@@ -29,6 +29,7 @@
 
 #include "serialHull.h"
 #include "vertex.h"
+#include "convexHull3d/vertex.h"
 
 template<class linkedFacet3d, class vertex3d, class origin3d>
 void incrementHull3dSerial(serialHull<linkedFacet3d, vertex3d, origin3d> *context) {

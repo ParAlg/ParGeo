@@ -3,19 +3,49 @@
 #include <algorithm>
 #include <queue>
 #include <math.h>
+
 #include "parlay/parallel.h"
 #include "parlay/primitives.h"
 #include "parlay/sequence.h"
 #include "pargeo/point.h"
-#include "convexHull3d/hull.h"
-#include "pairHash.h"
+
+#include "facet.h"
+#include "internal/sparse_table.h"
 
 #ifdef WRITE
 #include <iostream>
 #include <fstream>
 #endif
 
-using namespace std;
+struct emptyT {
+  int arr[0]; // todo this produces a struct of size 0 but seems dangerous, need to check
+};
+
+struct hashIntPair {
+  inline size_t operator () (const std::pair<int, int>& t) const {
+    size_t l = t.first;
+    size_t r = t.second;
+    size_t key = (l << 32) + r;
+    return parlay::hash64_2(key);
+  }
+};
+
+struct pairHash {
+  typedef pbbsbench::sparse_table<std::pair<int,int>, emptyT, hashIntPair> tableT;
+
+  tableT edgeTable;
+  pairHash(size_t n)
+    : edgeTable(tableT(n, make_tuple(std::make_pair<int,int>(-1,-1), emptyT()), hashIntPair())) {
+  }
+
+  void mark(int p1, int p2) {
+    edgeTable.insert(make_tuple(std::pair(p1,p2),emptyT()));
+  };
+
+  bool processed(int p1, int p2) {
+    return edgeTable.contains(std::pair(p1,p2));
+  };
+};
 
 /* Angle between facet(a1, c1, b1) & facet(a1, c2, b1)
    c1
@@ -64,7 +94,7 @@ size_t pivotOnFacet(size_t p1, size_t q1, size_t q2, parlay::slice<pt*, pt*> P) 
   return q-P.begin();
 }
 
-parlay::sequence<pargeo::facet3d<pargeo::fpoint<3>>> giftWrap3d(parlay::sequence<pargeo::fpoint<3>> &P) {
+parlay::sequence<pargeo::facet3d<pargeo::fpoint<3>>> hull3dGift(parlay::sequence<pargeo::fpoint<3>> &P) {
   using namespace parlay;
   using pt = pargeo::fpoint<3>;
   using facet3d = pargeo::facet3d<pt>;
@@ -110,7 +140,7 @@ parlay::sequence<pargeo::facet3d<pargeo::fpoint<3>>> giftWrap3d(parlay::sequence
   myfile << P[p3] << p3 << endl;
 #endif
 
-  queue<fc*> Q;
+  std::queue<fc*> Q;
   Q.push(&H[0]);
 
   auto T = pairHash(4*n);

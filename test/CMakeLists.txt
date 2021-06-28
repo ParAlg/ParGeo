@@ -56,12 +56,21 @@ add_test(NAME wspd_test COMMAND wspd_test)
 
 add_executable(hull_test hull_test.cpp)
 target_link_libraries(hull_test PRIVATE
-  pargeoLib convexHull3dLib ${GTest_LIBRARIES})
+  pargeoLib
+  concurrentHull3dLib
+  searchHull3dLib
+  bruteforceHull3dLib
+  gridHull3dLib
+  samplingHull3dLib
+  pseudoHull3dLib
+  serialHull3dLib
+  incrementalHull3dLib
+  ${GTest_LIBRARIES})
 add_test(NAME hull_test COMMAND hull_test)
 
 add_executable(hullTopology_test hullTopology_test.cpp)
 target_link_libraries(hullTopology_test PRIVATE
-  pargeoLib convexHull3dLib ${GTest_LIBRARIES})
+  pargeoLib ${GTest_LIBRARIES})
 add_test(NAME hullTopology_test COMMAND hullTopology_test)
 
 add_executable(dataset_test dataset_test.cpp)

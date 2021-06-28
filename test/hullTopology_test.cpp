@@ -6,6 +6,7 @@
 #include "gtest/gtest.h"
 
 TEST(hullTopology, facetTraversal) {
+  using vertex = pargeo::hullInternal::vertex;
   sequence<vertex> P(4);
   size_t i = 0;
   P[i][0] = 0; P[i][1] = 0; P[i][2] = 0;

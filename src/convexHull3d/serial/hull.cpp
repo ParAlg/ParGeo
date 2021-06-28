@@ -1,4 +1,6 @@
-#include "convexHull3d/hull.h"
+//#include "convexHull3d/hull.h"
+#include "convexHull3d/serialHull.h"
+#include "convexHull3d/bruteforceHull.h"
 
 #include "parlay/parallel.h"
 #include "parlay/sequence.h"
@@ -15,20 +17,21 @@ pargeo::hull3dSerial(parlay::sequence<pargeo::fpoint<3>> &P) {
   using pointT = pargeo::fpoint<3>;
   using floatT = pointT::floatT;
   using facetT = facet3d<pointT>;
+  using vertexT = pargeo::hullInternal::vertex;
 
   if (P.size() < 10) return hull3dBruteforce(P);
 
-  sequence<vertex> Q(P.size());
+  sequence<vertexT> Q(P.size());
 
   parallel_for(0, P.size(), [&](size_t i) {
-			      Q[i] = vertex(P[i].coords());
+			      Q[i] = vertexT(P[i].coords());
 			    });
 
   auto origin = pointOrigin();
 
-  auto linkedHull = new serialHull<linkedFacet3d<vertex>, vertex, pointOrigin>(make_slice(Q), origin);
+  auto linkedHull = new serialHull<linkedFacet3d<vertexT>, vertexT, pointOrigin>(make_slice(Q), origin);
 
-  incrementHull3dSerial<linkedFacet3d<vertex>, vertex>(linkedHull);
+  incrementHull3dSerial<linkedFacet3d<vertexT>, vertexT>(linkedHull);
 
   auto out = sequence<facetT>();
 

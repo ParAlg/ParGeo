@@ -106,7 +106,7 @@ void incrementHull3dSerial(serialHull<linkedFacet3d, vertex3d, origin3d> *contex
 	errors ++;
 #endif
 
-	abort(); // handle numerical issue todo
+	throw std::runtime_error("numerical issue not handled yet in search-hull");
 	goto loopStart;
       }
     }

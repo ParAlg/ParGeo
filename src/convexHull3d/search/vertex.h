@@ -23,9 +23,33 @@
 #pragma once
 
 //#include <vector>
-#include "convexHull3d/hull.h"
+#include "convexHull3d/searchHull.h"
 #include "parlay/sequence.h"
 #include "pargeo/algebra.h"
+
+class vertexAtt;
+
+using vertex = pargeo::_point<3, pargeo::fpoint<3>::floatT, pargeo::fpoint<3>::floatT, vertexAtt>;
+
+template <class vertexT> struct linkedFacet3d;
+
+// should probably template the facet
+class vertexAtt {
+public:
+  static constexpr typename pargeo::fpoint<3>::floatT numericKnob = 1e-5;
+
+// #ifdef VERBOSE
+//   size_t i;
+// #endif
+  linkedFacet3d<vertex> *seeFacet;
+  vertexAtt() {}
+};
+
+static std::ostream& operator<<(std::ostream& os, const vertex& v) {
+  for (int i=0; i<v.dim; ++i)
+    os << v.x[i] << " ";
+  return os;
+}
 
 template <class vertexT>
 struct linkedFacet3d {

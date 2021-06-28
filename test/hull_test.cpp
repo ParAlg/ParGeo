@@ -1,16 +1,20 @@
 #include "convexHull3d/hull.h"
+#include "convexHull3d/bruteforceHull.h"
+#include "convexHull3d/serialHull.h"
+#include "convexHull3d/pseudoHull.h"
+#include "convexHull3d/gridHull.h"
+#include "convexHull3d/samplingHull.h"
+#include "convexHull3d/searchHull.h"
+#include "convexHull3d/concurrentHull.h"
+#include "convexHull3d/incrementalHull.h"
+
 #include "parlay/primitives.h"
 #include "pargeo/pointIO.h"
+#include "dataset/uniform.h"
 #include "gtest/gtest.h"
 
-parlay::sequence<pargeo::fpoint<3>> data40() {
-  auto filePath = "datasets/3d_40.txt";
-  int dim = pargeo::pointIO::readHeader(filePath);
-
-  parlay::sequence<pargeo::fpoint<3>> P =
-    pargeo::pointIO::readPointsFromFile<pargeo::fpoint<3>>(filePath);
-
-  return P;
+parlay::sequence<pargeo::fpoint<3>> data() {
+  return pargeo::uniformInPolyPoints<3, pargeo::fpoint<3>>(100, 0);
 }
 
 bool compareFacets(parlay::sequence<pargeo::facet3d<pargeo::fpoint<3>>> H1,
@@ -54,7 +58,7 @@ bool compareFacets(parlay::sequence<pargeo::facet3d<pargeo::fpoint<3>>> H1,
 }
 
 TEST(hull3d_serial, compareFacet) {
-  auto P = data40();
+  auto P = data();
   auto H1 = pargeo::hull3dSerial(P);
   auto H2 = pargeo::hull3dBruteforce(P);
   EXPECT_EQ(H1.size(), H2.size());
@@ -62,7 +66,7 @@ TEST(hull3d_serial, compareFacet) {
 }
 
 TEST(hull3d_incremental, compareFacet) {
-  auto P = data40();
+  auto P = data();
   auto H1 = pargeo::hull3dIncremental(P, 2);
   auto H2 = pargeo::hull3dBruteforce(P);
   EXPECT_EQ(H1.size(), H2.size());
@@ -70,7 +74,7 @@ TEST(hull3d_incremental, compareFacet) {
 }
 
 TEST(hull3d_concurrent, compareFacet) {
-  auto P = data40();
+  auto P = data();
   auto H1 = pargeo::hull3dConcurrent(P, 2);
   auto H2 = pargeo::hull3dBruteforce(P);
   EXPECT_EQ(H1.size(), H2.size());
@@ -78,7 +82,7 @@ TEST(hull3d_concurrent, compareFacet) {
 }
 
 TEST(hull3d_pseudo, compareFacet) {
-  auto P = data40();
+  auto P = data();
   auto H1 = pargeo::hull3dPseudo(P);
   auto H2 = pargeo::hull3dBruteforce(P);
   EXPECT_EQ(H1.size(), H2.size());
@@ -86,8 +90,24 @@ TEST(hull3d_pseudo, compareFacet) {
 }
 
 TEST(hull3d_grid, compareFacet) {
-  auto P = data40();
+  auto P = data();
   auto H1 = pargeo::hull3dGrid(P, 2, false);
+  auto H2 = pargeo::hull3dBruteforce(P);
+  EXPECT_EQ(H1.size(), H2.size());
+  EXPECT_TRUE(compareFacets(H1, H2));
+}
+
+TEST(hull3d_samping, compareFacet) {
+  auto P = data();
+  auto H1 = pargeo::hull3dSampling(P, 0.01);
+  auto H2 = pargeo::hull3dBruteforce(P);
+  EXPECT_EQ(H1.size(), H2.size());
+  EXPECT_TRUE(compareFacets(H1, H2));
+}
+
+TEST(hull3d_search, compareFacet) {
+  auto P = data();
+  auto H1 = pargeo::hull3dSearch(P);
   auto H2 = pargeo::hull3dBruteforce(P);
   EXPECT_EQ(H1.size(), H2.size());
   EXPECT_TRUE(compareFacets(H1, H2));

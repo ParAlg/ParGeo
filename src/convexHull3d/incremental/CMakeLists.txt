@@ -1,19 +1,9 @@
 project(incrementalHull3d)
 
-#------------------- Compile as executable
-
-add_executable(${PROJECT_NAME} hullTime.cpp hull.cpp)
-
-target_link_libraries(${PROJECT_NAME} pargeolib)
-
-target_include_directories(${PROJECT_NAME} PRIVATE ../include)
-
-#------------------- Compile as library
-
-add_library(${PROJECT_NAME}Lib
+add_library(incrementalHull3dLib
   hull.cpp
   )
 
-target_link_libraries(${PROJECT_NAME}Lib pargeolib)
+target_link_libraries(incrementalHull3dLib pargeoLib serialHull3dLib)
 
-target_include_directories(${PROJECT_NAME}Lib PRIVATE ../include)
+#target_include_directories(incrementalHull3dLib PRIVATE ../include)
