@@ -45,3 +45,9 @@ target_link_libraries(hull pargeoLib
   serialHull3dLib
   incrementalHull3dLib
   )
+
+add_executable(hullSampling hullSampling.cpp)
+target_link_libraries(hullSampling pargeoLib
+  samplingHull3dLib
+  serialHull3dLib
+  )

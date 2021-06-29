@@ -23,6 +23,7 @@
 #include "convexHull3d/vertex.h"
 #include "convexHull3d/serialHull.h"
 #include "convexHull3d/samplingHull.h"
+#include "convexHull3d/internal/sampling.h"
 
 #include "parlay/parallel.h"
 #include "parlay/sequence.h"
@@ -50,9 +51,7 @@ pargeo::hull3dSampling(parlay::sequence<pargeo::fpoint<3>> &P, double fraction) 
   size_t sampleSize = P.size() * fraction;
   sampleSize = std::max(sampleSize, size_t(5));
 
-  auto sample = parlay::tabulate(sampleSize, [&](size_t i) {
-					       return P[parlay::hash64(i) % P.size()];
-					     });
+  auto sample = pargeo::hullInternal::randomSample(P, sampleSize);
 
   parlay::sequence<facet3d<pointT>> sampleHull = hull3dSerial(sample);
 

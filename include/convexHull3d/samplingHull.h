@@ -2,8 +2,8 @@
 
 #include "facet.h"
 #include "pargeo/point.h"
+#include "pargeo/getTime.h"
 #include "parlay/sequence.h"
-#include "parlay/parallel.h"
 
 namespace pargeo {
 
