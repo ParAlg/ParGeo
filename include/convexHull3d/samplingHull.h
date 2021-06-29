@@ -10,6 +10,15 @@ namespace pargeo {
   parlay::sequence<facet3d<pargeo::fpoint<3>>>
   hull3dSampling(parlay::sequence<pargeo::fpoint<3>> &, double);
 
+  parlay::sequence<facet3d<pargeo::fpoint<3>>>
+  hull3dRandomSampling(parlay::sequence<pargeo::fpoint<3>> &P, double fraction);
+
+  parlay::sequence<facet3d<pargeo::fpoint<3>>>
+  hull3dGridSampling(parlay::sequence<pargeo::fpoint<3>> &P, double fraction);
+
+  parlay::sequence<facet3d<pargeo::fpoint<3>>>
+  hull3dRandomProjection(parlay::sequence<pargeo::fpoint<3>> &P, double fraction);
+
   double
   testHull(parlay::sequence<pargeo::fpoint<3>> &, double);
 

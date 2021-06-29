@@ -23,7 +23,6 @@
 #pragma once
 
 #include <vector>
-#include "convexHull3d/hull.h"
 #include "convexHull3d/vertex.h"
 #include "parlay/sequence.h"
 #include "pargeo/algebra.h"

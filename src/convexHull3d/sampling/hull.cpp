@@ -60,26 +60,7 @@ pargeo::hull3dSampling(parlay::sequence<pargeo::fpoint<3>> &P, double fraction) 
   std::cout << "h = " << sampleHull.size() << "\n";
 #endif
 
-  auto interiorPt = (sampleHull[0].a + sampleHull[sampleSize % sampleHull.size()].a) / 2;
-
-  sequence<pointT> area(sampleHull.size());
-  parallel_for(0, sampleHull.size(),
-	       [&](size_t i){
-		 auto f = sampleHull[i];
-		 area[i] = pargeo::crossProduct3d(f.b-f.a, f.c-f.a);
-	       });
-
-  auto isOut = [&](pointT p) {
-		 for (size_t i = 0; i < sampleHull.size(); ++i) {
-		   auto f = sampleHull[i];
-		   if (((f.a - interiorPt) - (p - interiorPt)).dot(area[i]) > 0) {
-		     return true;
-		   }
-		 }
-		 return false;
-	       };
-
-  auto remain = parlay::filter(make_slice(P), isOut);
+  auto remain = pargeo::hullInternal::filter1(P, sampleHull);
 
 #ifdef SAMPLE_HULL_VERBOSE
   std::cout << "filter-time = " << t.get_next() << "\n";
@@ -93,4 +74,43 @@ pargeo::hull3dSampling(parlay::sequence<pargeo::fpoint<3>> &P, double fraction) 
   std::cout << "final-hull-time = " << t.stop() << "\n";
 #endif
   return hull;
+}
+
+parlay::sequence<facet3d<pargeo::fpoint<3>>>
+pargeo::hull3dRandomSampling(parlay::sequence<pargeo::fpoint<3>> &P, double fraction) {
+  using namespace std;
+  using namespace parlay;
+  using namespace pargeo;
+  if (P.size() < 1000) return hull3dSerial(P);
+  size_t sampleSize = std::max(size_t(P.size() * fraction), size_t(5));
+  auto sample = pargeo::hullInternal::randomSample(P, sampleSize);
+  parlay::sequence<facet3d<fpoint<3>>> sampleHull = hull3dSerial(sample);
+  auto remain = pargeo::hullInternal::filter1(P, sampleHull);
+  return hull3dSerial(remain);
+}
+
+parlay::sequence<facet3d<pargeo::fpoint<3>>>
+pargeo::hull3dGridSampling(parlay::sequence<pargeo::fpoint<3>> &P, double fraction) {
+  using namespace std;
+  using namespace parlay;
+  using namespace pargeo;
+  if (P.size() < 1000) return hull3dSerial(P);
+  size_t sampleSize = std::max(size_t(P.size() * fraction), size_t(5));
+  auto sample = pargeo::hullInternal::gridSample(P, sampleSize);
+  parlay::sequence<facet3d<fpoint<3>>> sampleHull = hull3dSerial(sample);
+  auto remain = pargeo::hullInternal::filter1(P, sampleHull);
+  return hull3dSerial(remain);
+}
+
+parlay::sequence<facet3d<pargeo::fpoint<3>>>
+pargeo::hull3dRandomProjection(parlay::sequence<pargeo::fpoint<3>> &P, double fraction) {
+  using namespace std;
+  using namespace parlay;
+  using namespace pargeo;
+  if (P.size() < 1000) return hull3dSerial(P);
+  size_t sampleSize = std::max(size_t(P.size() * fraction), size_t(5));
+  auto sample = pargeo::hullInternal::randomProjection(P, sampleSize);
+  parlay::sequence<facet3d<fpoint<3>>> sampleHull = hull3dSerial(sample);
+  auto remain = pargeo::hullInternal::filter1(P, sampleHull);
+  return hull3dSerial(remain);
 }

@@ -58,3 +58,9 @@ target_link_libraries(hull_bench PRIVATE
   incrementalHull3dLib
   pargeoLib
   benchmark_main)
+
+add_executable(hull_sampling hull_sampling.cpp)
+target_link_libraries(hull_sampling PRIVATE
+  samplingHull3dLib
+  pargeoLib
+  benchmark_main)

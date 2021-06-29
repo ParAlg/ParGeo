@@ -23,9 +23,9 @@ template <class pt>
 void timeHull(parlay::sequence<pt> &P, int rounds, char const *outFile) {
   timer t; t.start();
   for(int i=0; i<rounds; ++i) {
-    auto H = hull3dSerial(P);
-    std::cout << "serial-time = " << t.get_next() << "\n";
-    std::cout << "hull-size = " << H.size() << "\n";
+    // auto H = hull3dSerial(P);
+    // std::cout << "serial-time = " << t.get_next() << "\n";
+    // std::cout << "hull-size = " << H.size() << "\n";
     // H = hull3dGift(P);
     // std::cout << "serial-time = " << t.get_next() << "\n";
     // std::cout << "hull-size = " << H.size() << "\n";
@@ -44,9 +44,9 @@ void timeHull(parlay::sequence<pt> &P, int rounds, char const *outFile) {
     // H = hull3dSearch(P);
     // std::cout << "search-time = " << t.get_next() << "\n";
     // std::cout << "hull-size = " << H.size() << "\n";
-    // H = hull3dSampling(P, 0.01);
-    // std::cout << "sampling-time = " << t.get_next() << "\n";
-    // std::cout << "hull-size = " << H.size() << "\n";
+    auto H = hull3dSampling(P, 0.0001);
+    std::cout << "sampling-time = " << t.get_next() << "\n";
+    std::cout << "hull-size = " << H.size() << "\n";
   }
   t.stop();
 }

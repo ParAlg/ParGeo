@@ -1,4 +1,3 @@
-//#include "convexHull3d/hull.h"
 #include "convexHull3d/serialHull.h"
 
 #include "parlay/parallel.h"

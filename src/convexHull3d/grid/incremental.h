@@ -24,7 +24,6 @@
 
 #include "parlay/sequence.h"
 #include "pargeo/getTime.h"
-#include "convexHull3d/hull.h"
 #include "gridVertex.h"
 #include "gridHull.h"
 

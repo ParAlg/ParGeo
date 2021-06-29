@@ -20,7 +20,6 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-// #include "convexHull3d/hull.h"
 #include "convexHull3d/vertex.h"
 #include "convexHull3d/serialHull.h"
 #include "convexHull3d/samplingHull.h"

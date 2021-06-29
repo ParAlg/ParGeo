@@ -1,4 +1,3 @@
-#include "convexHull3d/hull.h"
 #include "convexHull3d/serialHull.h"
 #include "convexHull3d/pseudoHull.h"
 #include "convexHull3d/gridHull.h"
@@ -6,13 +5,12 @@
 #include "convexHull3d/searchHull.h"
 #include "convexHull3d/concurrentHull.h"
 #include "convexHull3d/incrementalHull.h"
+#include "convexHull3d/samplingHull.h"
+#include "convexHull3d/searchHull.h"
 
 #include <benchmark/benchmark.h>
 
 #include "dataset/uniform.h"
-#include "convexHull3d/hull.h"
-#include "convexHull3d/samplingHull.h"
-#include "convexHull3d/searchHull.h"
 
 long maxThreads = 12;
 long defaultN = 1000000;

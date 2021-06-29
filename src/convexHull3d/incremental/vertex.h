@@ -25,7 +25,6 @@
 #include <vector>
 #include "parlay/sequence.h"
 #include "pargeo/algebra.h"
-#include "convexHull3d/hull.h"
 #include "convexHull3d/vertex.h"
 
 template <class vertexT>
