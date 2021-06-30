@@ -88,31 +88,5 @@ namespace pargeo {
       return filter(sample, [&](fpoint<3> p) {return !p.isEmpty();});
     }
 
-    parlay::sequence<fpoint<3>>
-    filter1(parlay::sequence<fpoint<3>> &P, parlay::sequence<facet3d<fpoint<3>>> &F) {
-      using namespace parlay;
-
-      auto interiorPt = (F[0].a + F[F.size()-1].a) / 2;
-
-      sequence<fpoint<3>> area(F.size());
-      parallel_for(0, F.size(),
-		   [&](size_t i){
-		     auto f = F[i];
-		     area[i] = pargeo::crossProduct3d(f.b-f.a, f.c-f.a);
-		   });
-
-      auto isOut = [&](fpoint<3> p) {
-		     for (size_t i = 0; i < F.size(); ++i) {
-		       auto f = F[i];
-		       if (((f.a - interiorPt) - (p - interiorPt)).dot(area[i]) > 0) {
-			 return true;
-		       }
-		     }
-		     return false;
-		   };
-
-      return parlay::filter(make_slice(P), isOut);
-    }
-
   } // End namespace hullInternal
 }; // End namespace pargeo

@@ -8,7 +8,7 @@
 namespace pargeo {
 
   parlay::sequence<facet3d<pargeo::fpoint<3>>>
-  hull3dSampling(parlay::sequence<pargeo::fpoint<3>> &, double);
+  hull3dSampling(parlay::sequence<pargeo::fpoint<3>> &, double fraction = 0.001);
 
   parlay::sequence<facet3d<pargeo::fpoint<3>>>
   hull3dRandomSampling(parlay::sequence<pargeo::fpoint<3>> &P, double fraction);

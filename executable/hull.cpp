@@ -1,4 +1,3 @@
-#include "convexHull3d/hull.h"
 #include "convexHull3d/giftHull.h"
 #include "convexHull3d/serialHull.h"
 #include "convexHull3d/pseudoHull.h"
@@ -44,7 +43,7 @@ void timeHull(parlay::sequence<pt> &P, int rounds, char const *outFile) {
     // H = hull3dSearch(P);
     // std::cout << "search-time = " << t.get_next() << "\n";
     // std::cout << "hull-size = " << H.size() << "\n";
-    auto H = hull3dSampling(P, 0.0001);
+    auto H = hull3dSampling(P, 0.01);
     std::cout << "sampling-time = " << t.get_next() << "\n";
     std::cout << "hull-size = " << H.size() << "\n";
   }

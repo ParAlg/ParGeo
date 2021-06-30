@@ -107,17 +107,17 @@ static void pseudo_inCube(benchmark::State& state) {
 
 static void sampling_inSphere(benchmark::State& state) {
   auto P = data0(state.range(0));
-  for (auto _ : state) hull3dSampling(P, 0.01);
+  for (auto _ : state) hull3dSampling(P);
 }
 
 static void sampling_onSphere(benchmark::State& state) {
   auto P = data1(state.range(0));
-  for (auto _ : state) hull3dSampling(P, 0.01);
+  for (auto _ : state) hull3dSampling(P);
 }
 
 static void sampling_inCube(benchmark::State& state) {
   auto P = data2(state.range(0));
-  for (auto _ : state) hull3dSampling(P, 0.01);
+  for (auto _ : state) hull3dSampling(P);
 }
 
 static void search_inSphere(benchmark::State& state) {
