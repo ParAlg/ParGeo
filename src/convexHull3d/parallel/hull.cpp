@@ -60,3 +60,31 @@ pargeo::hull3dParallel(parlay::sequence<pargeo::fpoint<3>> &P, size_t numProc) {
   delete linkedHull;
   return out;
 }
+
+parlay::sequence<pargeo::facet3d<pargeo::fpoint<3>>>
+pargeo::hullInternal::hull3dParallelInternal(parlay::slice<
+			       pargeo::hullInternal::vertex*,
+			       pargeo::hullInternal::vertex*
+			       > Q,
+			       size_t numProc) {
+  using namespace std;
+  using namespace parlay;
+  using floatT = pargeo::fpoint<3>::floatT;
+  using pointT = pargeo::fpoint<3>;
+  using facetT = facet3d<pargeo::fpoint<3>>;
+  using vertexT = pargeo::hullInternal::vertex;
+
+  // Create an initial simplex
+  auto origin = pointOrigin();
+
+  auto linkedHull = new parallelHull<linkedFacet3d<vertexT>, vertexT, pointOrigin>(Q, origin);
+
+  incrementHull3d<linkedFacet3d<vertexT>, vertexT, pointOrigin>(linkedHull, numProc);
+
+  // getHull will undo the translation of linkedHull
+  auto out = sequence<facetT>();
+  linkedHull->getHull<pointT>(out);
+
+  delete linkedHull;
+  return out;
+}

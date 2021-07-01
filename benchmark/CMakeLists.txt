@@ -55,7 +55,8 @@ target_link_libraries(hull_bench PRIVATE
   samplingHull3dLib
   pseudoHull3dLib
   serialHull3dLib
-  incrementalHull3dLib
+  #incrementalHull3dLib
+  parallelHull3dLib
   pargeoLib
   benchmark_main)
 

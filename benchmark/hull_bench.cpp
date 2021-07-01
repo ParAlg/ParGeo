@@ -4,7 +4,8 @@
 #include "convexHull3d/samplingHull.h"
 #include "convexHull3d/searchHull.h"
 #include "convexHull3d/concurrentHull.h"
-#include "convexHull3d/incrementalHull.h"
+// #include "convexHull3d/incrementalHull.h"
+#include "convexHull3d/parallelHull.h"
 #include "convexHull3d/samplingHull.h"
 #include "convexHull3d/searchHull.h"
 
@@ -45,19 +46,34 @@ static void serial_inCube(benchmark::State& state) {
   for (auto _ : state) hull3dSerial(P);
 }
 
-static void incremental_inSphere(benchmark::State& state) {
+// static void incremental_inSphere(benchmark::State& state) {
+//   auto P = data0(state.range(0));
+//   for (auto _ : state) hull3dIncremental(P, state.range(1));
+// }
+
+// static void incremental_onSphere(benchmark::State& state) {
+//   auto P = data1(state.range(0));
+//   for (auto _ : state) hull3dIncremental(P, state.range(1));
+// }
+
+// static void incremental_inCube(benchmark::State& state) {
+//   auto P = data2(state.range(0));
+//   for (auto _ : state) hull3dIncremental(P, state.range(1));
+// }
+
+static void parallel_inSphere(benchmark::State& state) {
   auto P = data0(state.range(0));
-  for (auto _ : state) hull3dIncremental(P, state.range(1));
+  for (auto _ : state) hull3dParallel(P, state.range(1));
 }
 
-static void incremental_onSphere(benchmark::State& state) {
+static void parallel_onSphere(benchmark::State& state) {
   auto P = data1(state.range(0));
-  for (auto _ : state) hull3dIncremental(P, state.range(1));
+  for (auto _ : state) hull3dParallel(P, state.range(1));
 }
 
-static void incremental_inCube(benchmark::State& state) {
+static void parallel_inCube(benchmark::State& state) {
   auto P = data2(state.range(0));
-  for (auto _ : state) hull3dIncremental(P, state.range(1));
+  for (auto _ : state) hull3dParallel(P, state.range(1));
 }
 
 static void concurrent_inSphere(benchmark::State& state) {
@@ -139,9 +155,13 @@ BENCHMARK(serial_inSphere)->Unit(benchmark::kMillisecond)->Arg(defaultN);
 BENCHMARK(serial_onSphere)->Unit(benchmark::kMillisecond)->Arg(defaultN);
 BENCHMARK(serial_inCube)->Unit(benchmark::kMillisecond)->Arg(defaultN);
 
-BENCHMARK(incremental_inSphere)->Unit(benchmark::kMillisecond)->Args({defaultN, maxThreads});
-BENCHMARK(incremental_onSphere)->Unit(benchmark::kMillisecond)->Args({defaultN, maxThreads});
-BENCHMARK(incremental_inCube)->Unit(benchmark::kMillisecond)->Args({defaultN, maxThreads});
+// BENCHMARK(incremental_inSphere)->Unit(benchmark::kMillisecond)->Args({defaultN, maxThreads});
+// BENCHMARK(incremental_onSphere)->Unit(benchmark::kMillisecond)->Args({defaultN, maxThreads});
+// BENCHMARK(incremental_inCube)->Unit(benchmark::kMillisecond)->Args({defaultN, maxThreads});
+
+BENCHMARK(parallel_inSphere)->Unit(benchmark::kMillisecond)->Args({defaultN, maxThreads});
+BENCHMARK(parallel_onSphere)->Unit(benchmark::kMillisecond)->Args({defaultN, maxThreads});
+BENCHMARK(parallel_inCube)->Unit(benchmark::kMillisecond)->Args({defaultN, maxThreads});
 
 BENCHMARK(concurrent_inSphere)->Unit(benchmark::kMillisecond)->Args({defaultN, maxThreads});
 BENCHMARK(concurrent_onSphere)->Unit(benchmark::kMillisecond)->Args({defaultN, maxThreads});

@@ -28,7 +28,7 @@
 #include "parallelHull.h"
 #include "vertex.h"
 
-#define HULL_PARALLEL_VERBOSE
+// #define HULL_PARALLEL_VERBOSE
 
 template<class linkedFacet3d, class vertex3d, class origin3d>
 void incrementHull3d(parallelHull<linkedFacet3d, vertex3d, origin3d> *context, size_t numProc = 0) {

@@ -23,6 +23,7 @@
 #include "convexHull3d/vertex.h"
 #include "convexHull3d/serialHull.h"
 #include "convexHull3d/samplingHull.h"
+#include "convexHull3d/parallelHull.h"
 #include "convexHull3d/concurrentHull.h"
 
 #include "parlay/parallel.h"
@@ -111,7 +112,8 @@ pargeo::hull3dConcurrent(parlay::sequence<pargeo::fpoint<3>> &P, size_t numProc)
     std::cout << "> concurrent-hull-time = " << t.get_next() << "\n";
 #endif
 
-    return hullInternal::hull3dSerialInternal2(make_slice(Q2));
+    // return hullInternal::hull3dSerialInternal2(make_slice(Q2));
+    return hullInternal::hull3dParallelInternal(make_slice(Q2));
     // return hull3dIncrementalInternal(make_slice(Q2));
 
 #ifdef HULL_CONCURRENT_VERBOSE

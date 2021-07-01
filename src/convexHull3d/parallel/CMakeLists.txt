@@ -1,5 +1,3 @@
-project(parallelHull3d)
-
 add_library(parallelHull3dLib
   hull.cpp
   )
