@@ -298,7 +298,7 @@ e.b==e.ff.a    e.a==e.ff.c
 		   cout << "Erroneous hull size = " << hullSizeDfs(f) << endl;
 		   throw std::runtime_error("Error, hull inconsistency detected");
 		 }
-		 if (!checker) cout << *f << ":" << f->numVisiblePts() << " ";
+		 if (!checker) cout << f << ":" << f->numPts() << " ";
 	       };
     auto fStop = [&]() { return false;};
 

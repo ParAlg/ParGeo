@@ -1,4 +1,5 @@
 add_subdirectory(incremental)
+add_subdirectory(parallel)
 add_subdirectory(bruteforce)
 add_subdirectory(pseudoHull)
 add_subdirectory(concurrent)
