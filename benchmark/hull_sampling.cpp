@@ -1,7 +1,7 @@
 #include <benchmark/benchmark.h>
 
 #include "dataset/uniform.h"
-#include "convexHull3d/samplingHull.h"
+#include "convexHull3d/sampling/hull.h"
 
 long maxThreads = 12;
 long defaultN = 1000000;
@@ -23,17 +23,17 @@ parlay::sequence<pargeo::fpoint<3>> data2(size_t n = defaultN) {
 
 static void randomSampling_inSphere(benchmark::State& state, double fraction) {
   auto P = data0();
-  for (auto _ : state) hull3dRandomSampling(P, fraction);
+  for (auto _ : state) pargeo::hull3d::sampling::random(make_slice(P), fraction);
 }
 
 static void randomSampling_onSphere(benchmark::State& state, double fraction) {
   auto P = data1();
-  for (auto _ : state) hull3dRandomSampling(P, fraction);
+  for (auto _ : state) pargeo::hull3d::sampling::random(make_slice(P), fraction);
 }
 
 static void randomSampling_inCube(benchmark::State& state, double fraction) {
   auto P = data2();
-  for (auto _ : state) hull3dRandomSampling(P, fraction);
+  for (auto _ : state) pargeo::hull3d::sampling::random(make_slice(P), fraction);
 }
 
 BENCHMARK_CAPTURE(randomSampling_inSphere, 0.1, 0.1)->Unit(benchmark::kMillisecond);
@@ -53,17 +53,17 @@ BENCHMARK_CAPTURE(randomSampling_inCube, 0.0001, 0.0001)->Unit(benchmark::kMilli
 
 static void gridSampling_inSphere(benchmark::State& state, double fraction) {
   auto P = data0();
-  for (auto _ : state) hull3dGridSampling(P, fraction);
+  for (auto _ : state) pargeo::hull3d::sampling::grid(make_slice(P), fraction);
 }
 
 static void gridSampling_onSphere(benchmark::State& state, double fraction) {
   auto P = data1();
-  for (auto _ : state) hull3dGridSampling(P, fraction);
+  for (auto _ : state) pargeo::hull3d::sampling::grid(make_slice(P), fraction);
 }
 
 static void gridSampling_inCube(benchmark::State& state, double fraction) {
   auto P = data2();
-  for (auto _ : state) hull3dGridSampling(P, fraction);
+  for (auto _ : state) pargeo::hull3d::sampling::grid(make_slice(P), fraction);
 }
 
 BENCHMARK_CAPTURE(gridSampling_inSphere, 0.1, 0.1)->Unit(benchmark::kMillisecond);
@@ -83,17 +83,17 @@ BENCHMARK_CAPTURE(gridSampling_inCube, 0.0001, 0.0001)->Unit(benchmark::kMillise
 
 static void randomProjection_inSphere(benchmark::State& state, double fraction) {
   auto P = data0();
-  for (auto _ : state) hull3dRandomProjection(P, fraction);
+  for (auto _ : state) pargeo::hull3d::sampling::projection(make_slice(P), fraction);
 }
 
 static void randomProjection_onSphere(benchmark::State& state, double fraction) {
   auto P = data1();
-  for (auto _ : state) hull3dRandomProjection(P, fraction);
+  for (auto _ : state) pargeo::hull3d::sampling::projection(make_slice(P), fraction);
 }
 
 static void randomProjection_inCube(benchmark::State& state, double fraction) {
   auto P = data2();
-  for (auto _ : state) hull3dRandomProjection(P, fraction);
+  for (auto _ : state) pargeo::hull3d::sampling::projection(make_slice(P), fraction);
 }
 
 BENCHMARK_CAPTURE(randomProjection_inSphere, 0.01, 0.01)->Unit(benchmark::kMillisecond);

@@ -32,9 +32,8 @@
 #include "pargeo/point.h"
 #include "pargeo/getTime.h"
 
-using namespace std;
-using namespace parlay;
-using namespace parlay::internal;
+namespace pargeo {
+namespace hull3d {
 
 // Example for hashing numeric values.
 // T must be some integer type
@@ -44,7 +43,7 @@ struct hash_pointer {
   using kType = T;
   eType empty() { return nullptr; }
   kType getKey(eType v) { return v; }
-  size_t hash(kType v) { return static_cast<size_t>(hash64(size_t(v))); }
+  size_t hash(kType v) { return static_cast<size_t>(parlay::hash64(size_t(v))); }
   int cmp(kType v, kType b) { return (v > b) ? 1 : ((v == b) ? 0 : -1); }
   bool replaceQ(eType, eType) { return 0; }
   eType update(eType v, eType) { return v; }
@@ -54,28 +53,36 @@ struct hash_pointer {
   }
 };
 
-template <class facetT, class vertexT, class originT>
+template <class facetT, class vertexT>
 class _hullTopology {
 
 protected:
 
+  static constexpr typename vertexT::floatT numericKnob = vertexT::pointT::eps;
+
+public:
   // The number of facets in H
   std::atomic<size_t> hSize;
 
-public:
+  vertexT interiorPt;
+
   // A linked structure for the facets
   facetT* H;
+
+  inline bool visible(facetT* f, vertexT p) {
+    return (f->a - p).dot(f->area) > numericKnob;
+  }
 
   /* Depth-first hull traversal (no facet repeat)
   */
   template <class F, class G, class H>
   void dfsFacet(facetT* start, F& fVisit, G& fDo, H& fStop) {
 
-    hashtable<hash_pointer<facetT*>> V(hSize, hash_pointer<facetT*>());
+    parlay::hashtable<hash_pointer<facetT*>> V(hSize, hash_pointer<facetT*>());
     auto mark = [&](facetT* f) {V.insert(f);};
     auto visited = [&](facetT* f) {return V.find(f) != nullptr;};
 
-    stack<_edge> S;
+    std::stack<_edge> S;
 
     S.emplace(start->b, start->a, start, nullptr);
 
@@ -105,7 +112,7 @@ public:
 
     // Quadratic iteration of V seems to be fast
     // as the involved facets are few
-    sequence<edgeT> V;
+    parlay::sequence<edgeT> V;
     auto mark = [&](edgeT f) {V.push_back(f);};
     auto visited = [&](edgeT f) {
 		     for (auto g: V) {
@@ -113,7 +120,7 @@ public:
 		     }
 		     return false;};
 
-    stack<edgeT> S;
+    std::stack<edgeT> S;
 
     /* Create initial advancing edge (b,a)
          o start->c
@@ -154,7 +161,7 @@ e.b==e.ff.a    e.a==e.ff.c
 
   // An arbitrary coordinate class located within the hull
   // it also contains primitives for visibility test
-  originT origin;
+  // originT origin;
 
   // Link f with ab, bc, ca; the edge matching is automatic -- input in any order
   void linkFacet(facetT* f, facetT* ab, facetT* bc, facetT* ca) {
@@ -221,17 +228,18 @@ e.b==e.ff.a    e.a==e.ff.c
 /*     return f0; */
 /*   } */
 
-  originT getOrigin() {
-    return origin;
-  }
+  // originT getOrigin() {
+  //   return origin;
+  // }
 
   _hullTopology() {}
 
   /* Compute a frontier of edges in the clockwise order
       and facets to delete
    */
-  tuple<sequence<_edge>, sequence<facetT*>> computeFrontier(vertexT apex) {
-    facetT* fVisible = apex.attribute.seeFacet;
+  std::tuple<parlay::sequence<_edge>, parlay::sequence<facetT*>> computeFrontier(vertexT apex) {
+    using namespace parlay;
+    facetT* fVisible = apex.seeFacet;
 
     auto frontier = sequence<_edge>();
     auto facets = sequence<facetT*>();
@@ -245,7 +253,7 @@ e.b==e.ff.a    e.a==e.ff.c
     auto fVisit = [&](_edge e) {
 		    // Visit the facet as long as the parent facet is visible to the apex
 		    // e.fb == nullptr for the starting facet (whose parent is nullptr, see dfsEdge(...))
-		    if (e.fb == nullptr || origin.visible(e.fb, apex))
+		    if (e.fb == nullptr || visible(e.fb, apex))
 		      return true;
 		    else
 		      return false;
@@ -253,25 +261,23 @@ e.b==e.ff.a    e.a==e.ff.c
 
     auto fDo = [&](_edge e) {
 		 // Include the facet for deletion if visible
-		 bool seeff = origin.visible(e.ff, apex);
+		 bool seeff = visible(e.ff, apex);
 		 if ((seeff || e.fb == nullptr) && !facetVisited(e.ff))
 		   facets.push_back(e.ff);
 
 		 if (e.fb == nullptr) return; // Stop for the starting facet
 
 		 // Include an edge joining a visible and an invisible facet as frontier
-		 bool seefb = origin.visible(e.fb, apex);
+		 bool seefb = visible(e.fb, apex);
 		 if (seefb && !seeff) {
 		   frontier.emplace_back(e.a, e.b, e.ff, e.fb);
 		 }
   	       };
     auto fStop = [&](){ return false;};
 
-    dfsEdge(apex.attribute.seeFacet, fVisit, fDo, fStop);
-    return make_tuple(std::move(frontier), std::move(facets));
+    dfsEdge(apex.seeFacet, fVisit, fDo, fStop);
+    return std::make_tuple(std::move(frontier), std::move(facets));
   }
-
-  virtual facetT* initialize(slice<vertexT*, vertexT*> P) = 0;
 
   std::atomic<size_t>& hullSize() {
     return hSize;
@@ -294,18 +300,18 @@ e.b==e.ff.a    e.a==e.ff.c
     auto fVisit = [&](facetT* f) { return true;};
     auto fDo = [&](facetT* f) {
 		 if (checker && hullSizeDfs(f) != hs) {
-		   cout << " ..." << endl;
-		   cout << "Erroneous hull size = " << hullSizeDfs(f) << endl;
+		   std::cout << " ...\n";
+		   std::cout << "Erroneous hull size = " << hullSizeDfs(f) << "\n";
 		   throw std::runtime_error("Error, hull inconsistency detected");
 		 }
-		 if (!checker) cout << f << ":" << f->numPts() << " ";
+		 if (!checker) std::cout << f << ":" << f->numPts() << " ";
 	       };
     auto fStop = [&]() { return false;};
 
-    if (!checker) cout << "Hull DFS (" << hs << ")  = ";
+    if (!checker) std::cout << "Hull DFS (" << hs << ")  = ";
     if (start) dfsFacet(start, fVisit, fDo, fStop);
     else dfsFacet(H, fVisit, fDo, fStop);
-    if (!checker) cout << endl;
+    if (!checker) std::cout << "\n";
   }
 
   void checkHull(facetT* start=nullptr) {
@@ -339,26 +345,38 @@ e.b==e.ff.a    e.a==e.ff.c
     else dfsFacet(H, fVisit, fDo, fStop);
   }
 
-  template<class pt, class facet3d>
-  void getHull(sequence<facet3d>& out) {
+  // template<class pt, class facet3d>
+  // void getHull(parlay::sequence<facet3d>& out) {
+  //   auto fVisit = [&](facetT* f) { return true;};
+  //   auto fDo = [&](facetT* f) {
+  // 		 out.emplace_back(pt((f->a+interiorPt).coords()),
+  // 				  pt((f->b+interiorPt).coords()),
+  // 				  pt((f->c+interiorPt).coords()));};
+  //   auto fStop = [&]() { return false;};
+
+  //   dfsFacet(H, fVisit, fDo, fStop);
+  // }
+
+  template<class facet3d>
+  void getFacet(parlay::sequence<facet3d>& out) {
+    using pt = typename facet3d::pointT;
     auto fVisit = [&](facetT* f) { return true;};
     auto fDo = [&](facetT* f) {
-		 out.emplace_back(pt((f->a+origin.get()).coords()),
-				  pt((f->b+origin.get()).coords()),
-				  pt((f->c+origin.get()).coords()));};
+		 out.emplace_back(pt((f->a+interiorPt).coords()),
+				  pt((f->b+interiorPt).coords()),
+				  pt((f->c+interiorPt).coords()));};
     auto fStop = [&]() { return false;};
 
     dfsFacet(H, fVisit, fDo, fStop);
   }
 
-  template<class pt>
-  sequence<pt> getHullVertices() {
-    sequence<pt> out;
+  parlay::sequence<vertexT> getVertex() {
+    parlay::sequence<vertexT> out;
     auto fVisit = [&](facetT* f) { return true;};
     auto fDo = [&](facetT* f) {
-		 out.emplace_back(pt((f->a+origin.get()).coords()));
-		 out.emplace_back(pt((f->b+origin.get()).coords()));
-		 out.emplace_back(pt((f->c+origin.get()).coords()));
+		 out.emplace_back(vertexT((f->a+interiorPt).coords()));
+		 out.emplace_back(vertexT((f->b+interiorPt).coords()));
+		 out.emplace_back(vertexT((f->c+interiorPt).coords()));
   	       };
     auto fStop = [&]() { return false;};
 
@@ -367,12 +385,12 @@ e.b==e.ff.a    e.a==e.ff.c
     return parlay::unique(out);
   }
 
-  sequence<vertexT> getHullPts() {
-    sequence<vertexT> out;
+  parlay::sequence<vertexT> getHullPts() {
+    parlay::sequence<vertexT> out;
     auto fVisit = [&](facetT* f) { return true;};
     auto fDo = [&](facetT* f) {
 		 for (size_t i = 0; i < f->numPts(); ++i) {
-		   out.push_back(f->pts(i) + origin.get());
+		   out.push_back(f->pts(i) + interiorPt);
 		 }
 	       };
     auto fStop = [&]() { return false;};
@@ -384,17 +402,19 @@ e.b==e.ff.a    e.a==e.ff.c
 
   void writeHull(char const *fileName) {
     using edgeT = _edge;
-    auto offset = origin.get();
-    ofstream myfile;
+    std::ofstream myfile;
     myfile.open(fileName, std::ofstream::trunc);
     auto fVisit = [&](facetT* f) { return true;};
     auto fDo = [&](facetT* f) {
-		 myfile << f->a + offset << endl;
-		 myfile << f->b + offset << endl;
-		 myfile << f->c + offset << endl;
+		 myfile << f->a + interiorPt << "\n";
+		 myfile << f->b + interiorPt << "\n";
+		 myfile << f->c + interiorPt << "\n";
 	       };
     auto fStop = [&]() { return false;};
     dfsFacet(H, fVisit, fDo, fStop);
     myfile.close();
   }
 };
+
+} // End namespace hull3d
+} // End namespace pargeo

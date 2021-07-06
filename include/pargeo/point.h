@@ -13,14 +13,17 @@ namespace pargeo {
     int arr[0]; // todo this produces a struct of size 0 but seems dangerous, need to check
   };
 
-  template <int _dim, class _tData, class _tFloat, class _tAtt> class _point {
+  template <int _dim, class _tData, class _tFloat, class _tAtt>
+  class _point {
 
     static constexpr _tData empty = std::numeric_limits<_tData>::max();
 
   public:
 
     static constexpr int dim = _dim;
-    typedef _tFloat floatT;
+    static constexpr _tFloat eps = 1e-5;
+    using floatT = _tFloat;
+    using attT = _tAtt;
 
     _tData x[_dim];
     _tAtt attribute;
@@ -43,15 +46,17 @@ namespace pargeo {
 
     bool isEmpty() {return x[0]==empty;}
 
-    _point operator+(_point op2) {
+    template<class pt>
+    pt operator+(pt op2) {
       _tData xx[_dim];
       for (int i=0; i<_dim; ++i) xx[i] = x[i]+op2.x[i];
-      return _point(xx, attribute);}
+      return pt(xx, attribute);}
 
-    _point operator-(_point op2) {
+    template<class pt> // todo add template for all (for derived class)
+    pt operator-(pt op2) {
       _tData xx[_dim];
       for (int i=0; i<_dim; ++i) xx[i] = x[i]-op2.x[i];
-      return _point(xx, attribute);}
+      return pt(xx, attribute);}
 
     _point operator*(_tData dv) {
       _tData xx[_dim];

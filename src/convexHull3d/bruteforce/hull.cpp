@@ -1,4 +1,4 @@
-#include "convexHull3d/bruteforceHull.h"
+#include "convexHull3d/bruteforce/hull.h"
 
 #include <iostream>
 #include <fstream>
@@ -10,7 +10,7 @@
 
 template <class vertexT>
 struct internalFacet {
-  static constexpr typename vertexT::floatT numericKnob = 1e-5;
+  static constexpr typename vertexT::floatT numericKnob = vertexT::eps;
 
   vertexT a, b, c;
 
@@ -37,12 +37,12 @@ struct internalFacet {
 
 };
 
-parlay::sequence<pargeo::facet3d<pargeo::fpoint<3>>>
-pargeo::hull3dBruteforce(parlay::sequence<pargeo::fpoint<3>> &P) {
+template<class pointT>
+parlay::sequence<pargeo::hull3d::facet<pointT>>
+pargeo::hull3d::bruteforce::compute(parlay::slice<pointT*, pointT*> P) {
   using namespace parlay;
-  using pointT = pargeo::fpoint<3>;
-  using floatT = pointT::floatT;
-  using facetT = facet3d<pointT>;
+  using floatT = typename pointT::floatT;
+  using facetT = pargeo::hull3d::facet<pointT>;
   using fc = internalFacet<pointT>;
 
   sequence<facetT> H;
@@ -78,3 +78,13 @@ pargeo::hull3dBruteforce(parlay::sequence<pargeo::fpoint<3>> &P) {
 
   return H;
 }
+
+template
+parlay::sequence<pargeo::hull3d::facet<pargeo::fpoint<3>>>
+  pargeo::hull3d::bruteforce::compute<pargeo::fpoint<3>>
+  (parlay::slice<pargeo::fpoint<3>*, pargeo::fpoint<3>*> P);
+
+template
+parlay::sequence<pargeo::hull3d::facet<pargeo::point<3>>>
+  pargeo::hull3d::bruteforce::compute<pargeo::point<3>>
+  (parlay::slice<pargeo::point<3>*, pargeo::point<3>*> P);

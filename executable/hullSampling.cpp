@@ -1,6 +1,6 @@
-#include "convexHull3d/serialHull.h"
-#include "convexHull3d/internal/sampling.h"
-#include "convexHull3d/samplingHull.h"
+#include "convexHull3d/serialQuickHull/hull.h"
+#include "convexHull3d/sampling/hull.h"
+#include "convexHull3d/sampling/sampling.h"
 
 #include <iostream>
 #include <algorithm>
@@ -10,7 +10,6 @@
 #include "dataset/uniform.h"
 
 using namespace pargeo;
-using namespace pargeo::hullInternal;
 
 int main(int argc, char* argv[]) {
 
@@ -25,21 +24,21 @@ int main(int argc, char* argv[]) {
   timer t; t.start();
 
   std::cout << "random\n";
-  auto pRand = randomSample(pts, fraction * n);
+  auto pRand = pargeo::hull3d::samplingHelper::randomSample<fpoint<3>>(parlay::make_slice(pts), fraction * n);
   std::cout << pRand.size() << "\n";
-  std::cout << "h-fraction = " << testHull(pRand, 1) << "\n";
+  std::cout << "h-fraction = " << pargeo::hull3d::sampling::test<fpoint<3>>(parlay::make_slice(pRand), 1) << "\n";
   std::cout << "time = " << t.get_next() << "\n";
 
   std::cout << "rand-proj\n";
-  auto pRand2 = randomProjection(pts, fraction * n);
+  auto pRand2 = pargeo::hull3d::samplingHelper::randomProjection<fpoint<3>>(parlay::make_slice(pts), fraction * n);
   std::cout << pRand2.size() << "\n";
-  std::cout << "h-fraction = " << testHull(pRand2, 1) << "\n";
+  std::cout << "h-fraction = " << pargeo::hull3d::sampling::test<fpoint<3>>(parlay::make_slice(pRand2), 1) << "\n";
   std::cout << "time = " << t.get_next() << "\n";
 
   std::cout << "grid-sample\n";
-  auto pRand3 = gridSample(pts, fraction * n);
+  auto pRand3 = pargeo::hull3d::samplingHelper::gridSample<fpoint<3>>(parlay::make_slice(pts), fraction * n);
   std::cout << pRand3.size() << "\n";
-  std::cout << "h-fraction = " << testHull(pRand3, 1) << "\n";
+  std::cout << "h-fraction = " << pargeo::hull3d::sampling::test(parlay::make_slice(pRand3), 1) << "\n";
   std::cout << "time = " << t.get_next() << "\n";
 
   return 0;

@@ -365,7 +365,7 @@ namespace pargeo {
   }
 
   template<int dim, class objT>
-  kdNode<dim, objT>* buildKdt(parlay::sequence<objT>& P,
+  kdNode<dim, objT>* buildKdt(parlay::slice<objT*, objT*> P,
 			      bool parallel=true,
 			      bool noCoarsen=false,
 			      parlay::sequence<objT*>* items=nullptr) {
@@ -376,7 +376,6 @@ namespace pargeo {
     if (!items) {
       items = new parlay::sequence<objT*>(n);
     }
-
 
     parlay::parallel_for(0, n, [&](size_t i) {items->at(i)=&P[i];});
 
@@ -396,6 +395,14 @@ namespace pargeo {
       root[0] = nodeT(itemSlice, n, root+1, noCoarsen ? 1 : 16);
     }
     return root;
+  }
+
+  template<int dim, class objT>
+  kdNode<dim, objT>* buildKdt(parlay::sequence<objT>& P,
+			      bool parallel=true,
+			      bool noCoarsen=false,
+			      parlay::sequence<objT*>* items=nullptr) {
+    return buildKdt<dim, objT>(parlay::make_slice(P), parallel, noCoarsen, items);
   }
 
 } // End namespace

@@ -1,5 +1,5 @@
-#include "convexHull3d/serialHull.h"
-#include "convexHull3d/samplingHull.h"
+#include "convexHull3d/serialQuickHull/hull.h"
+#include "convexHull3d/sampling/hull.h"
 #include "convexHull3d/vertex.h"
 
 #include "parlay/parallel.h"
@@ -8,11 +8,10 @@
 #include "pargeo/getTime.h"
 #include "pargeo/point.h"
 
-using namespace pargeo;
-
-double pargeo::testHull(parlay::sequence<pargeo::fpoint<3>> &P, double fraction) {
+template<class pointT>
+double
+pargeo::hull3d::sampling::test(parlay::slice<pointT*, pointT*> P, double fraction) {
   using namespace parlay;
-  using pt = pargeo::hullInternal::vertex;
 
   if (P.size() < 5) return 1.0;
 
@@ -23,7 +22,13 @@ double pargeo::testHull(parlay::sequence<pargeo::fpoint<3>> &P, double fraction)
 					       return P[parlay::hash64(i) % P.size()];
 					     });
 
-  sequence<pargeo::fpoint<3>> hullVertices = hullInternal::hull3dSerialInternal3(sample);
+  auto hullVertices = pargeo::hull3d::serialQuickHull::computeVertex<pointT>(make_slice(sample));
 
   return double(hullVertices.size()) / double(sampleSize);
 }
+
+template double
+pargeo::hull3d::sampling::test(parlay::slice<pargeo::fpoint<3>*, pargeo::fpoint<3>*>, double);
+
+template double
+pargeo::hull3d::sampling::test(parlay::slice<pargeo::point<3>*, pargeo::point<3>*>, double);

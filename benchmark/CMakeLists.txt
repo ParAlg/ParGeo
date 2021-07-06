@@ -48,14 +48,11 @@ target_link_libraries(spatialSearch_bench PRIVATE
 
 add_executable(hull_bench hull_bench.cpp)
 target_link_libraries(hull_bench PRIVATE
-  concurrentHull3dLib
-  searchHull3dLib
+  divideConquerHull3dLib
   bruteforceHull3dLib
-  gridHull3dLib
   samplingHull3dLib
   pseudoHull3dLib
   serialHull3dLib
-  #incrementalHull3dLib
   parallelHull3dLib
   pargeoLib
   benchmark_main)

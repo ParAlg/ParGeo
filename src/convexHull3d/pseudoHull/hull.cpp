@@ -1,5 +1,5 @@
-#include "convexHull3d/serialHull.h"
-#include "convexHull3d/pseudoHull.h"
+#include "convexHull3d/serialQuickHull/hull.h"
+#include "convexHull3d/pseudo/hull.h"
 
 #include <iostream>
 #include <fstream>
@@ -201,12 +201,9 @@ pseudoHull(parlay::slice<vertexT*, vertexT*> P) {
 				     });
 }
 
-parlay::sequence<pargeo::facet3d<pargeo::fpoint<3>>>
-pargeo::hull3dPseudo(parlay::sequence<pargeo::fpoint<3>> &P) {
-  using namespace parlay;
-  using pointT = pargeo::fpoint<3>;
-  using floatT = pointT::floatT;
-  using facetT = facet3d<pointT>;
+template<class pointT>
+parlay::sequence<pargeo::hull3d::facet<pointT>>
+pargeo::hull3d::pseudo::compute(parlay::slice<pointT*, pointT*> P) {
 
 #ifdef PSEUDO_HULL_VERBOSE
   timer t; t.start();
@@ -219,7 +216,7 @@ pargeo::hull3dPseudo(parlay::sequence<pargeo::fpoint<3>> &P) {
   std::cout << Q.size() << "\n";
 #endif
 
-  auto H = hull3dSerial(Q);
+  auto H = pargeo::hull3d::serialQuickHull::compute(make_slice(Q));
 
 #ifdef PSEUDO_HULL_VERBOSE
   std::cout << "hull-time = " << t.get_next() << "\n";
@@ -227,3 +224,9 @@ pargeo::hull3dPseudo(parlay::sequence<pargeo::fpoint<3>> &P) {
 
   return H;
 }
+
+template parlay::sequence<pargeo::hull3d::facet<pargeo::fpoint<3>>>
+pargeo::hull3d::pseudo::compute(parlay::slice<pargeo::fpoint<3>*, pargeo::fpoint<3>*>);
+
+template parlay::sequence<pargeo::hull3d::facet<pargeo::point<3>>>
+pargeo::hull3d::pseudo::compute(parlay::slice<pargeo::point<3>*, pargeo::point<3>*>);
