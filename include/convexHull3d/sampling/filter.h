@@ -1,6 +1,7 @@
 #pragma once
 
 #include <math.h>
+#include <atomic>
 #include "pargeo/kdTree.h"
 #include "pargeo/point.h"
 #include "convexHull3d/facet.h"
@@ -100,18 +101,20 @@ namespace pargeo {
       template<class pointT>
       void flagVisible(kdNode<3, pointT>* r,
 		       facet<pointT>* f,
-		       parlay::slice<bool*, bool*> flag,
+		       parlay::slice<std::atomic<bool>*, std::atomic<bool>*> flag,
 		       pointT* base) {
 	using floatT = typename pointT::floatT;
 
 	auto vols = nodeVol<pointT>(r, f);
 	floatT volMin = std::get<0>(vols);
 	floatT volMax = std::get<1>(vols);
+	bool F = false;
 
 	if (volMin <= 0 && volMax <= 0) {
+	  // node is in hull
 	  return;
 	} else if (volMin <= 0 && volMax > 0) {
-	  // not intersect
+	  // node intersect
 	  if (!r->isLeaf()) {
 	    flagVisible<pointT>(r->L(), f, flag, base);
 	    flagVisible<pointT>(r->R(), f, flag, base);
@@ -123,21 +126,23 @@ namespace pargeo {
 		  f->b == *r->at(i) ||
 		  f->c == *r->at(i)
 		  ) {
-		flag[r->at(i) - base] = true;
+		//flag[r->at(i) - base] = true;
+		std::atomic_compare_exchange_weak(&flag[r->at(i) - base], &F, true);
 	      }
 	    }
 	  }
 	} else {
-	  // node visible
+	  // node is outside of hull
 	  for (size_t i = 0; i < r->size(); ++ i) {
-	    auto pVol = f->getVolume(*r->at(i));
-	    if (pVol >= 0 ||
-		f->a == *r->at(i) ||
-		f->b == *r->at(i) ||
-		f->c == *r->at(i)
-		) {
-	      flag[r->at(i) - base] = true;
-	    }
+	    //auto pVol = f->getVolume(*r->at(i));
+	    // if (pVol >= 0 ||
+	    // 	f->a == *r->at(i) ||
+	    // 	f->b == *r->at(i) ||
+	    // 	f->c == *r->at(i)
+	    // 	) {
+	    std::atomic_compare_exchange_weak(&flag[r->at(i) - base], &F, true);
+	    //flag[r->at(i) - base] = true;
+	    //}
 	  }
 	}
 
@@ -154,9 +159,17 @@ namespace pargeo {
 	pargeo::kdNode<3, pointT>* tree =
 	  buildKdt<3, pointT>(P, true, false); // todo manual leaf size
 
-	parlay::sequence<bool> flag = parlay::tabulate(P.size(), [&](size_t i) {
-							   return false;
-						 });
+	// parlay::sequence<bool> flag = parlay::tabulate(P.size(), [&](size_t i) {
+	// 						   return false;
+	// 					 });
+
+	// parlay::sequence<std::atomic<bool>> flag =
+	//   parlay::tabulate(P.size(), [&](size_t i) {
+	// 			       return false;
+	// 			     });
+
+	parlay::sequence<std::atomic<bool>> flag(P.size());
+	parlay::parallel_for(0, flag.size(), [&](size_t i){flag[i] = false;});
 
 	auto facets = parlay::tabulate(F.size(), [&](size_t i) {
 					   return facet(F[i].a, F[i].b, F[i].c);

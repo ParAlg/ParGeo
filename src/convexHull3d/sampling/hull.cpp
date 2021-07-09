@@ -22,6 +22,7 @@
 
 #include "convexHull3d/vertex.h"
 #include "convexHull3d/serialQuickHull/hull.h"
+#include "convexHull3d/parallelQuickHull/hull.h"
 #include "convexHull3d/sampling/hull.h"
 #include "convexHull3d/sampling/sampling.h"
 #include "convexHull3d/sampling/filter.h"
@@ -67,7 +68,7 @@ pargeo::hull3d::sampling::compute(parlay::slice<pointT*, pointT*> P, double frac
   std::cout << "fraction = " << double(remain.size())/P.size() << "\n";
 #endif
 
-  auto hull = pargeo::hull3d::serialQuickHull::compute(make_slice(remain));
+  auto hull = pargeo::hull3d::parallelQuickHull::compute(make_slice(remain));
 
 #ifdef SAMPLE_HULL_VERBOSE
   std::cout << "final-hull-time = " << t.stop() << "\n";

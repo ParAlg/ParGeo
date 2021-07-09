@@ -4,4 +4,5 @@ add_library(samplingHull3dLib
 
 target_link_libraries(samplingHull3dLib
   serialHull3dLib
+  parallelHull3dLib
   pargeoLib)
