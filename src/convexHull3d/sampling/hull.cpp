@@ -93,7 +93,7 @@ pargeo::hull3d::sampling::random(parlay::slice<pointT*, pointT*> P, double fract
   parlay::sequence<pargeo::hull3d::facet<pointT>> sampleHull =
     pargeo::hull3d::serialQuickHull::compute<pointT>(make_slice(sample));
   auto remain = pargeo::hull3d::samplingHelper::filter2(P, make_slice(sampleHull));
-  return pargeo::hull3d::serialQuickHull::compute<pointT>(make_slice(remain));
+  return pargeo::hull3d::parallelQuickHull::compute<pointT>(make_slice(remain));
 }
 
 template parlay::sequence<pargeo::hull3d::facet<pargeo::fpoint<3>>>
@@ -111,7 +111,7 @@ pargeo::hull3d::sampling::grid(parlay::slice<pointT*, pointT*> P, double fractio
   parlay::sequence<pargeo::hull3d::facet<pointT>> sampleHull =
     pargeo::hull3d::serialQuickHull::compute<pointT>(make_slice(sample));
   auto remain = pargeo::hull3d::samplingHelper::filter2(P, make_slice(sampleHull));
-  return pargeo::hull3d::serialQuickHull::compute<pointT>(make_slice(remain));
+  return pargeo::hull3d::parallelQuickHull::compute<pointT>(make_slice(remain));
 }
 
 template parlay::sequence<pargeo::hull3d::facet<pargeo::fpoint<3>>>
@@ -129,7 +129,7 @@ pargeo::hull3d::sampling::projection(parlay::slice<pointT*, pointT*> P, double f
   parlay::sequence<pargeo::hull3d::facet<pointT>> sampleHull =
     pargeo::hull3d::serialQuickHull::compute<pointT>(make_slice(sample));
   auto remain = pargeo::hull3d::samplingHelper::filter2(P, make_slice(sampleHull));
-  return pargeo::hull3d::serialQuickHull::compute<pointT>(make_slice(remain));
+  return pargeo::hull3d::parallelQuickHull::compute<pointT>(make_slice(remain));
 }
 
 template parlay::sequence<pargeo::hull3d::facet<pargeo::fpoint<3>>>
