@@ -37,14 +37,16 @@ target_link_libraries(uniformData pargeoLib)
 add_executable(hull hull.cpp)
 target_link_libraries(hull pargeoLib
   divideConquerHull3dLib
-  # searchHull3dLib
   bruteforceHull3dLib
-  # gridHull3dLib
   samplingHull3dLib
   pseudoHull3dLib
   serialHull3dLib
-  # incrementalHull3dLib
   parallelHull3dLib
+  )
+
+add_executable(hull2d hull2d.cpp)
+target_link_libraries(hull2d pargeoLib
+  quickHull2dLib
   )
 
 add_executable(hullSampling hullSampling.cpp)
