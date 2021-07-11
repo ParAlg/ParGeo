@@ -1,4 +1,6 @@
 #include "convexHull2d/quickHull/hull.h"
+#include "convexHull2d/bruteforce/hull.h"
+#include "convexHull2d/divideConquer/hull.h"
 
 #include <iostream>
 #include <algorithm>
@@ -15,7 +17,14 @@ template <class pt>
 void timeHull(parlay::sequence<pt> &P, int rounds, char const *outFile) {
   timer t; t.start();
 
-  auto H = pargeo::hull2d::quickHull::compute<pt>(make_slice(P));
+  //auto H = pargeo::hull2d::quickHull::compute<pt>(make_slice(P));
+  //auto H = pargeo::hull2d::bruteforce::compute<pt>(make_slice(P));
+  auto H = pargeo::hull2d::divideConquer::compute<pt>(make_slice(P));
+
+  // for (auto h: H) {
+  //   std::cout << h << " ";
+  // }
+  // std::cout << "\n";
 
   std::cout << "hull-time = " << t.get_next() << "\n";
   std::cout << "hull-size = " << H.size() << "\n";

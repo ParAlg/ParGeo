@@ -1,5 +1,3 @@
-add_library(quickHull2dLib
-  hull.cpp
-  )
+add_library(quickHull2dLib INTERFACE)
 
-target_link_libraries(quickHull2dLib pargeoLib)
+target_include_directories(quickHull2dLib INTERFACE include)
