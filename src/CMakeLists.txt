@@ -1,5 +1,6 @@
 add_subdirectory(delaunayTriangulation)
 add_subdirectory(convexHull2d)
 add_subdirectory(convexHull3d)
+add_subdirectory(enclosingBall)
 add_subdirectory(spatialGraph)
 add_subdirectory(euclideanMst)
