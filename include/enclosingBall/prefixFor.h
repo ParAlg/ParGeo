@@ -1,9 +1,5 @@
 #pragma once
 
-// #include "pbbs/utils.h"
-// #include "pbbs/parallel.h"
-// #include "pbbs/sequence.h"
-// #include "pbbs/gettime.h"
 #include "parlay/sequence.h"
 
 template<class T, class F, class G>

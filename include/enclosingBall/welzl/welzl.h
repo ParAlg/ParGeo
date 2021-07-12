@@ -39,7 +39,7 @@ size_t findPivot(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P,
   size_t bestI = -1;
   for (size_t ii = s; ii < P.size(); ++ ii) {
     floatT tmp = P[ii].distSqr(B.center());
-    if (tmp - rSqr > dMax) { // ||p-c||^2 - r^2                                                                           
+    if (tmp - rSqr > dMax) { // ||p-c||^2 - r^2
       bestI = ii;
       dMax = tmp - rSqr;
     }
