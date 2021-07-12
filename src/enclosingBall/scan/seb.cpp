@@ -116,7 +116,7 @@ bool ortScan(pargeo::point<dim> c,
 
 template<int dim>
 pargeo::seb::ball<dim>
-miniDisOrt(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P) {
+miniDiscOrt(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P) {
   using ballT = pargeo::seb::ball<dim>;
   using pointT = pargeo::point<dim>;
   using floatT = typename pointT::floatT;
