@@ -1,30 +1,38 @@
 #pragma once
 
-#include "pbbs/utils.h"
-#include "pbbs/parallel.h"
-#include "pbbs/sequence.h"
-#include "pbbs/gettime.h"
+// #include "pbbs/utils.h"
+// #include "pbbs/parallel.h"
+// #include "pbbs/sequence.h"
+// #include "pbbs/gettime.h"
+#include "parlay/sequence.h"
 
 template<class T, class F, class G>
-void serial_prefix(T* A, intT n, F& process, G& cleanUp) {
-  for(intT i=0; i<n; ++i) {
+void serial_prefix(parlay::slice<T*, T*> A, F& process, G& cleanUp) {
+  for(size_t i = 0; i < A.size(); ++ i) {
     if (process(A[i])) {
       cleanUp(A, i);}
   }
 }
 
 template<class T, class F, class G>
-void parallel_prefix(T* A, intT n, F& process, G& cleanUp, bool verbose=false, intT* flag=NULL, intT PREFIX=2000, intT THRESH=5000) {
-  if (n < THRESH) return serial_prefix(A, n, process, cleanUp);
+void parallel_prefix(parlay::slice<T*, T*> A,
+		     F& process,
+		     G& cleanUp,
+		     parlay::sequence<size_t>* flag = NULL,
+		     size_t PREFIX = 2000,
+		     size_t THRESH = 5000) {
 
-  intT prefix;
-  intT i = 0;
-  intT conflict;
+  if (A.size() < THRESH) return serial_prefix(A, process, cleanUp);
+
+  size_t prefix;
+  size_t i = 0;
+  size_t conflict;
 
   bool freeFlag = false;
   if (!flag) {
-    flag = newA(intT, n+1);
-    freeFlag = true;}
+    freeFlag = true;
+    flag = new parlay::sequence<size_t>(A.size()+1);
+  }
 
   /* timing t0; */
   /* intT serCount = 0; */
@@ -37,9 +45,9 @@ void parallel_prefix(T* A, intT n, F& process, G& cleanUp, bool verbose=false, i
   /* floatT parTime2 = 0; */
   /* floatT parTime3 = 0; */
 
-  while (i < n) {
-    if (i==0) prefix = PREFIX;//prefix < n is known
-    else prefix = min(i*3, n);//prefix to be taken as 3*i
+  while (i < A.size()) {
+    if (i==0) prefix = PREFIX; // prefix < n is known
+    else prefix = std::min(i * 3, A.size());// prefix to be taken as 3*i
 
     //if (verbose) cout << "prefix = " << prefix << endl;
 
@@ -54,26 +62,26 @@ void parallel_prefix(T* A, intT n, F& process, G& cleanUp, bool verbose=false, i
       //if(verbose) serTime += t0.stop();
     } else {
       //if(verbose) t0.start();
-      parCount += 1;
-      parSize += prefix - i;
+      // parCount += 1;
+      // parSize += prefix - i;
 
       auto body = [&](size_t j) {
-		    if (process(A[j])) flag[j-i] = 1;//conflict
-		    else flag[j-i] = 0;
+		    if (process(A[j])) flag->at(j-i) = 1; // conflict
+		    else flag->at(j-i) = 0;
 		  };
-      parallel_for(i, prefix, body);
+      parlay::parallel_for(i, prefix, body);
       //if(verbose) parTime += t0.next();
 
-      intT numBad = sequence::prefixSum(flag, 0, prefix-i);
-      flag[prefix-i] = numBad;
+      size_t numBad = parlay::scan_inplace(flag->cut(0, prefix - i), parlay::addm<size_t>());
+      flag->at(prefix-i) = numBad;
       //if(verbose) parTime1 += t0.stop();
 
       if (numBad > 0) {
 	//if(verbose) t0.start();
 	auto body = [&](size_t j) {
-		      if (flag[j]==0 && flag[j]!=flag[j+1]) conflict = j;
+		      if (flag->at(j)==0 && flag->at(j)!=flag->at(j+1)) conflict = j;
 		    };
-	parallel_for(0, prefix-i, body);
+	parlay::parallel_for(0, prefix-i, body);
 	i += conflict;
 	//if(verbose) parTime2 += t0.next();
 	cleanUp(A, i);
@@ -101,7 +109,5 @@ void parallel_prefix(T* A, intT n, F& process, G& cleanUp, bool verbose=false, i
 /*   } */
 /* #endif */
 
-  if(freeFlag) free(flag);
+  if(freeFlag) delete flag;
 }
-
-#endif
