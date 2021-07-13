@@ -2,8 +2,24 @@
 
 #include "parlay/sequence.h"
 
+namespace pargeo {
+  namespace seb {
+
+    template<class T, class F, class G>
+    void serial_prefix(parlay::slice<T*, T*>, F&, G&);
+
+    template<class T, class F, class G>
+    void parallel_prefix(parlay::slice<T*, T*>,
+			 F&, G&,
+			 parlay::sequence<size_t>* flag = NULL,
+			 size_t PREFIX = 2000,
+			 size_t THRESH = 5000);
+
+  }
+}
+
 template<class T, class F, class G>
-void serial_prefix(parlay::slice<T*, T*> A, F& process, G& cleanUp) {
+void pargeo::seb::serial_prefix(parlay::slice<T*, T*> A, F& process, G& cleanUp) {
   for(size_t i = 0; i < A.size(); ++ i) {
     if (process(A[i])) {
       cleanUp(A, i);}
@@ -11,12 +27,12 @@ void serial_prefix(parlay::slice<T*, T*> A, F& process, G& cleanUp) {
 }
 
 template<class T, class F, class G>
-void parallel_prefix(parlay::slice<T*, T*> A,
+void pargeo::seb::parallel_prefix(parlay::slice<T*, T*> A,
 		     F& process,
 		     G& cleanUp,
-		     parlay::sequence<size_t>* flag = NULL,
-		     size_t PREFIX = 2000,
-		     size_t THRESH = 5000) {
+		     parlay::sequence<size_t>* flag,
+		     size_t PREFIX,
+		     size_t THRESH) {
 
   if (A.size() < THRESH) return serial_prefix(A, process, cleanUp);
 

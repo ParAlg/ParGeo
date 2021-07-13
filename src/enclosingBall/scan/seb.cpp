@@ -125,10 +125,10 @@ miniDiscOrt(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P) {
   ballT B;
   if (sample > P.size()) {
     parlay::sequence<pointT> support;
-    return welzlParallel<dim>(P.cut(0, sample), support, B);
+    return pargeo::seb::welzl::welzlParallel<dim>(P.cut(0, sample), support, B);
   } else {
     parlay::sequence<pointT> support;
-    B = welzlParallel<dim>(P.cut(0, sample), support, B);
+    B = pargeo::seb::welzl::welzlParallel<dim>(P.cut(0, sample), support, B);
   }
 
   int dd = int(pow(2.0, dim));
@@ -146,7 +146,7 @@ miniDiscOrt(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P) {
       return B;
     } else {
       auto supportNew = parlay::sequence<pointT>();
-      B = welzlParallel<dim>(parlay::make_slice(support), supportNew, ballT());
+      B = pargeo::seb::welzl::welzlParallel<dim>(parlay::make_slice(support), supportNew, ballT());
       for(int i = 0; i < dd; ++ i) dist[i] = -1;
     }
   }

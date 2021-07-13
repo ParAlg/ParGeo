@@ -62,3 +62,11 @@ target_link_libraries(hull_sampling PRIVATE
   samplingHull3dLib
   pargeoLib
   benchmark_main)
+
+add_executable(seb_bench seb_bench.cpp)
+target_link_libraries(seb_bench PRIVATE
+  pargeoLib
+  welzlSebLib
+  scanSebLib
+  samplingSebLib
+  benchmark_main)

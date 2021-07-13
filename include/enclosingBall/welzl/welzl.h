@@ -6,11 +6,72 @@
 #include "enclosingBall/ball.h"
 #include "enclosingBall/prefixFor.h"
 
+namespace pargeo {
+  namespace seb {
+
+    template<int dim>
+    pargeo::seb::ball<dim>
+    support2Ball(parlay::slice<pargeo::point<dim>*,
+		 pargeo::point<dim>*> P,
+		 parlay::sequence<pargeo::point<dim>>& support);
+
+    namespace welzl {
+
+      template<int dim>
+      size_t
+      findPivot(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*>,
+		pargeo::seb::ball<dim>, size_t);
+
+      template<int dim>
+      pargeo::seb::ball<dim>
+      welzlSerial(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*>,
+		  parlay::sequence<pargeo::point<dim>>&,
+		  pargeo::seb::ball<dim>);
+
+      template<int dim>
+      pargeo::seb::ball<dim>
+      welzlParallel(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*>,
+		    parlay::sequence<pargeo::point<dim>>&,
+		    pargeo::seb::ball<dim>,
+		    parlay::sequence<size_t>* flag = NULL);
+
+      template<int dim>
+      pargeo::seb::ball<dim>
+      welzlMtfSerial(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*>,
+		     parlay::sequence<pargeo::point<dim>>&,
+		     pargeo::seb::ball<dim>);
+
+      template<int dim>
+      pargeo::seb::ball<dim>
+      welzlMtfParallel(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P,
+		       parlay::sequence<pargeo::point<dim>>& support,
+		       pargeo::seb::ball<dim> B,
+		       parlay::sequence<size_t>* flag=NULL);
+
+      template<int dim>
+      pargeo::seb::ball<dim>
+      welzlMtfPivotSerial(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*>,
+			  parlay::sequence<pargeo::point<dim>>&,
+			  pargeo::seb::ball<dim>);
+
+      template<int dim>
+      pargeo::seb::ball<dim>
+      welzlMtfPivotParallel(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P,
+			    parlay::sequence<pargeo::point<dim>>& support,
+			    pargeo::seb::ball<dim> B,
+			    parlay::sequence<size_t>* flag=NULL);
+
+    }
+
+  }
+}
+
 /*------------ Primitives ------------*/
 
 template<int dim>
-pargeo::seb::ball<dim> support2Ball(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P,
-				    parlay::sequence<pargeo::point<dim>>& support) {
+pargeo::seb::ball<dim>
+pargeo::seb::support2Ball(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P,
+	     parlay::sequence<pargeo::point<dim>>& support) {
   using ballT = pargeo::seb::ball<dim>;
 
   ballT B;
@@ -29,9 +90,10 @@ pargeo::seb::ball<dim> support2Ball(parlay::slice<pargeo::point<dim>*, pargeo::p
 }
 
 template<int dim>
-size_t findPivot(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P,
-		 pargeo::seb::ball<dim> B,
-		 size_t s) {
+size_t
+pargeo::seb::welzl::findPivot(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P,
+			      pargeo::seb::ball<dim> B,
+			      size_t s) {
   using floatT = typename pargeo::point<dim>::floatT;
 
   floatT rSqr = B.radius() * B.radius();
@@ -50,9 +112,10 @@ size_t findPivot(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P,
 /*------------ The vanilla Welzl's algorithm ------------*/
 
 template<int dim>
-pargeo::seb::ball<dim> welzlSerial(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P,
-					   parlay::sequence<pargeo::point<dim>>& support,
-					   pargeo::seb::ball<dim> B) {
+pargeo::seb::ball<dim>
+pargeo::seb::welzl::welzlSerial(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P,
+				parlay::sequence<pargeo::point<dim>>& support,
+				pargeo::seb::ball<dim> B) {
   using ballT = pargeo::seb::ball<dim>;
   using pointT = pargeo::point<dim>;
 
@@ -78,10 +141,11 @@ pargeo::seb::ball<dim> welzlSerial(parlay::slice<pargeo::point<dim>*, pargeo::po
 }
 
 template<int dim>
-pargeo::seb::ball<dim> welzlParallel(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P,
-				     parlay::sequence<pargeo::point<dim>>& support,
-				     pargeo::seb::ball<dim> B,
-				     parlay::sequence<size_t>* flag=NULL) {
+pargeo::seb::ball<dim>
+pargeo::seb::welzl::welzlParallel(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P,
+				  parlay::sequence<pargeo::point<dim>>& support,
+				  pargeo::seb::ball<dim> B,
+				  parlay::sequence<size_t>* flag) {
   using ballT = pargeo::seb::ball<dim>;
   using pointT = pargeo::point<dim>;
 
@@ -119,9 +183,10 @@ pargeo::seb::ball<dim> welzlParallel(parlay::slice<pargeo::point<dim>*, pargeo::
 /*------------ Welzl + mtf algorithm ------------*/
 
 template<int dim>
-pargeo::seb::ball<dim> welzlMtfSerial(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P,
-					   parlay::sequence<pargeo::point<dim>>& support,
-					   pargeo::seb::ball<dim> B) {
+pargeo::seb::ball<dim>
+pargeo::seb::welzl::welzlMtfSerial(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P,
+				   parlay::sequence<pargeo::point<dim>>& support,
+				   pargeo::seb::ball<dim> B) {
   using ballT = pargeo::seb::ball<dim>;
   using pointT = pargeo::point<dim>;
 
@@ -152,10 +217,11 @@ pargeo::seb::ball<dim> welzlMtfSerial(parlay::slice<pargeo::point<dim>*, pargeo:
 }
 
 template<int dim>
-pargeo::seb::ball<dim> welzlMtfParallel(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P,
-					     parlay::sequence<pargeo::point<dim>>& support,
-					     pargeo::seb::ball<dim> B,
-					     parlay::sequence<size_t>* flag=NULL) {
+pargeo::seb::ball<dim>
+pargeo::seb::welzl::welzlMtfParallel(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P,
+				     parlay::sequence<pargeo::point<dim>>& support,
+				     pargeo::seb::ball<dim> B,
+				     parlay::sequence<size_t>* flag) {
   using ballT = pargeo::seb::ball<dim>;
   using pointT = pargeo::point<dim>;
 
@@ -197,9 +263,10 @@ pargeo::seb::ball<dim> welzlMtfParallel(parlay::slice<pargeo::point<dim>*, parge
 /*------------ Welzl + pivoting + mtf algorithm ------------*/
 
 template<int dim>
-pargeo::seb::ball<dim> welzlMtfPivotSerial(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P,
-					   parlay::sequence<pargeo::point<dim>>& support,
-					   pargeo::seb::ball<dim> B) {
+pargeo::seb::ball<dim>
+pargeo::seb::welzl::welzlMtfPivotSerial(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P,
+					parlay::sequence<pargeo::point<dim>>& support,
+					pargeo::seb::ball<dim> B) {
   using ballT = pargeo::seb::ball<dim>;
   using pointT = pargeo::point<dim>;
 
@@ -232,10 +299,11 @@ pargeo::seb::ball<dim> welzlMtfPivotSerial(parlay::slice<pargeo::point<dim>*, pa
 }
 
 template<int dim>
-pargeo::seb::ball<dim> welzlMtfPivotParallel(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P,
-					     parlay::sequence<pargeo::point<dim>>& support,
-					     pargeo::seb::ball<dim> B,
-					     parlay::sequence<size_t>* flag=NULL) {
+pargeo::seb::ball<dim>
+pargeo::seb::welzl::welzlMtfPivotParallel(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P,
+					  parlay::sequence<pargeo::point<dim>>& support,
+					  pargeo::seb::ball<dim> B,
+					  parlay::sequence<size_t>* flag) {
   using ballT = pargeo::seb::ball<dim>;
   using pointT = pargeo::point<dim>;
 
