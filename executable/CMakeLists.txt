@@ -59,6 +59,7 @@ target_link_libraries(hullSampling pargeoLib
 
 add_executable(seb seb.cpp)
 target_link_libraries(seb pargeoLib
+  samplingSebLib
   welzlSebLib
   scanSebLib
   )
