@@ -18,7 +18,7 @@ size_t quadrant(pargeo::point<dim> p, pargeo::point<dim> center) {
 
 template<int dim>
 bool ortScanSerial(pargeo::point<dim> c,
-		   typename pargeo::point<dim>::floatT rSqr,
+		   typename pargeo::point<dim>::floatT r,
 		   parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P,
 		   parlay::sequence<pargeo::point<dim>>& support,
 		   typename pargeo::point<dim>::floatT* dist) {
@@ -31,11 +31,11 @@ bool ortScanSerial(pargeo::point<dim> c,
   for(int i=0; i<dd; ++i) idx[i] = -1;
 
   for (size_t i = 0; i < P.size(); ++ i) {
-    floatT dSqr = P[i].distSqr(c);
-    if (dSqr > rSqr + c.eps) {
+    floatT d = P[i].dist(c);
+    if (d > r + c.eps) {
       int o = quadrant(c, P[i]);
-      if (dSqr > dist[o] + c.eps) {
-        dist[o] = dSqr;
+      if (d > dist[o] + c.eps) {
+        dist[o] = d;
         idx[o] = i;
       }
     }
@@ -53,14 +53,14 @@ bool ortScanSerial(pargeo::point<dim> c,
 
 template<int dim>
 bool ortScan(pargeo::point<dim> c,
-	     typename pargeo::point<dim>::floatT rSqr,
+	     typename pargeo::point<dim>::floatT r,
 	     parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> A,
 	     parlay::sequence<pargeo::point<dim>>& support,
 	     typename pargeo::point<dim>::floatT* distGlobal) {
   using pointT = pargeo::point<dim>;
   using floatT = typename pargeo::point<dim>::floatT;
 
-  if (A.size() < 2000) return ortScanSerial(c, rSqr, A, support, distGlobal);
+  if (A.size() < 2000) return ortScanSerial(c, r, A, support, distGlobal);
 
   int dd = int(pow(2.0, dim));
   int P = std::max((size_t)96, parlay::num_workers());
@@ -80,11 +80,11 @@ bool ortScan(pargeo::point<dim> c,
 		 long* locIdx = idx + p*dd;
 		 floatT* locDist = dist + p * dd;
 		 for (size_t i = s; i < e; ++ i) {
-		   floatT dSqr = A[i].distSqr(c);
-		   if (dSqr > rSqr + c.eps) {
+		   floatT d = A[i].dist(c);
+		   if (d > r + c.eps) {
 		     int o = quadrant(c, A[i]);
-		     if (dSqr > locDist[o] + c.eps) {
-		       locDist[o] = dSqr;
+		     if (d > locDist[o] + c.eps) {
+		       locDist[o] = d;
 		       locIdx[o] = i;}
 		   }
 		 }
@@ -143,7 +143,7 @@ miniDiscOrt(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P) {
     for(size_t i=0; i<B.size(); ++i) {
       support.push_back(B.support()[i]);}
 
-    bool found = ortScan<dim>(B.center(), B.radius() * B.radius(),
+    bool found = ortScan<dim>(B.center(), B.radius(),
 			      P.cut(scanned, scanned+step), support, dist);
     scanned += step;
 
@@ -163,7 +163,7 @@ miniDiscOrt(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P) {
     for(size_t i=0; i<B.size(); ++i) {
       support.push_back(B.support()[i]);}
 
-    bool found = ortScan<dim>(B.center(), B.radius() * B.radius(), P, support, dist);
+    bool found = ortScan<dim>(B.center(), B.radius(), P, support, dist);
 
     if (!found) {
       return B;
