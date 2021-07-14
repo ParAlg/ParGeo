@@ -6,21 +6,21 @@
 
 #include "dataset/uniform.h"
 
-long defaultN = 1000000;
+long defaultN = 10000000;
 
 // in sphere
 parlay::sequence<pargeo::point<3>> data0(size_t n) {
-  return pargeo::uniformInPolyPoints<3, pargeo::point<3>>(n, 0, 100);
+  return pargeo::uniformInPolyPoints<3, pargeo::point<3>>(n, 0);
 }
 
 // on sphere
 parlay::sequence<pargeo::point<3>> data1(size_t n) {
-  return pargeo::uniformOnPolyPoints<3, pargeo::point<3>>(n, 0, 0.05, 100);
+  return pargeo::uniformOnPolyPoints<3, pargeo::point<3>>(n, 0, 0.1);
 }
 
 // in cube
 parlay::sequence<pargeo::point<3>> data2(size_t n) {
-  return pargeo::uniformInPolyPoints<3, pargeo::point<3>>(n, 1, 100);
+  return pargeo::uniformInPolyPoints<3, pargeo::point<3>>(n, 1);
 }
 
 static void welzl_inSphere(benchmark::State& state) {

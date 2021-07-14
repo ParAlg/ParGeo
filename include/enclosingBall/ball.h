@@ -100,6 +100,10 @@ public:
   inline int size() {return d;}
   inline bool isEmpty() {return size() <= 0;}
 
+  bool operator==(ball<dim> b2) {
+    return (c == c) && (r == r);
+  }
+
   ball(): d(0) {}
 
   //ball(pointT* PP, int dd): d(dd) {

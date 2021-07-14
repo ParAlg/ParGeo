@@ -144,7 +144,7 @@ miniDiscOrt(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P) {
       support.push_back(B.support()[i]);}
 
     bool found = ortScan<dim>(B.center(), B.radius() * B.radius(),
-				    P.cut(scanned, scanned+step), support, dist);
+			      P.cut(scanned, scanned+step), support, dist);
     scanned += step;
 
     if (!found) {

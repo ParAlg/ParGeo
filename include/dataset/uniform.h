@@ -59,9 +59,11 @@ namespace pargeo {
   template<int dim, class pointT = point<dim>>
   parlay::sequence<pointT> uniformInPolyPoints(size_t n,
 					       size_t shape,
-					       double scale = 1.0) {
+					       double scale = -1.0) {
     using namespace parlay;
     using namespace uniformDataGen;
+
+    if (scale < 0) scale = n;
 
     auto P = sequence<pointT>(n);
     parallel_for (0, n, [&](size_t i) {
@@ -77,10 +79,12 @@ namespace pargeo {
   parlay::sequence<pointT> uniformOnPolyPoints(size_t n,
 					       size_t shape,
 					       double thickness,
-					       double scale = 1.0) {
+					       double scale = -1.0) {
     using namespace parlay;
     using namespace uniformDataGen;
     using floatT = typename pointT::floatT;
+
+    if (scale < 0) scale = floatT(n);
 
     auto P = sequence<pointT>(n);
 

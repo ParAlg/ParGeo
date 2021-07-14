@@ -17,9 +17,9 @@ template <int dim>
 void timeSeb(parlay::sequence<pargeo::point<dim>> &P, char const *outFile) {
   timer t; t.start();
 
-  // auto D = pargeo::seb::welzlMtfPivot::compute<dim>(make_slice(P));
-  // auto D = pargeo::seb::scan::compute<dim>(make_slice(P));
-  auto D = pargeo::seb::sampling::compute<dim>(make_slice(P));
+  // auto D = pargeo::seb::welzlMtf::compute<dim>(make_slice(P));
+  auto D = pargeo::seb::scan::compute<dim>(make_slice(P));
+  // auto D = pargeo::seb::sampling::compute<dim>(make_slice(P));
   std::cout << D.radius() << ", center = " << D.center() << "\n";
   std::cout << "seb-time = " << t.get_next() << "\n";
   t.stop();
