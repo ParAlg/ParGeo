@@ -37,4 +37,6 @@
 # Build files
 build/
 
+# Benchmark files
 *.json
+*.png

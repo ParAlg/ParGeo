@@ -14,7 +14,7 @@ pargeo::seb::welzlMtfPivot::compute(parlay::slice<pargeo::point<dim>*, pargeo::p
   typedef pargeo::seb::ball<dim> ballT;
 
   auto support = parlay::sequence<pointT>();
-  ballT D = welzlMtfPivotParallel(P, support, ballT());
+  ballT D = pargeo::seb::welzl::welzlMtfPivotParallel(P, support, ballT());
   return D;
 }
 

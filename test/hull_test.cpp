@@ -12,19 +12,17 @@
 #include "gtest/gtest.h"
 
 parlay::sequence<pargeo::fpoint<3>> data() {
-  return pargeo::uniformInPolyPoints<3, pargeo::fpoint<3>>(200, 0);
+  return pargeo::uniformInPolyPoints<3, pargeo::fpoint<3>>(200, 0, 1.0);
 }
 
 bool compareFacets(parlay::sequence<pargeo::hull3d::facet<pargeo::fpoint<3>>> H1,
 		   parlay::sequence<pargeo::hull3d::facet<pargeo::fpoint<3>>> H2) {
   using namespace pargeo;
 
-  double knob = 1e-6;
-
   auto eq = [&](pargeo::fpoint<3> p1, pargeo::fpoint<3> p2) {
-		return (std::abs(p1[0] - p2[0]) < knob) &&
-		  (std::abs(p1[1] - p2[1]) < knob) &&
-		  (std::abs(p1[2] - p2[2]) < knob);
+		return (std::abs(p1[0] - p2[0]) < p1.eps) &&
+		  (std::abs(p1[1] - p2[1]) < p1.eps) &&
+		  (std::abs(p1[2] - p2[2]) < p1.eps);
 	      };
 
   auto facetEq = [&] (pargeo::hull3d::facet<pargeo::fpoint<3>> f1,

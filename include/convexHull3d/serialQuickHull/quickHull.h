@@ -136,11 +136,11 @@ void pargeo::hull3d::serialQuickHull::quickHullSerial(pargeo::hull3d::serialQuic
   }
 
 #ifdef HULL_SERIAL_VERBOSE
-  cout << "apex-time = " << apexTime << endl;
-  cout << "frontier-time = " << frontierTime << endl;
-  cout << "create-time = " << createTime << endl;
-  cout << "split-time = " << splitTime << endl;
-  cout << "#-rounds = " << round << endl;
-  cout << "#-errors = " << errors << endl;
+  std::cout << "apex-time = " << apexTime << std::endl;
+  std::cout << "frontier-time = " << frontierTime << std::endl;
+  std::cout << "create-time = " << createTime << std::endl;
+  std::cout << "split-time = " << splitTime << std::endl;
+  std::cout << "#-rounds = " << round << std::endl;
+  std::cout << "#-errors = " << errors << std::endl;
 #endif
 }

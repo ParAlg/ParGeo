@@ -163,6 +163,47 @@ e.b==e.ff.a    e.a==e.ff.c
   // it also contains primitives for visibility test
   // originT origin;
 
+  // todo test this function
+  // try to link facets f1 and f2, and return success
+  bool linkFacet(facetT* f1, facetT* f2) {
+    bool matched = false;
+
+    auto match = [&](vertexT f1v1,
+		     vertexT f1v2,
+		     vertexT f2v1,
+		     vertexT f2v2) {
+		   if ((f1v1 == f2v1 && f1v2 == f2v2) ||
+		       (f1v1 == f2v2 && f1v2 == f2v1)) {
+		     matched = true;
+		     return true;
+		   }
+		   return false;
+		 };
+
+    if (!matched && match(f1->a, f1->b, f2->a, f2->b)) {
+      f1->abFacet = f2; f2->abFacet = f1;}
+    if (!matched && match(f1->b, f1->c, f2->a, f2->b)) {
+      f1->bcFacet = f2; f2->abFacet = f1;}
+    if (!matched && match(f1->c, f1->a, f2->a, f2->b)) {
+      f1->caFacet = f2; f2->abFacet = f1;}
+
+    if (!matched && match(f1->a, f1->b, f2->b, f2->c)) {
+      f1->abFacet = f2; f2->bcFacet = f1;}
+    if (!matched && match(f1->b, f1->c, f2->b, f2->c)) {
+      f1->bcFacet = f2; f2->bcFacet = f1;}
+    if (!matched && match(f1->c, f1->a, f2->b, f2->c)) {
+      f1->caFacet = f2; f2->bcFacet = f1;}
+
+    if (!matched && match(f1->a, f1->b, f2->c, f2->a)) {
+      f1->abFacet = f2; f2->caFacet = f1;}
+    if (!matched && match(f1->b, f1->c, f2->c, f2->a)) {
+      f1->bcFacet = f2; f2->bcFacet = f1;}
+    if (!matched && match(f1->c, f1->a, f2->c, f2->a)) {
+      f1->caFacet = f2; f2->caFacet = f1;}
+
+    return matched;
+  }
+
   // Link f with ab, bc, ca; the edge matching is automatic -- input in any order
   void linkFacet(facetT* f, facetT* ab, facetT* bc, facetT* ca) {
     using fc = facetT;

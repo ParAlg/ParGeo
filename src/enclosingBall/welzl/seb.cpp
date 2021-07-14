@@ -14,7 +14,7 @@ pargeo::seb::welzl::compute(parlay::slice<pargeo::point<dim>*, pargeo::point<dim
   typedef pargeo::seb::ball<dim> ballT;
 
   auto support = parlay::sequence<pointT>();
-  return welzlParallel(P, support, ballT());
+  return pargeo::seb::welzl::welzlParallel(P, support, ballT());
 }
 
 template

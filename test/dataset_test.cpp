@@ -15,7 +15,7 @@ void unique(Seq& P) {
 TEST(dataset, onSphere0) {
 
   parlay::sequence<pargeo::point<3>> P =
-    pargeo::uniformOnPolyPoints<3, pargeo::point<3>>(100, 0, 0);
+    pargeo::uniformOnPolyPoints<3, pargeo::point<3>>(100, 0, 0, 1.0);
 
   pargeo::point<3> zero;
   zero[0] = 0; zero[1] = 0; zero[2] = 0;
@@ -28,7 +28,7 @@ TEST(dataset, onSphere0) {
 TEST(dataset, onSphereFloat0) {
 
   parlay::sequence<pargeo::fpoint<3>> P =
-    pargeo::uniformOnPolyPoints<3, pargeo::fpoint<3>>(100, 0, 0);
+    pargeo::uniformOnPolyPoints<3, pargeo::fpoint<3>>(100, 0, 0, 1.0);
 
   pargeo::fpoint<3> zero;
   zero[0] = 0; zero[1] = 0; zero[2] = 0;
@@ -41,7 +41,7 @@ TEST(dataset, onSphereFloat0) {
 TEST(dataset, onSphere1) {
 
   parlay::sequence<pargeo::point<3>> P =
-    pargeo::uniformOnPolyPoints<3, pargeo::point<3>>(100, 0, 0.1);
+    pargeo::uniformOnPolyPoints<3, pargeo::point<3>>(100, 0, 0.1, 1.0);
 
   pargeo::point<3> zero;
   zero[0] = 0; zero[1] = 0; zero[2] = 0;
@@ -54,7 +54,7 @@ TEST(dataset, onSphere1) {
 TEST(dataset, inSphere0) {
 
   parlay::sequence<pargeo::point<3>> P =
-    pargeo::uniformInPolyPoints<3, pargeo::point<3>>(100, 0);
+    pargeo::uniformInPolyPoints<3, pargeo::point<3>>(100, 0, 1.0);
 
   pargeo::point<3> zero;
   zero[0] = 0; zero[1] = 0; zero[2] = 0;
@@ -67,7 +67,7 @@ TEST(dataset, inSphere0) {
 TEST(dataset, inCube0) {
 
   parlay::sequence<pargeo::point<3>> P =
-    pargeo::uniformInPolyPoints<3, pargeo::point<3>>(100, 1);
+    pargeo::uniformInPolyPoints<3, pargeo::point<3>>(100, 1, 1.0);
 
   for (auto p: P) {
     EXPECT_TRUE(abs(p[0]) <= 1);
