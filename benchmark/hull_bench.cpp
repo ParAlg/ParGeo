@@ -8,8 +8,8 @@
 
 #include "dataset/uniform.h"
 
-long maxThreads = 12;
-long defaultN = 1000000;
+long maxThreads = 72;
+long defaultN = 10000000;
 
 // in sphere
 parlay::sequence<pargeo::fpoint<3>> data0(size_t n) {

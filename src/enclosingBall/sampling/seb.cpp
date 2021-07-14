@@ -5,8 +5,38 @@
 
 //todo make point generic
 
+namespace pargeo {
+  namespace seb {
+    namespace sampling {
+
+      template<int dim>
+      size_t quadrant(pargeo::point<dim>, pargeo::point<dim>);
+
+      template<int dim>
+      bool ortScanSerial(pargeo::point<dim>,
+			 typename pargeo::point<dim>::floatT,
+			 parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*>,
+			 parlay::sequence<pargeo::point<dim>>&,
+			 typename pargeo::point<dim>::floatT*);
+
+      template<int dim>
+      bool ortScan(pargeo::point<dim>,
+		   typename pargeo::point<dim>::floatT,
+		   parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*>,
+		   parlay::sequence<pargeo::point<dim>>&,
+		   typename pargeo::point<dim>::floatT*);
+
+      template<int dim>
+      pargeo::seb::ball<dim>
+      miniDiscOrt(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*>);
+
+    } // End namespace sampling
+  } // End namespace seb
+} // End namespace pargeo
+
 template<int dim>
-size_t quadrant(pargeo::point<dim> p, pargeo::point<dim> center) {
+size_t
+pargeo::seb::sampling::quadrant(pargeo::point<dim> p, pargeo::point<dim> center) {
   int index = 0;
   int offset = 1;
   for (int i = 0; i < dim; ++ i) {
@@ -17,7 +47,8 @@ size_t quadrant(pargeo::point<dim> p, pargeo::point<dim> center) {
 }
 
 template<int dim>
-bool ortScanSerial(pargeo::point<dim> c,
+bool
+pargeo::seb::sampling::ortScanSerial(pargeo::point<dim> c,
 		   typename pargeo::point<dim>::floatT r,
 		   parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P,
 		   parlay::sequence<pargeo::point<dim>>& support,
@@ -52,7 +83,8 @@ bool ortScanSerial(pargeo::point<dim> c,
 }
 
 template<int dim>
-bool ortScan(pargeo::point<dim> c,
+bool
+pargeo::seb::sampling::ortScan(pargeo::point<dim> c,
 	     typename pargeo::point<dim>::floatT r,
 	     parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> A,
 	     parlay::sequence<pargeo::point<dim>>& support,
@@ -115,7 +147,7 @@ bool ortScan(pargeo::point<dim> c,
 
 template<int dim>
 pargeo::seb::ball<dim>
-miniDiscOrt(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P) {
+pargeo::seb::sampling::miniDiscOrt(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P) {
   using ballT = pargeo::seb::ball<dim>;
   using pointT = pargeo::point<dim>;
   using floatT = typename pointT::floatT;
@@ -179,7 +211,7 @@ miniDiscOrt(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P) {
 template<int dim>
 pargeo::seb::ball<dim>
 pargeo::seb::sampling::compute(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P) {
-  return miniDiscOrt(P);
+  return pargeo::seb::sampling::miniDiscOrt(P);
 }
 
 template

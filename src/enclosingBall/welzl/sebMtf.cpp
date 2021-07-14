@@ -8,13 +8,14 @@
 
 template<int dim>
 pargeo::seb::ball<dim>
-pargeo::seb::welzlMtf::compute(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P) {
+pargeo::seb::welzlMtf::compute(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> _P) {
 
   typedef pargeo::point<dim> pointT;
   typedef pargeo::seb::ball<dim> ballT;
 
   auto support = parlay::sequence<pointT>();
-  return pargeo::seb::welzl::welzlMtfParallel(P, support, ballT());
+  auto P = parlay::tabulate(_P.size(), [&](size_t i){return _P[i];});
+  return pargeo::seb::welzl::welzlMtfParallel(parlay::make_slice(P), support, ballT());
 }
 
 template
