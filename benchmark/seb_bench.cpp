@@ -174,14 +174,14 @@ static void sampling_asianDragon_3d_3_6m(benchmark::State& state) {
   auto P = asianDragon_3d_3_6m();
   for (auto _ : state) pargeo::seb::sampling::compute<3>(parlay::make_slice(P));}
 
-BENCHMARK(welzl_inSphere_2d_10m)->Unit(benchmark::kMillisecond);
-BENCHMARK(welzl_onSphere_2d_10m)->Unit(benchmark::kMillisecond);
-BENCHMARK(welzl_inSphere_5d_10m)->Unit(benchmark::kMillisecond);
-BENCHMARK(welzl_onSphere_5d_10m)->Unit(benchmark::kMillisecond);
-BENCHMARK(welzl_armadillo_3d_173k)->Unit(benchmark::kMillisecond);
-BENCHMARK(welzl_dragon_3d_438k)->Unit(benchmark::kMillisecond);
-BENCHMARK(welzl_buddha_3d_544k)->Unit(benchmark::kMillisecond);
-BENCHMARK(welzl_asianDragon_3d_3_6m)->Unit(benchmark::kMillisecond);
+// BENCHMARK(welzl_inSphere_2d_10m)->Unit(benchmark::kMillisecond);
+// BENCHMARK(welzl_onSphere_2d_10m)->Unit(benchmark::kMillisecond);
+// BENCHMARK(welzl_inSphere_5d_10m)->Unit(benchmark::kMillisecond);
+// BENCHMARK(welzl_onSphere_5d_10m)->Unit(benchmark::kMillisecond);
+// BENCHMARK(welzl_armadillo_3d_173k)->Unit(benchmark::kMillisecond);
+// BENCHMARK(welzl_dragon_3d_438k)->Unit(benchmark::kMillisecond);
+// BENCHMARK(welzl_buddha_3d_544k)->Unit(benchmark::kMillisecond);
+// BENCHMARK(welzl_asianDragon_3d_3_6m)->Unit(benchmark::kMillisecond);
 
 BENCHMARK(welzlMtf_inSphere_2d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(welzlMtf_onSphere_2d_10m)->Unit(benchmark::kMillisecond);

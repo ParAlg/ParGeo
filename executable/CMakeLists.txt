@@ -34,8 +34,8 @@ target_link_libraries(zorder pargeoLib)
 add_executable(uniformData uniformData.cpp)
 target_link_libraries(uniformData pargeoLib)
 
-add_executable(hull hull.cpp)
-target_link_libraries(hull pargeoLib
+add_executable(hull3d hull3d.cpp)
+target_link_libraries(hull3d pargeoLib
   divideConquerHull3dLib
   bruteforceHull3dLib
   samplingHull3dLib
