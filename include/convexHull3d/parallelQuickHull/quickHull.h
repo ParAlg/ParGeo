@@ -191,16 +191,13 @@ void quickHullParallel(pargeo::hull3d::parallelQuickHull::hullTopology<pointT> *
 				   auto cv = FE0[a].at(i);
 				   if (cv.b != nv.a) {
 				     // Error found in point a
-				     if (success[a]) {
-				       // handle the error only if the reservation is successful
-				       linkedFacet3d* f = apexes0[a]->seeFacet;
-				       parallel_for(0, f->numPts(),
-						    [&](size_t i){
-						      f->pts(i)->seeFacet = nullptr;
-						    });
-				       f->clear();
-				       apexes0[a]->seeFacet = nullptr;
-				     }
+				     linkedFacet3d* f = apexes0[a]->seeFacet;
+				     parallel_for(0, f->numPts(),
+						  [&](size_t i){
+						    f->pts(i)->seeFacet = nullptr;
+						  });
+				     f->clear();
+				     apexes0[a]->seeFacet = nullptr;
 				     success[a] = false;
 				     break;
 				   }
