@@ -1,4 +1,5 @@
 #include <vector>
+#include "parlay/random.h"
 #include "parlay/sequence.h"
 #include "enclosingBall/welzl/seb.h"
 #include "enclosingBall/welzl/welzl.h"
@@ -8,13 +9,14 @@
 
 template<int dim>
 pargeo::seb::ball<dim>
-pargeo::seb::welzl::compute(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P) {
+pargeo::seb::welzl::compute(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> _P) {
 
   typedef pargeo::point<dim> pointT;
   typedef pargeo::seb::ball<dim> ballT;
 
   auto support = parlay::sequence<pointT>();
-  return pargeo::seb::welzl::welzlParallel(P, support, ballT());
+  auto P = parlay::random_shuffle(_P);
+  return pargeo::seb::welzl::welzlParallel(parlay::make_slice(P), support, ballT());
 }
 
 template

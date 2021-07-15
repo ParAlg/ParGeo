@@ -1,4 +1,4 @@
-#include <vector>
+#include "parlay/random.h"
 #include "parlay/sequence.h"
 #include "enclosingBall/welzl/seb.h"
 #include "enclosingBall/welzl/welzl.h"
@@ -14,7 +14,7 @@ pargeo::seb::welzlMtfPivot::compute(parlay::slice<pargeo::point<dim>*, pargeo::p
   typedef pargeo::seb::ball<dim> ballT;
 
   auto support = parlay::sequence<pointT>();
-  auto P = parlay::tabulate(_P.size(), [&](size_t i){return _P[i];});
+  auto P = parlay::random_shuffle(_P);
   ballT D = pargeo::seb::welzl::welzlMtfPivotParallel(parlay::make_slice(P), support, ballT());
   return D;
 }

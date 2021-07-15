@@ -24,6 +24,8 @@ endif()
 # Include benchmark targets
 # message(STATUS "benchmarks: Enabled")
 
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/benchmark/datasets)
+
 add_executable(spatialGraph_bench spatialGraph_bench.cpp)
 target_link_libraries(spatialGraph_bench PRIVATE
   pargeoLib
@@ -46,8 +48,15 @@ target_link_libraries(spatialSearch_bench PRIVATE
   pargeoLib
   benchmark_main)
 
-add_executable(hull_bench hull_bench.cpp)
-target_link_libraries(hull_bench PRIVATE
+add_executable(hull2d_bench hull2d_bench.cpp)
+target_link_libraries(hull2d_bench PRIVATE
+  quickHull2dLib
+  divideHull2dLib
+  pargeoLib
+  benchmark_main)
+
+add_executable(hull3d_bench hull3d_bench.cpp)
+target_link_libraries(hull3d_bench PRIVATE
   divideConquerHull3dLib
   bruteforceHull3dLib
   samplingHull3dLib
