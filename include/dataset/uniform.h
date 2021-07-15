@@ -15,7 +15,15 @@ namespace pargeo {
 
     template<typename floatT>
     floatT randFloat(size_t i) {
-        return floatT(parlay::hash64(i)) / floatT(std::numeric_limits<size_t>::max());
+      return floatT(parlay::hash64(i)) / floatT(std::numeric_limits<size_t>::max());
+    }
+
+    template<typename floatT>
+    floatT randRange(size_t i, floatT lo, floatT hi) {
+      if (lo >= hi) throw std::runtime_error("rand range error");
+      floatT f = randFloat<floatT>(i + 1); // +1 for randomness
+      f = f * (hi - lo) + lo;
+      return f;
     }
 
     template<int dim, class pointT>
@@ -110,6 +118,24 @@ namespace pargeo {
 	  P[i] = randOnUnitSphere<dim, pointT>(i, r2) * s * scale;
 	});
 
+    } else if (shape == 1) {
+      if (dim != 3)
+	throw std::runtime_error("on cube data is only available in 3d at the moment");
+      parallel_for(0, n, [&](size_t i){
+			       P[i] = randNd<dim, pointT>(i);});
+      size_t sideN = n / 6;
+      size_t m = 0;
+      floatT hi1 = 1 + thickness;
+      floatT lo1 = 1 - thickness;
+      floatT hi2 = -1 + thickness;
+      floatT lo2 = -1 - thickness;
+      parallel_for(0, sideN, [&](size_t i) {P[i + m][2] = randRange(i + m, lo1, hi1);}); m += sideN;
+      parallel_for(0, sideN, [&](size_t i) {P[i + m][2] = randRange(i + m, lo2, hi2);}); m += sideN;
+      parallel_for(0, sideN, [&](size_t i) {P[i + m][1] = randRange(i + m, lo1, hi1);}); m += sideN;
+      parallel_for(0, sideN, [&](size_t i) {P[i + m][1] = randRange(i + m, lo2, hi2);}); m += sideN;
+      parallel_for(0, sideN, [&](size_t i) {P[i + m][0] = randRange(i + m, lo1, hi1);}); m += sideN;
+      parallel_for(0, n - m, [&](size_t i) {P[i + m][0] = randRange(i + m, lo2, hi2);}); m += sideN;
+      parallel_for(0, n, [&](size_t i){ P[i] = P[i] * scale;});
     } else throw std::runtime_error("generator not implemented yet");
 
     return P; // data should be already permuted
