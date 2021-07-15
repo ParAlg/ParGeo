@@ -24,7 +24,7 @@ endif()
 # Include benchmark targets
 # message(STATUS "benchmarks: Enabled")
 
-file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/benchmark/datasets)
+file(COPY datasets DESTINATION ${CMAKE_BINARY_DIR}/benchmark/)
 
 add_executable(spatialGraph_bench spatialGraph_bench.cpp)
 target_link_libraries(spatialGraph_bench PRIVATE
