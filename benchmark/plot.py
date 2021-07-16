@@ -11,10 +11,8 @@ def parse(data):
         name = b['name']
         tokens = name.split("/")
         tokens1 = tokens[0].split("_")
-
         method = tokens1[0]
-        card = tokens[1]
-        dataset = tokens1[1] + "_" + str(card)
+        dataset = "_".join(tokens1[1:])
         time = b['cpu_time']
         if dataset not in dataOut:
             dataOut[dataset] = dict()
@@ -23,9 +21,6 @@ def parse(data):
     return dataOut
 
 def plotBar(data, title):
-    print(data)
-    # rows: methods
-    # columns: data sets
     datasets = [k for k in data.keys()]
     methods = [m for m in data[datasets[0]]]
     bars = np.zeros((len(datasets), len(methods)),\
@@ -33,28 +28,29 @@ def plotBar(data, title):
     for i, dataset in enumerate(datasets):
         for j, method in enumerate(methods):
             bars[i][j] = data[dataset][method]
-    bars = bars.T
 
-    X = np.arange(len(datasets))
-    fig = plt.figure()
+    ncol = int((len(datasets) / 2))
+    fig, axes = plt.subplots(nrows=2, ncols=ncol, figsize=[15,7])
 
-    w = 0.1
+    axx = None
     colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red',\
               'tab:cyan', 'tab:purple', 'tab:brown', 'tab:pink',\
               'tab:gray', 'tab:olive']
-    for i in range(len(methods)):
-        print(bars[i])
-        plt.bar(X + i * w, bars[i],\
-                color = colors[i % len(methods)],\
-                width = w)
+    for i, ax in enumerate(axes.flatten()):
+        B = ax.bar(methods, bars[i])
+        for j, bar in enumerate(B):
+            bar.set_label(methods[j])
+            bar.set_color(colors[j])
+        ax.set(title=datasets[i], ylabel='time (ms)')
+        ax.tick_params(labelbottom = False, bottom = False)
+        axx = ax
+    handles, labels = axx.get_legend_handles_labels()
+    fig.legend(handles, labels, loc='upper center', ncol=len(methods),\
+               fontsize=12, bbox_to_anchor=(0.5, 0.95))
 
-    plt.xlabel("Data set")
-    plt.ylabel("Time (ms)")
-
-    plt.xticks(X, datasets)
-    plt.legend(methods)
-    plt.title(title)
-
+    fig.suptitle(title, fontsize=20)
+    plt.tight_layout()
+    plt.subplots_adjust(top = 0.85)
     #plt.show()
     plt.savefig(title + ".png")
 
