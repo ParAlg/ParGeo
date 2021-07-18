@@ -11,6 +11,15 @@ namespace pargeo {
 
     template<class vertexT, class pointT>
     parlay::sequence<vertexT>
+    point2vertexSerial(parlay::slice<pointT*, pointT*> _P) {
+      parlay::sequence<vertexT> P(_P.size());
+      size_t i = 0;
+      for (auto _p: _P) P[i++] = vertexT(P[i].coords());
+      return P;
+    }
+
+    template<class vertexT, class pointT>
+    parlay::sequence<vertexT>
     point2vertex(parlay::slice<pointT*, pointT*> P) {
       return std::move(parlay::tabulate(P.size(),
 				[&](size_t i) {
@@ -23,7 +32,7 @@ namespace pargeo {
       using vertexT = vertex<facetT, pointT>;
       using floatT = typename vertexT::floatT;
 
-      parlay::sequence<vertexT> P = point2vertex<vertexT>(PIn);
+      parlay::sequence<vertexT> P = point2vertexSerial<vertexT>(PIn);
 
       // Maximize triangle area based on fixed xMin and xMax
       size_t X[6];
@@ -56,7 +65,7 @@ namespace pargeo {
       // Maximize simplex volume
 
       vertexT area = crossProduct3d(x1-y1, x2-y1);
-      auto z = max_element(P, [&](vertexT i, vertexT j) {
+      auto z = max_element_serial(P, [&](vertexT i, vertexT j) {
 	  return abs((y1-i).dot(area)) < abs((y1-j).dot(area));
 	});
       size_t zApex = z - &P[0];
