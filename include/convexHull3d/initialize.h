@@ -13,9 +13,10 @@ namespace pargeo {
     parlay::sequence<vertexT>
     point2vertexSerial(parlay::slice<pointT*, pointT*> _P) {
       parlay::sequence<vertexT> P(_P.size());
-      size_t i = 0;
-      for (auto _p: _P) P[i++] = vertexT(P[i].coords());
-      return P;
+      for (size_t i = 0; i < _P.size(); ++i) {
+	P[i] = vertexT(_P[i].coords());
+      }
+      return std::move(P);
     }
 
     template<class vertexT, class pointT>
