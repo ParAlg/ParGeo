@@ -2,12 +2,15 @@
 
 #include <math.h>
 #include <atomic>
+#include "pargeo/getTime.h"
 #include "pargeo/kdTree.h"
 #include "pargeo/point.h"
 #include "convexHull3d/facet.h"
 #include "parlay/sequence.h"
 #include "parlay/parallel.h"
 #include "parlay/hash_table.h"
+
+// #define SAMPLE_HULL_VERBOSE
 
 namespace pargeo {
   namespace hull3d {
@@ -32,7 +35,9 @@ namespace pargeo {
 	auto isOut = [&](pointT p) {
 		       for (size_t i = 0; i < F.size(); ++i) {
 			 auto f = F[i];
-			 if (((f.a - interiorPt) - (p - interiorPt)).dot(area[i]) > 0) {
+			 if (((f.a - interiorPt) - (p - interiorPt)).dot(area[i]) > 0
+			     || f.a == p || f.b == p || f.c == p
+			     ) {
 			   return true;
 			 }
 		       }
@@ -104,6 +109,7 @@ namespace pargeo {
 		       parlay::slice<std::atomic<bool>*, std::atomic<bool>*> flag,
 		       pointT* base) {
 	using floatT = typename pointT::floatT;
+	floatT eps = pointT::eps;
 
 	auto vols = nodeVol<pointT>(r, f);
 	floatT volMin = std::get<0>(vols);
@@ -156,17 +162,16 @@ namespace pargeo {
 	      pargeo::hull3d::facet<pointT>*> F) {
 	using namespace parlay;
 
+#ifdef SAMPLE_HULL_VERBOSE
+	pargeo::timer t; t.start();
+#endif
+
 	pargeo::kdNode<3, pointT>* tree =
-	  buildKdt<3, pointT>(P, true, false); // todo manual leaf size
+	  buildKdt<3, pointT>(P, true, (size_t)128); // todo manual leaf size
 
-	// parlay::sequence<bool> flag = parlay::tabulate(P.size(), [&](size_t i) {
-	// 						   return false;
-	// 					 });
-
-	// parlay::sequence<std::atomic<bool>> flag =
-	//   parlay::tabulate(P.size(), [&](size_t i) {
-	// 			       return false;
-	// 			     });
+#ifdef SAMPLE_HULL_VERBOSE
+	std::cout << " build-tree-time = " << t.get_next() << "\n";
+#endif
 
 	parlay::sequence<std::atomic<bool>> flag(P.size());
 	parlay::parallel_for(0, flag.size(), [&](size_t i){flag[i] = false;});
@@ -182,7 +187,16 @@ namespace pargeo {
 					    flagVisible<pointT>(tree, &facets[i], make_slice(flag), data);
 				  });
 
-	return parlay::pack(P, flag);
+#ifdef SAMPLE_HULL_VERBOSE
+	std::cout << " filter-time = " << t.get_next() << "\n";
+#endif
+
+	auto POut = std::move(parlay::pack(P, flag));
+
+#ifdef SAMPLE_HULL_VERBOSE
+	std::cout << " pack-time = " << t.get_next() << "\n";
+#endif
+	return std::move(POut);
       }
 
     } // End namespace helper

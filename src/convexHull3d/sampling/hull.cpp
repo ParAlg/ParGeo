@@ -49,6 +49,10 @@ pargeo::hull3d::sampling::compute(parlay::slice<pointT*, pointT*> P, double frac
   size_t sampleSize = P.size() * fraction;
   sampleSize = std::max(sampleSize, size_t(5));
 
+#ifdef SAMPLE_HULL_VERBOSE
+  std::cout << "sample-size = " << sampleSize << "\n";
+#endif
+
   auto sample = pargeo::hull3d::samplingHelper::randomProjection<pointT>(P, sampleSize);
 
   parlay::sequence<pargeo::hull3d::facet<pointT>> sampleHull =
