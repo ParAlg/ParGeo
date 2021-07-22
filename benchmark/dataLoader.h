@@ -147,6 +147,32 @@ parlay::sequence<pargeo::fpoint<3>> buddha_3d_544k_float() {
   }
 }
 
+parlay::sequence<pargeo::point<3>> thaiStatue_3d_3_5m() {
+  try {
+    auto filePath = "datasets/thai-statue.csv";
+    int dim = pargeo::pointIO::readHeader(filePath);
+    parlay::sequence<pargeo::point<3>> P =
+      pargeo::pointIO::readPointsFromFile<pargeo::point<3>>(filePath);
+    return P;
+  } catch (const std::runtime_error& error) {
+    std::cout << "warning: thaiStatue data set is not available\n";
+    return inSphere<3>(N);
+  }
+}
+
+parlay::sequence<pargeo::fpoint<3>> thaiStatue_3d_3_5m_float() {
+  try {
+    auto filePath = "datasets/thai-statue.csv";
+    int dim = pargeo::pointIO::readHeader(filePath);
+    parlay::sequence<pargeo::fpoint<3>> P =
+      pargeo::pointIO::readPointsFromFile<pargeo::fpoint<3>>(filePath);
+    return P;
+  } catch (const std::runtime_error& error) {
+    std::cout << "warning: thaiStatue data set is not available\n";
+    return inSphere_float<3>(N);
+  }
+}
+
 parlay::sequence<pargeo::point<3>> asianDragon_3d_3_6m() {
   try {
     auto filePath = "datasets/asian-dragon.csv";
@@ -169,6 +195,32 @@ parlay::sequence<pargeo::fpoint<3>> asianDragon_3d_3_6m_float() {
     return P;
   } catch (const std::runtime_error& error) {
     std::cout << "warning: asianDragon data set is not available\n";
+    return inSphere_float<3>(N);
+  }
+}
+
+parlay::sequence<pargeo::point<3>> lucy_3d_3_14m() {
+  try {
+    auto filePath = "datasets/lucy.csv";
+    int dim = pargeo::pointIO::readHeader(filePath);
+    parlay::sequence<pargeo::point<3>> P =
+      pargeo::pointIO::readPointsFromFile<pargeo::point<3>>(filePath);
+    return P;
+  } catch (const std::runtime_error& error) {
+    std::cout << "warning: lucy data set is not available\n";
+    return inSphere<3>(N);
+  }
+}
+
+parlay::sequence<pargeo::fpoint<3>> lucy_3d_3_14m_float() {
+  try {
+    auto filePath = "datasets/lucy.csv";
+    int dim = pargeo::pointIO::readHeader(filePath);
+    parlay::sequence<pargeo::fpoint<3>> P =
+      pargeo::pointIO::readPointsFromFile<pargeo::fpoint<3>>(filePath);
+    return P;
+  } catch (const std::runtime_error& error) {
+    std::cout << "warning: lucy data set is not available\n";
     return inSphere_float<3>(N);
   }
 }

@@ -34,8 +34,16 @@ static void welzl_buddha_3d_544k(benchmark::State& state) {
   auto P = buddha_3d_544k();
   for (auto _ : state) pargeo::seb::welzl::compute<3>(parlay::make_slice(P));}
 
+static void welzl_thaiStatue_3d_3_5m(benchmark::State& state) {
+  auto P = thaiStatue_3d_3_5m();
+  for (auto _ : state) pargeo::seb::welzl::compute<3>(parlay::make_slice(P));}
+
 static void welzl_asianDragon_3d_3_6m(benchmark::State& state) {
   auto P = asianDragon_3d_3_6m();
+  for (auto _ : state) pargeo::seb::welzl::compute<3>(parlay::make_slice(P));}
+
+static void welzl_lucy_3d_3_14m(benchmark::State& state) {
+  auto P = lucy_3d_3_14m();
   for (auto _ : state) pargeo::seb::welzl::compute<3>(parlay::make_slice(P));}
 
 
@@ -68,8 +76,16 @@ static void welzlMtf_buddha_3d_544k(benchmark::State& state) {
   auto P = buddha_3d_544k();
   for (auto _ : state) pargeo::seb::welzlMtf::compute<3>(parlay::make_slice(P));}
 
+static void welzlMtf_thaiStatue_3d_3_5m(benchmark::State& state) {
+  auto P = thaiStatue_3d_3_5m();
+  for (auto _ : state) pargeo::seb::welzlMtf::compute<3>(parlay::make_slice(P));}
+
 static void welzlMtf_asianDragon_3d_3_6m(benchmark::State& state) {
   auto P = asianDragon_3d_3_6m();
+  for (auto _ : state) pargeo::seb::welzlMtf::compute<3>(parlay::make_slice(P));}
+
+static void welzlMtf_lucy_3d_3_14m(benchmark::State& state) {
+  auto P = lucy_3d_3_14m();
   for (auto _ : state) pargeo::seb::welzlMtf::compute<3>(parlay::make_slice(P));}
 
 
@@ -102,8 +118,16 @@ static void welzlMtfPivot_buddha_3d_544k(benchmark::State& state) {
   auto P = buddha_3d_544k();
   for (auto _ : state) pargeo::seb::welzlMtfPivot::compute<3>(parlay::make_slice(P));}
 
+static void welzlMtfPivot_thaiStatue_3d_3_5m(benchmark::State& state) {
+  auto P = thaiStatue_3d_3_5m();
+  for (auto _ : state) pargeo::seb::welzlMtfPivot::compute<3>(parlay::make_slice(P));}
+
 static void welzlMtfPivot_asianDragon_3d_3_6m(benchmark::State& state) {
   auto P = asianDragon_3d_3_6m();
+  for (auto _ : state) pargeo::seb::welzlMtfPivot::compute<3>(parlay::make_slice(P));}
+
+static void welzlMtfPivot_lucy_3d_3_14m(benchmark::State& state) {
+  auto P = lucy_3d_3_14m();
   for (auto _ : state) pargeo::seb::welzlMtfPivot::compute<3>(parlay::make_slice(P));}
 
 
@@ -136,8 +160,16 @@ static void scan_buddha_3d_544k(benchmark::State& state) {
   auto P = buddha_3d_544k();
   for (auto _ : state) pargeo::seb::scan::compute<3>(parlay::make_slice(P));}
 
+static void scan_thaiStatue_3d_3_5m(benchmark::State& state) {
+  auto P = thaiStatue_3d_3_5m();
+  for (auto _ : state) pargeo::seb::scan::compute<3>(parlay::make_slice(P));}
+
 static void scan_asianDragon_3d_3_6m(benchmark::State& state) {
   auto P = asianDragon_3d_3_6m();
+  for (auto _ : state) pargeo::seb::scan::compute<3>(parlay::make_slice(P));}
+
+static void scan_lucy_3d_3_14m(benchmark::State& state) {
+  auto P = lucy_3d_3_14m();
   for (auto _ : state) pargeo::seb::scan::compute<3>(parlay::make_slice(P));}
 
 
@@ -170,53 +202,71 @@ static void sampling_buddha_3d_544k(benchmark::State& state) {
   auto P = buddha_3d_544k();
   for (auto _ : state) pargeo::seb::sampling::compute<3>(parlay::make_slice(P));}
 
+static void sampling_thaiStatue_3d_3_5m(benchmark::State& state) {
+  auto P = thaiStatue_3d_3_5m();
+  for (auto _ : state) pargeo::seb::sampling::compute<3>(parlay::make_slice(P));}
+
 static void sampling_asianDragon_3d_3_6m(benchmark::State& state) {
   auto P = asianDragon_3d_3_6m();
   for (auto _ : state) pargeo::seb::sampling::compute<3>(parlay::make_slice(P));}
 
-// BENCHMARK(welzl_inSphere_2d_10m)->Unit(benchmark::kMillisecond);
-// BENCHMARK(welzl_onSphere_2d_10m)->Unit(benchmark::kMillisecond);
-// BENCHMARK(welzl_inSphere_5d_10m)->Unit(benchmark::kMillisecond);
-// BENCHMARK(welzl_onSphere_5d_10m)->Unit(benchmark::kMillisecond);
+static void sampling_lucy_3d_3_14m(benchmark::State& state) {
+  auto P = lucy_3d_3_14m();
+  for (auto _ : state) pargeo::seb::sampling::compute<3>(parlay::make_slice(P));}
+
+BENCHMARK(welzl_inSphere_2d_10m)->Unit(benchmark::kMillisecond);
+BENCHMARK(welzl_onSphere_2d_10m)->Unit(benchmark::kMillisecond);
+BENCHMARK(welzl_inSphere_5d_10m)->Unit(benchmark::kMillisecond);
+BENCHMARK(welzl_onSphere_5d_10m)->Unit(benchmark::kMillisecond);
 // BENCHMARK(welzl_armadillo_3d_173k)->Unit(benchmark::kMillisecond);
 // BENCHMARK(welzl_dragon_3d_438k)->Unit(benchmark::kMillisecond);
-// BENCHMARK(welzl_buddha_3d_544k)->Unit(benchmark::kMillisecond);
-// BENCHMARK(welzl_asianDragon_3d_3_6m)->Unit(benchmark::kMillisecond);
+BENCHMARK(welzl_buddha_3d_544k)->Unit(benchmark::kMillisecond);
+BENCHMARK(welzl_thaiStatue_3d_3_5m)->Unit(benchmark::kMillisecond);
+BENCHMARK(welzl_asianDragon_3d_3_6m)->Unit(benchmark::kMillisecond);
+BENCHMARK(welzl_lucy_3d_3_14m)->Unit(benchmark::kMillisecond);
 
 BENCHMARK(welzlMtf_inSphere_2d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(welzlMtf_onSphere_2d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(welzlMtf_inSphere_5d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(welzlMtf_onSphere_5d_10m)->Unit(benchmark::kMillisecond);
-BENCHMARK(welzlMtf_armadillo_3d_173k)->Unit(benchmark::kMillisecond);
-BENCHMARK(welzlMtf_dragon_3d_438k)->Unit(benchmark::kMillisecond);
+// BENCHMARK(welzlMtf_armadillo_3d_173k)->Unit(benchmark::kMillisecond);
+// BENCHMARK(welzlMtf_dragon_3d_438k)->Unit(benchmark::kMillisecond);
 BENCHMARK(welzlMtf_buddha_3d_544k)->Unit(benchmark::kMillisecond);
+BENCHMARK(welzlMtf_thaiStatue_3d_3_5m)->Unit(benchmark::kMillisecond);
 BENCHMARK(welzlMtf_asianDragon_3d_3_6m)->Unit(benchmark::kMillisecond);
+BENCHMARK(welzlMtf_lucy_3d_3_14m)->Unit(benchmark::kMillisecond);
 
 BENCHMARK(welzlMtfPivot_inSphere_2d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(welzlMtfPivot_onSphere_2d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(welzlMtfPivot_inSphere_5d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(welzlMtfPivot_onSphere_5d_10m)->Unit(benchmark::kMillisecond);
-BENCHMARK(welzlMtfPivot_armadillo_3d_173k)->Unit(benchmark::kMillisecond);
-BENCHMARK(welzlMtfPivot_dragon_3d_438k)->Unit(benchmark::kMillisecond);
+// BENCHMARK(welzlMtfPivot_armadillo_3d_173k)->Unit(benchmark::kMillisecond);
+// BENCHMARK(welzlMtfPivot_dragon_3d_438k)->Unit(benchmark::kMillisecond);
 BENCHMARK(welzlMtfPivot_buddha_3d_544k)->Unit(benchmark::kMillisecond);
+BENCHMARK(welzlMtfPivot_thaiStatue_3d_3_5m)->Unit(benchmark::kMillisecond);
 BENCHMARK(welzlMtfPivot_asianDragon_3d_3_6m)->Unit(benchmark::kMillisecond);
+BENCHMARK(welzlMtfPivot_lucy_3d_3_14m)->Unit(benchmark::kMillisecond);
 
 BENCHMARK(scan_inSphere_2d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(scan_onSphere_2d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(scan_inSphere_5d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(scan_onSphere_5d_10m)->Unit(benchmark::kMillisecond);
-BENCHMARK(scan_armadillo_3d_173k)->Unit(benchmark::kMillisecond);
-BENCHMARK(scan_dragon_3d_438k)->Unit(benchmark::kMillisecond);
+// BENCHMARK(scan_armadillo_3d_173k)->Unit(benchmark::kMillisecond);
+// BENCHMARK(scan_dragon_3d_438k)->Unit(benchmark::kMillisecond);
 BENCHMARK(scan_buddha_3d_544k)->Unit(benchmark::kMillisecond);
+BENCHMARK(scan_thaiStatue_3d_3_5m)->Unit(benchmark::kMillisecond);
 BENCHMARK(scan_asianDragon_3d_3_6m)->Unit(benchmark::kMillisecond);
+BENCHMARK(scan_lucy_3d_3_14m)->Unit(benchmark::kMillisecond);
 
 BENCHMARK(sampling_inSphere_2d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(sampling_onSphere_2d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(sampling_inSphere_5d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(sampling_onSphere_5d_10m)->Unit(benchmark::kMillisecond);
-BENCHMARK(sampling_armadillo_3d_173k)->Unit(benchmark::kMillisecond);
-BENCHMARK(sampling_dragon_3d_438k)->Unit(benchmark::kMillisecond);
+// BENCHMARK(sampling_armadillo_3d_173k)->Unit(benchmark::kMillisecond);
+// BENCHMARK(sampling_dragon_3d_438k)->Unit(benchmark::kMillisecond);
 BENCHMARK(sampling_buddha_3d_544k)->Unit(benchmark::kMillisecond);
+BENCHMARK(sampling_thaiStatue_3d_3_5m)->Unit(benchmark::kMillisecond);
 BENCHMARK(sampling_asianDragon_3d_3_6m)->Unit(benchmark::kMillisecond);
+BENCHMARK(sampling_lucy_3d_3_14m)->Unit(benchmark::kMillisecond);
 
 BENCHMARK_MAIN();
