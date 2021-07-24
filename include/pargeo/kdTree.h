@@ -408,7 +408,7 @@ namespace pargeo {
   }
 
   template<int dim, class objT>
-  kdNode<dim, objT>* buildKdt(parlay::slice<objT*, objT*> P,
+  kdNode<dim, objT>* buildKdTree(parlay::slice<objT*, objT*> P,
 			      bool parallel=true,
 			      size_t leafSize = 16,
 			      parlay::sequence<objT*>* items=nullptr) {
@@ -441,7 +441,7 @@ namespace pargeo {
   }
 
   template<int dim, class objT>
-  kdNode<dim, objT>* buildKdt(parlay::sequence<objT>& P,
+  kdNode<dim, objT>* buildKdTree(parlay::sequence<objT>& P,
 			      bool parallel=true,
 			      size_t leafSize = 16,
 			      parlay::sequence<objT*>* items=nullptr) {

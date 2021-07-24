@@ -167,7 +167,7 @@ namespace pargeo {
 #endif
 
 	pargeo::kdNode<3, pointT>* tree =
-	  buildKdt<3, pointT>(P, true, (size_t)128); // todo manual leaf size
+	  buildKdTree<3, pointT>(P, true, 128); // todo manual leaf size
 
 #ifdef SAMPLE_HULL_VERBOSE
 	std::cout << " build-tree-time = " << t.get_next() << "\n";
