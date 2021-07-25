@@ -36,8 +36,6 @@ add_subdirectory(src)
 
 add_subdirectory(executable)
 
-add_subdirectory(pybindings)
-
 add_subdirectory(benchmark)
 
 enable_testing()
