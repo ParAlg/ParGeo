@@ -267,53 +267,59 @@ BENCHMARK(serialQuick_onSphere_3d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(serialQuick_inCube_3d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(serialQuick_onCube_3d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(serialQuick_buddha_3d_544k)->Unit(benchmark::kMillisecond);
+BENCHMARK(serialQuick_dragon_3d_438k)->Unit(benchmark::kMillisecond);
 BENCHMARK(serialQuick_thaiStatue_3d_3_5m)->Unit(benchmark::kMillisecond);
 BENCHMARK(serialQuick_asianDragon_3d_3_6m)->Unit(benchmark::kMillisecond);
-BENCHMARK(serialQuick_lucy_3d_3_14m)->Unit(benchmark::kMillisecond);
+//BENCHMARK(serialQuick_lucy_3d_3_14m)->Unit(benchmark::kMillisecond);
 
 BENCHMARK(quickHull_inSphere_3d_10m)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
 BENCHMARK(quickHull_onSphere_3d_10m)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
 BENCHMARK(quickHull_inCube_3d_10m)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
 BENCHMARK(quickHull_onCube_3d_10m)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
 BENCHMARK(quickHull_buddha_3d_544k)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
+BENCHMARK(quickHull_dragon_3d_438k)->Unit(benchmark::kMillisecond);
 BENCHMARK(quickHull_thaiStatue_3d_3_5m)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
 BENCHMARK(quickHull_asianDragon_3d_3_6m)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
-BENCHMARK(quickHull_lucy_3d_3_14m)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
+//BENCHMARK(quickHull_lucy_3d_3_14m)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
 
 BENCHMARK(randInc_inSphere_3d_10m)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
 BENCHMARK(randInc_onSphere_3d_10m)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
 BENCHMARK(randInc_inCube_3d_10m)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
 BENCHMARK(randInc_onCube_3d_10m)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
 BENCHMARK(randInc_buddha_3d_544k)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
+BENCHMARK(randInc_dragon_3d_438k)->Unit(benchmark::kMillisecond);
 BENCHMARK(randInc_thaiStatue_3d_3_5m)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
 BENCHMARK(randInc_asianDragon_3d_3_6m)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
-BENCHMARK(randInc_lucy_3d_3_14m)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
+//BENCHMARK(randInc_lucy_3d_3_14m)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
 
 BENCHMARK(divideConquer_inSphere_3d_10m)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
 BENCHMARK(divideConquer_onSphere_3d_10m)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
 BENCHMARK(divideConquer_inCube_3d_10m)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
 BENCHMARK(divideConquer_onCube_3d_10m)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
 BENCHMARK(divideConquer_buddha_3d_544k)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
+BENCHMARK(divideConquer_dragon_3d_438k)->Unit(benchmark::kMillisecond);
 BENCHMARK(divideConquer_thaiStatue_3d_3_5m)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
 BENCHMARK(divideConquer_asianDragon_3d_3_6m)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
-BENCHMARK(divideConquer_lucy_3d_3_14m)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
+//BENCHMARK(divideConquer_lucy_3d_3_14m)->Unit(benchmark::kMillisecond)->Arg(maxThreads);
 
 BENCHMARK(pseudo_inSphere_3d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(pseudo_onSphere_3d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(pseudo_inCube_3d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(pseudo_onCube_3d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(pseudo_buddha_3d_544k)->Unit(benchmark::kMillisecond);
+BENCHMARK(pseudo_dragon_3d_438k)->Unit(benchmark::kMillisecond);
 BENCHMARK(pseudo_thaiStatue_3d_3_5m)->Unit(benchmark::kMillisecond);
 BENCHMARK(pseudo_asianDragon_3d_3_6m)->Unit(benchmark::kMillisecond);
-BENCHMARK(pseudo_lucy_3d_3_14m)->Unit(benchmark::kMillisecond);
+//BENCHMARK(pseudo_lucy_3d_3_14m)->Unit(benchmark::kMillisecond);
 
 BENCHMARK(sampling_inSphere_3d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(sampling_onSphere_3d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(sampling_inCube_3d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(sampling_onCube_3d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(sampling_buddha_3d_544k)->Unit(benchmark::kMillisecond);
+BENCHMARK(sampling_dragon_3d_438k)->Unit(benchmark::kMillisecond);
 BENCHMARK(sampling_thaiStatue_3d_3_5m)->Unit(benchmark::kMillisecond);
 BENCHMARK(sampling_asianDragon_3d_3_6m)->Unit(benchmark::kMillisecond);
-BENCHMARK(sampling_lucy_3d_3_14m)->Unit(benchmark::kMillisecond);
+//BENCHMARK(sampling_lucy_3d_3_14m)->Unit(benchmark::kMillisecond);
 
 BENCHMARK_MAIN();

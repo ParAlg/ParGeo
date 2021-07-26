@@ -23,7 +23,7 @@ void timeHull(parlay::sequence<pt> &P, int rounds, char const *outFile) {
   //auto H = pargeo::hull2d::bruteforce::compute<pt>(make_slice(P));
   //auto H = pargeo::hull2d::divideConquer::compute<pt>(make_slice(P));
   //auto H = pargeo::hull2d::sampling::compute<pt>(make_slice(P), 0.001);
-  //auto H = pargeo::hull2d::randInc::compute<pt>(make_slice(P));
+  auto H = pargeo::hull2d::randInc::compute<pt>(make_slice(P));
 
   // for (auto h: H) {
   //   std::cout << h << " ";
