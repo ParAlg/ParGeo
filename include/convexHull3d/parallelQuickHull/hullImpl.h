@@ -264,7 +264,7 @@ class pargeo::hull3d::parallelQuickHull::hullTopology :
 
     // std::cout << "total = " << M2 << "\n";
 
-    if (M2 <= 0) M2;
+    if (M2 <= 0) return M2;
 
     auto map2 = parlay::sequence<size_t>(M2);
     parlay::parallel_for(0, M,

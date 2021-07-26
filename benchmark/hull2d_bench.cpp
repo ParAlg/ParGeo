@@ -1,3 +1,4 @@
+#include "convexHull2d/randInc/hull.h"
 #include "convexHull2d/quickHull/hull.h"
 #include "convexHull2d/divideConquer/hull.h"
 
@@ -48,6 +49,30 @@ BENCHMARK(divideConquer_inSphere_2d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(divideConquer_onSphere_2d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(divideConquer_inCube_2d_10m)->Unit(benchmark::kMillisecond);
 BENCHMARK(divideConquer_onCube_2d_10m)->Unit(benchmark::kMillisecond);
+
+
+
+static void randInc_inSphere_2d_10m(benchmark::State& state) {
+  auto P = inSphere_float<2>(N);
+  for (auto _ : state) pargeo::hull2d::randInc::compute(parlay::make_slice(P));}
+
+static void randInc_onSphere_2d_10m(benchmark::State& state) {
+  auto P = onSphere_float<2>(N);
+  for (auto _ : state) pargeo::hull2d::randInc::compute(parlay::make_slice(P));}
+
+static void randInc_inCube_2d_10m(benchmark::State& state) {
+  auto P = inCube_float<2>(N);
+  for (auto _ : state) pargeo::hull2d::randInc::compute(parlay::make_slice(P));}
+
+static void randInc_onCube_2d_10m(benchmark::State& state) {
+  auto P = onCube_float<2>(N);
+  for (auto _ : state) pargeo::hull2d::randInc::compute(parlay::make_slice(P));}
+
+BENCHMARK(randInc_inSphere_2d_10m)->Unit(benchmark::kMillisecond);
+BENCHMARK(randInc_onSphere_2d_10m)->Unit(benchmark::kMillisecond);
+BENCHMARK(randInc_inCube_2d_10m)->Unit(benchmark::kMillisecond);
+BENCHMARK(randInc_onCube_2d_10m)->Unit(benchmark::kMillisecond);
+
 
 
 BENCHMARK_MAIN();

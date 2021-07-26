@@ -47,8 +47,9 @@ target_link_libraries(hull3d pargeoLib
 add_executable(hull2d hull2d.cpp)
 target_link_libraries(hull2d pargeoLib
   quickHull2dLib
-  bruteforceHull2dLib
   divideHull2dLib
+  randIncHull2dLib
+  bruteforceHull2dLib
   )
 
 add_executable(hullSampling hullSampling.cpp)

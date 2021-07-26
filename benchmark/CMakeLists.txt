@@ -50,6 +50,7 @@ target_link_libraries(spatialSearch_bench PRIVATE
 
 add_executable(hull2d_bench hull2d_bench.cpp)
 target_link_libraries(hull2d_bench PRIVATE
+  randIncHull2dLib
   quickHull2dLib
   divideHull2dLib
   pargeoLib
