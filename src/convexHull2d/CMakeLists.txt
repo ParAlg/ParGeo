@@ -1,4 +1,5 @@
 add_subdirectory(randInc)
+add_subdirectory(sampling)
 add_subdirectory(quickHull)
 add_subdirectory(bruteforce)
 add_subdirectory(divideConquer)

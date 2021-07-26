@@ -49,6 +49,7 @@ target_link_libraries(hull2d pargeoLib
   quickHull2dLib
   divideHull2dLib
   randIncHull2dLib
+  samplingHull2dLib
   bruteforceHull2dLib
   )
 
