@@ -23,6 +23,7 @@
 #pragma once
 
 #include <vector>
+#include "parlay/utilities.h"
 #include "parlay/sequence.h"
 #include "pargeo/algebra.h"
 #include "convexHull3d/vertex.h"
@@ -118,6 +119,11 @@ public:
 				   signedVolume(*bb);
 			       }));
     return apex;
+  }
+
+  // i is a seed for generating random number
+  vertexT* randomApex(size_t i = 0) {
+    return seeList[parlay::hash64(i) % seeList.size()];
   }
 
   linkedFacet(vertexT _a, vertexT _b, vertexT _c):

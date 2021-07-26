@@ -36,7 +36,8 @@ namespace pargeo {
 
 template<class linkedFacet3d, class vertex3d, class pointT>
 void quickHullParallel(pargeo::hull3d::parallelQuickHull::hullTopology<pointT> *context,
-		     size_t numProc = 0) {
+		       size_t numProc = 0,
+		       bool randomized = false) {
   using namespace pargeo;
   using namespace parlay;
 
@@ -75,7 +76,11 @@ void quickHullParallel(pargeo::hull3d::parallelQuickHull::hullTopology<pointT> *
 
     loopStart:
       linkedFacet3d* f0 = context->hullSize() < 512 ? context->facetWalk() : nullptr;
-      vertex3d *apex = context->furthestApexParallel(f0);
+      vertex3d *apex;
+      if (randomized)
+	apex = context->randomApex(f0);
+      else
+	apex = context->furthestApexParallel(f0);
 
 #ifdef HULL_PARALLEL_VERBOSE
       apexTime += t.get_next();
@@ -146,7 +151,11 @@ void quickHullParallel(pargeo::hull3d::parallelQuickHull::hullTopology<pointT> *
       // collect the apexes, if it's very difficult, maybe should pack the vertices
       // and find them instead
       if (context->updateMap() <= 0) break;
-      sequence<vertex3d*> apexes0 = context->furthestApexesParallel3(numProc * 8); // todo tune
+      sequence<vertex3d*> apexes0;
+      if (randomized)
+	apexes0 = std::move(context->randomApexes(numProc * 8)); // todo tune
+      else
+	apexes0 = std::move(context->furthestApexesParallel3(numProc * 8)); // todo tune
       // sequence<vertex3d> apexes0 = context->furthestApexes(numProc * 8); // todo tune
       // sequence<vertex3d> apexes0 = context->randomApexes(numProc*8); // not as good
       //sequence<vertex3d> apexes0 = context->furthestApexesWithSkip(numProc*8); // not as good

@@ -14,7 +14,7 @@ namespace pargeo {
 
       template<class pointT>
       parlay::sequence<pargeo::hull3d::facet<pointT>>
-      compute(parlay::slice<pointT*, pointT*>, size_t = 0);
+      compute(parlay::slice<pointT*, pointT*>, size_t = 0, bool randomized = true);
 
       template<class pointT>
       parlay::sequence<pargeo::hull3d::facet<pointT>>

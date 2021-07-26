@@ -379,21 +379,41 @@ class pargeo::hull3d::parallelQuickHull::hullTopology :
     //return vertexDedup(make_slice(V));
   }
 
-  // If n not supplied, find furthest apexes of all facets
-  parlay::sequence<vertexT> randomApexes(size_t n=-1) {
-    parlay::sequence<vertexT> apexes;
+  // randomized incremental
+  parlay::sequence<vertexT*> randomApexes(size_t n=-1) {
+    using floatT = typename vertexT::floatT;
+
+    size_t m = std::min(M, n);
+
+    parlay::sequence<facetT*> F =
+      parlay::tabulate(m, [&](size_t i){
+		    return Q[mapping[i]].seeFacet;
+		  });
+
+    parlay::sort_inplace(make_slice(F),
+		 [&](facetT* f1, facetT* f2){
+		   return f1 < f2;
+		 });
+
+    F = std::move(parlay::unique(make_slice(F)));
+
+    auto V = parlay::tabulate(F.size(), [&](size_t i){
+				  return F[i]->randomApex(i);
+				});
+
+    return std::move(V);
+  }
+
+  vertexT* randomApex(facetT *_f=nullptr) {
+    vertexT* apex = nullptr;
+
     auto fVisit = [&](facetT* f) {return true;};
-    auto fStop = [&]() {return apexes.size() >= n;};
-
-    auto fFill = [&](facetT* f) {
-		   if (f->numPts() > 0) {
-		     auto apex = *(f->pts(parlay::hash64(f->numPts()) % f->numPts()));
-		     if (!apex.isEmpty()) apexes.push_back(apex);
-		   }
-		 };
-    baseT::dfsFacet(baseT::H, fVisit, fFill, fStop);
-
-    return apexes;
+    auto fDo = [&](facetT* f) {
+		 if (f->numPts() > 0) apex = f->randomApex();
+	       };
+    auto fStop = [&]() { return !apex->isEmpty(); };
+    baseT::dfsFacet(_f ? _f : baseT::H, fVisit, fDo, fStop);
+    return apex;
   }
 
   // // If n not supplied, find furthest apexes of all facets

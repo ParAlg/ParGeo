@@ -21,7 +21,8 @@ template <class pt>
 void timeHull(parlay::sequence<pt> &P, int rounds, char const *outFile) {
   timer t; t.start();
 
-  auto H = pargeo::hull3d::parallelQuickHull::compute<pt>(make_slice(P));
+  auto H = pargeo::hull3d::parallelQuickHull::compute<pt>(make_slice(P), 0, false);
+  //auto H = pargeo::hull3d::parallelQuickHull::compute<pt>(make_slice(P), 0, true); // randomized
   //auto H = pargeo::hull3d::divideConquer::compute<pt>(make_slice(P));
   //auto H = pargeo::hull3d::sampling::compute<pt>(make_slice(P));
   //auto H = pargeo::hull3d::pseudo::compute<pt>(make_slice(P));

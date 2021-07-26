@@ -1,3 +1,4 @@
+
 // This code is part of the Pargeo Library
 // Copyright (c) 2021 Yiqiu Wang and the Pargeo Team
 //
@@ -34,11 +35,11 @@
 
 template<class pointT>
 parlay::sequence<pargeo::hull3d::facet<pointT>>
-pargeo::hull3d::parallelQuickHull::compute(parlay::slice<pointT*, pointT*> P, size_t numProc) {
+pargeo::hull3d::parallelQuickHull::compute(parlay::slice<pointT*, pointT*> P, size_t numProc, bool randomized) {
 
   hullTopology<pointT>* linkedHull = pargeo::hull3d::initParallel<hullTopology<pointT>, linkedFacet<pointT>, pointT>(P);
 
-  quickHullParallel<linkedFacet<pointT>, pargeo::hull3d::vertex<linkedFacet<pointT>, pointT>>(linkedHull, numProc);
+  quickHullParallel<linkedFacet<pointT>, pargeo::hull3d::vertex<linkedFacet<pointT>, pointT>>(linkedHull, numProc, randomized);
 
   auto out = parlay::sequence<pargeo::hull3d::facet<pointT>>();
   linkedHull->getFacet(out);
@@ -118,7 +119,7 @@ pargeo::hull3d::parallelQuickHull::compute(hullTopology<pointT>* linkedHull, siz
 // }
 
 template parlay::sequence<pargeo::hull3d::facet<pargeo::fpoint<3>>>
-pargeo::hull3d::parallelQuickHull::compute(parlay::slice<pargeo::fpoint<3>*, pargeo::fpoint<3>*>, size_t);
+pargeo::hull3d::parallelQuickHull::compute(parlay::slice<pargeo::fpoint<3>*, pargeo::fpoint<3>*>, size_t, bool);
 
 template parlay::sequence<pargeo::hull3d::facet<pargeo::point<3>>>
-pargeo::hull3d::parallelQuickHull::compute(parlay::slice<pargeo::point<3>*, pargeo::point<3>*>, size_t);
+pargeo::hull3d::parallelQuickHull::compute(parlay::slice<pargeo::point<3>*, pargeo::point<3>*>, size_t, bool);
