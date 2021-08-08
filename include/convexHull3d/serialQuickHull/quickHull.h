@@ -67,7 +67,8 @@ void pargeo::hull3d::serialQuickHull::quickHullSerial(pargeo::hull3d::serialQuic
 
   loopStart:
 
-    vertex3d apex = context->furthestApex();
+    linkedFacet3d* f0 = context->hullSize() < 512 ? context->facetWalk() : nullptr;
+    vertex3d apex = context->furthestApex(f0);
 
 #ifdef HULL_SERIAL_VERBOSE
     apexTime += t.get_next();

@@ -89,6 +89,22 @@ class pargeo::hull3d::serialQuickHull::hullTopology :
 	  }}}}
   }
 
+  facetT* facetWalk() {
+    facetT* f = baseT::H;
+    size_t fSize = f->numPts();
+
+    auto fVisit = [&](facetT* _f) {return true;};
+    auto fDo = [&](facetT* _f) {
+      if (_f->numPts() > fSize) {
+	fSize = _f->numPts();
+	f = _f;
+      }
+    };
+    auto fStop = [&]() { return false; };
+    baseT::dfsFacet(f, fVisit, fDo, fStop);
+    return f;
+  }
+
   vertexT furthestApex(facetT *f=nullptr) {
     vertexT apex = vertexT();
 
