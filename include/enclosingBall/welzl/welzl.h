@@ -23,6 +23,11 @@ namespace pargeo {
 		pargeo::seb::ball<dim>, size_t);
 
       template<int dim>
+      size_t
+      findPivotParallel(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*>,
+			pargeo::seb::ball<dim>, size_t);
+
+      template<int dim>
       pargeo::seb::ball<dim>
       welzlSerial(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*>,
 		  parlay::sequence<pargeo::point<dim>>&,
@@ -107,6 +112,23 @@ pargeo::seb::welzl::findPivot(parlay::slice<pargeo::point<dim>*, pargeo::point<d
     }
   }
   return bestI;
+}
+
+template<int dim>
+size_t
+pargeo::seb::welzl::findPivotParallel(parlay::slice<pargeo::point<dim>*, pargeo::point<dim>*> P,
+				      pargeo::seb::ball<dim> B,
+				      size_t s) {
+  using pointT = pargeo::point<dim>;
+  using floatT = typename pointT::floatT;
+  auto cmp = [&](pointT a, pointT b) {
+    auto da = a.distSqr(B.center());
+    auto db = b.distSqr(B.center());
+    return da < db;
+  };
+  pointT* best = parlay::max_element(P.cut(s, P.size()), cmp);
+  size_t ii = best->distSqr(B.center()) > (B.radius() * B.radius()) ? best - &P[0] : -1;
+  return ii;
 }
 
 /*------------ The vanilla Welzl's algorithm ------------*/
@@ -324,7 +346,7 @@ pargeo::seb::welzl::welzlMtfPivotParallel(parlay::slice<pargeo::point<dim>*, par
                  };
 
   auto cleanUp = [&](parlay::slice<pointT*, pointT*> A, size_t i) {
-		   size_t ii = findPivot<dim>(P, B, i+1);
+		   size_t ii = findPivotParallel<dim>(P, B, i+1);
 		   if (ii != -1) std::swap(P[ii], P[i]);
 
                    if (support.size() == B.size()) B.grow(A[i]);
