@@ -11,8 +11,8 @@ namespace pargeo {
       using pointT = pt;
       pt a, b, c;// Indices into P
       facet(pt _a, pt _b, pt _c): a(_a), b(_b), c(_c) {
-	if (pargeo::determinant3by3(a, b, c) > 0)
-	  std::swap(b, c);
+	      if (pargeo::determinant3by3(a, b, c) > 0)
+	        std::swap(b, c);
       }
     };
 

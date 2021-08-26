@@ -13,7 +13,7 @@ namespace pargeo {
     namespace parallelQuickHull {
 
       template<class pointT>
-      parlay::sequence<pargeo::hull3d::facet<pointT>>
+      parlay::sequence<pargeo::hull3d::facet<pointT> >
       compute(parlay::slice<pointT*, pointT*>, size_t = 0, bool randomized = true);
 
       template<class pointT>
@@ -25,7 +25,7 @@ namespace pargeo {
 
       template<class pointT>
       parlay::sequence<pargeo::hull3d::facet<pointT>>
-      compute(hullTopology<pointT>* linkedHull);
+      compute(hullTopology<pointT>*, size_t = 0);
 
     } // End namespace parallelQuickHull
   } // End namespace hull3d
