@@ -23,6 +23,21 @@ namespace dynKdTree {
 
     }
 
+    template<typename T>
+    coordinate(T& _data) {
+
+      for (int i = 0; i < dim; ++ i) data[i] = _data[i];
+
+    }
+
+    coordinate() { }
+
+    floatT& operator[](int i) {
+
+      return data[i];
+
+    }
+
   };
 
 
@@ -30,8 +45,22 @@ namespace dynKdTree {
 
   public:
 
+    coordinate<dim> topLeft, lowerRight;
+
     template<typename T>
     boundingBox(std::vector<T> _input) {
+
+      if (_input.size() < 2) return;
+
+      topLeft = coordinate<dim>(_input[0]);
+      lowerRight = coordinate<dim>(_input[0]);
+
+      for (auto p: _input) {
+	for (int i = 0; i < dim; ++ i) {
+	  topLeft[i] = std::min(p[i], topLeft[i]);
+	  lowerRight[i] = std::max(p[i], lowerRight[i]);
+	}
+      }
 
     }
 
@@ -45,6 +74,8 @@ namespace dynKdTree {
   template<int dim, typename T> class baseNode {
 
   protected:
+
+    static const int threshold = 16; // for splitting
 
     boundingBox<dim> box;
 
@@ -60,11 +91,20 @@ namespace dynKdTree {
 
 
   template<int dim, typename T>
-  class splitNode: public baseNode<dim, T> {
+  class splitNode: public baseNode<dim, T> { // internal node
+
+    baseNode<dim, T>* left = nullptr;
+
+    baseNode<dim, T>* right = nullptr;
+
+    int splitDim = -1;
 
   public:
 
-    splitNode() {
+    splitNode(vector<T>& _input, _splitDim = 0):
+      splitDim(_splitDim) {
+
+      // nth_element
 
     }
 
@@ -72,7 +112,7 @@ namespace dynKdTree {
 
 
   template<int dim, typename T>
-  class dataNode: public baseNode<dim, T> {
+  class dataNode: public baseNode<dim, T> { // leaf node
 
     std::vector<T> data;
 

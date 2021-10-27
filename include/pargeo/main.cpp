@@ -1,3 +1,7 @@
+#include <iostream>
+#include <memory>
+#include <vector>
+
 #include "dynKdTree.h"
 
 template<int dim>
@@ -5,16 +9,41 @@ class point: public dynKdTree::coordinate<dim> {
 
 public:
 
-  point(double* _data): dynKdTree::coordinate<dim>(_data) {
-
-  }
+  point(double* _data): dynKdTree::coordinate<dim>(_data) { }
 
 };
 
 
 int main() {
 
+  using namespace std;
+
   using namespace dynKdTree;
+
+  static const int dim = 2;
+
+  int n = 10;
+
+  /* Generate test data */
+
+  unique_ptr<double[]> rawData(new double[n]);
+
+  for (int i = 0; i < n; ++ i) {
+    rawData[i] = rand() / (double)RAND_MAX;
+  }
+
+  vector<point<2>> points;
+
+  for (int i = 0; i < n / dim; ++ i) {
+    points.push_back(point<2>(&rawData[dim * i]));
+  }
+
+  /* Insert to the kdtree */
+
+  boundingBox<dim> bb(points);
+
+  // cout << bb.topLeft[0] << "," << bb.lowerRight[0] << endl;
+  // cout << bb.topLeft[1] << "," << bb.lowerRight[1] << endl;
 
   return 0;
 }
