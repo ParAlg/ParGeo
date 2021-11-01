@@ -32,18 +32,20 @@ int main() {
     rawData[i] = rand() / (double)RAND_MAX;
   }
 
-  vector<point<2>> points;
+  vector<point<dim>> points;
 
   for (int i = 0; i < n / dim; ++ i) {
-    points.push_back(point<2>(&rawData[dim * i]));
+    points.push_back(point<dim>(&rawData[dim * i]));
   }
 
   /* Insert to the kdtree */
 
-  boundingBox<dim> bb(points);
-
+  // boundingBox<dim> bb(points);
   // cout << bb.topLeft[0] << "," << bb.lowerRight[0] << endl;
   // cout << bb.topLeft[1] << "," << bb.lowerRight[1] << endl;
+
+  unique_ptr<splitNode<dim, point<dim>>>
+    tree(new splitNode<dim, point<dim>>(points));
 
   return 0;
 }
