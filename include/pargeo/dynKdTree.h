@@ -96,8 +96,13 @@ namespace dynKdTree {
 
     virtual ~baseNode() { };
 
+    virtual baseNode* insert(std::vector<T>& _input, int s, int e) {
+      return nullptr;
+    };
+
   };
 
+  template<int dim, typename T> class splitNode;
 
   template<int dim, typename T>
   class dataNode: public baseNode<dim, T> { // leaf node
@@ -121,6 +126,31 @@ namespace dynKdTree {
 
       for (int i = s; i < e; ++ i) {
 	data.push_back(_input[i]);
+      }
+
+    }
+
+    baseNode<dim, T>* insert(std::vector<T>& _input, int s = -1, int e = -1) {
+
+      if (s < 0 || e < 0) {
+	s = 0;
+	e = _input.size();
+      }
+
+      if ((e - s) + data.size() >= baseNode<dim, T>::threshold) {
+
+	splitNode<dim, T>* newNode = new splitNode<dim, T>(_input, s, e);
+
+	return newNode;
+
+      } else {
+
+	for (int i = s; i < e; ++ i) {
+	  data.push_back(_input[i]);
+	}
+
+	return nullptr;
+
       }
 
     }
@@ -149,8 +179,6 @@ namespace dynKdTree {
 	e = _input.size();
       }
 
-      std::cout << "size = " << e - s << "\n";
-
       baseNode<dim, T>::box = boundingBox<dim>(_input, s, e);
 
       std::nth_element(_input.begin() + s,
@@ -162,19 +190,58 @@ namespace dynKdTree {
 
       split = _input[s + (e - s) / 2][splitDim];
 
-      if (e - s < baseNode<dim, T>::threshold) {
+      int leftSize = s + (e - s) / 2 - s;
+
+      if (leftSize < baseNode<dim, T>::threshold) {
 
 	left = new dataNode<dim, T>(_input, s, s + (e - s) / 2);
-
-	right = new dataNode<dim, T>(_input, s + (e - s) / 2, e);
 
       } else {
 
 	left = new splitNode(_input, s, s + (e - s) / 2, (splitDim + 1) % dim);
 
+      }
+
+      int rightSize = e - s + (e - s) / 2;
+
+      if (rightSize < baseNode<dim, T>::threshold) {
+
+	right = new dataNode<dim, T>(_input, s + (e - s) / 2, e);
+
+      } else {
+
 	right = new splitNode(_input, s + (e - s) / 2, e, (splitDim + 1) % dim);
 
       }
+
+    }
+
+    baseNode<dim, T>* insert(std::vector<T>& _input, int s = -1, int e = -1) {
+
+      if (s < 0 || e < 0) {
+	s = 0;
+	e = _input.size();
+      }
+
+      auto middle = std::partition(_input.begin() + s, _input.begin() + e, [&](T& elem) {
+	return elem[splitDim] < split;
+      });
+
+      auto newLeft = left->insert(_input, s, std::distance(_input.begin(), middle));
+
+      if (newLeft) {
+	delete left;
+	left = newLeft;
+      }
+
+      auto newRight = right->insert(_input, std::distance(_input.begin(), middle), e);
+
+      if (newRight) {
+	delete right;
+	right = newRight;
+      }
+
+      return nullptr;
 
     }
 

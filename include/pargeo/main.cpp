@@ -22,7 +22,7 @@ int main() {
 
   static const int dim = 2;
 
-  int n = 10;
+  int n = 80;
 
   /* Generate test data */
 
@@ -45,7 +45,9 @@ int main() {
   // cout << bb.topLeft[1] << "," << bb.lowerRight[1] << endl;
 
   unique_ptr<splitNode<dim, point<dim>>>
-    tree(new splitNode<dim, point<dim>>(points));
+    tree(new splitNode<dim, point<dim>>(points, 0, n / 4));
+
+  tree->insert(points, n / 4, n / 2);
 
   return 0;
 }
