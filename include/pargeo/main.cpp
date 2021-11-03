@@ -1,8 +1,10 @@
+#include <assert.h>
 #include <iostream>
 #include <memory>
 #include <vector>
 
 #include "dynKdTree.h"
+#include "getTime.h"
 
 template<int dim>
 class point: public dynKdTree::coordinate<dim> {
@@ -22,7 +24,7 @@ int main() {
 
   static const int dim = 2;
 
-  int n = 80;
+  int n = 2000;
 
   /* Generate test data */
 
@@ -40,14 +42,28 @@ int main() {
 
   /* Insert to the kdtree */
 
-  // boundingBox<dim> bb(points);
-  // cout << bb.topLeft[0] << "," << bb.lowerRight[0] << endl;
-  // cout << bb.topLeft[1] << "," << bb.lowerRight[1] << endl;
+  pargeo::timer t;
+  t.start();
 
   unique_ptr<splitNode<dim, point<dim>>>
     tree(new splitNode<dim, point<dim>>(points, 0, n / 4));
 
+  std::cout << "build-time = " << t.get_next() << "\n";
+
   tree->insert(points, n / 4, n / 2);
 
+  std::cout << "size-after-insert = " << tree->size() << "\n";
+
+  std::cout << "insert-time = " << t.get_next() << "\n";
+
+  tree->erase(points, n / 4, n / 2);
+
+  std::cout << "size-after-erase = " << tree->size() << "\n";
+
+  std::cout << "erase-time = " << t.get_next() << "\n";
+
+  assert(tree->size() == n / 4);
+
   return 0;
+
 }

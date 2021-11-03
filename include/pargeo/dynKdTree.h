@@ -9,6 +9,7 @@
 
 namespace dynKdTree {
 
+
   template<int dim, typename floatT = double>
   class coordinate {
 
@@ -106,11 +107,13 @@ namespace dynKdTree {
 
     virtual ~baseNode() { };
 
-    virtual baseNode* insert(std::vector<T>& _input, int s, int e) {
+    virtual baseNode* insert(std::vector<T>& _input, int s = -1, int e = -1) {
 
       return nullptr;
 
-    };
+    }
+
+    virtual int erase(std::vector<T>& _input, int s = -1, int e = -1) { return 0; };
 
   };
 
@@ -121,9 +124,15 @@ namespace dynKdTree {
   template<int dim, typename T>
   class dataNode: public baseNode<dim, T> { // leaf node
 
+  private:
+
     std::vector<T> data;
 
+    std::vector<char> flag;
+
   public:
+
+    int size() { return data.size(); }
 
     bool internal() { return false; }
 
@@ -137,9 +146,11 @@ namespace dynKdTree {
       baseNode<dim, T>::box = boundingBox<dim>(_input, s, e);
 
       data = std::vector<T>();
+      flag = std::vector<char>();
 
       for (int i = s; i < e; ++ i) {
 	data.push_back(_input[i]);
+	flag.push_back(1);
       }
 
     }
@@ -167,11 +178,45 @@ namespace dynKdTree {
 
 	for (int i = s; i < e; ++ i) {
 	  data.push_back(_input[i]);
+	  flag.push_back(1);
 	}
 
 	return nullptr;
 
       }
+
+    }
+
+    int erase(std::vector<T>& _input, int s = -1, int e = -1) {
+
+      if (s < 0 || e < 0) {
+	s = 0;
+	e = _input.size();
+      }
+
+      if (e - s <= 0) return 0;
+
+      int erased = 0;
+
+      for (int i = s; i < e; ++ i) {
+	for (int j = 0; j < data.size(); ++ j) {
+
+	  int k = 0;
+	  for (; k < dim; ++ k) {
+	    if (data[j][k] != _input[i][k]) {
+	      break;
+	    }
+	  }
+
+	  if (k == dim) {
+	    flag[j] = 0;
+	    erased ++;
+	  }
+
+	}
+      }
+
+      return erased;
 
     }
 
@@ -181,6 +226,8 @@ namespace dynKdTree {
   template<int dim, typename T>
   class splitNode: public baseNode<dim, T> { // internal node
 
+  private:
+
     baseNode<dim, T>* left = nullptr;
 
     baseNode<dim, T>* right = nullptr;
@@ -189,7 +236,11 @@ namespace dynKdTree {
 
     double split = -1;
 
+    int n;
+
   public:
+
+    int size() { return n; }
 
     splitNode(std::vector<T>& _input, int s = -1, int e = -1, int _splitDim = 0):
       splitDim(_splitDim) {
@@ -198,6 +249,8 @@ namespace dynKdTree {
 	s = 0;
 	e = _input.size();
       }
+
+      n = e - s;
 
       baseNode<dim, T>::box = boundingBox<dim>(_input, s, e);
 
@@ -243,6 +296,8 @@ namespace dynKdTree {
 	e = _input.size();
       }
 
+      n += e - s;
+
       for (int i = s; i < e; ++ i) {
 
 	baseNode<dim, T>::box.update(_input[i]);
@@ -268,6 +323,29 @@ namespace dynKdTree {
       }
 
       return nullptr;
+
+    }
+
+    int erase(std::vector<T>& _input, int s = -1, int e = -1) {
+
+      if (s < 0 || e < 0) {
+	s = 0;
+	e = _input.size();
+      }
+
+      if (e - s <= 0) return 0;
+
+      auto middle = std::partition(_input.begin() + s, _input.begin() + e, [&](T& elem) {
+	return elem[splitDim] < split;
+      });
+
+      int leftErased = left->erase(_input, s, std::distance(_input.begin(), middle));
+
+      int rightErased = right->erase(_input, std::distance(_input.begin(), middle), e);
+
+      n -= leftErased + rightErased;
+
+      return leftErased + rightErased;
 
     }
 
