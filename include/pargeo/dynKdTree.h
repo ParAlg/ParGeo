@@ -4,10 +4,10 @@
 #include <iostream>
 #include <vector>
 
-// Simple dynamic kd-tree
+#include "../parallel/parallel.h"
+
 
 namespace dynKdTree {
-
 
   template<int dim, typename floatT = double>
   class coordinate {
@@ -73,6 +73,16 @@ namespace dynKdTree {
 
     }
 
+    template<typename T>
+    void update(T& p) {
+
+      for (int i = 0; i < dim; ++ i) {
+	topLeft[i] = std::min(p[i], topLeft[i]);
+	lowerRight[i] = std::max(p[i], lowerRight[i]);
+      }
+
+    }
+
     ~boundingBox() {
 
     }
@@ -84,7 +94,7 @@ namespace dynKdTree {
 
   protected:
 
-    static const int threshold = 2; // for splitting
+    static const int threshold = 16; // for splitting
 
     boundingBox<dim> box;
 
@@ -97,12 +107,16 @@ namespace dynKdTree {
     virtual ~baseNode() { };
 
     virtual baseNode* insert(std::vector<T>& _input, int s, int e) {
+
       return nullptr;
+
     };
 
   };
 
+
   template<int dim, typename T> class splitNode;
+
 
   template<int dim, typename T>
   class dataNode: public baseNode<dim, T> { // leaf node
@@ -135,6 +149,12 @@ namespace dynKdTree {
       if (s < 0 || e < 0) {
 	s = 0;
 	e = _input.size();
+      }
+
+      for (int i = s; i < e; ++ i) {
+
+	baseNode<dim, T>::box.update(_input[i]);
+
       }
 
       if ((e - s) + data.size() >= baseNode<dim, T>::threshold) {
@@ -221,6 +241,12 @@ namespace dynKdTree {
       if (s < 0 || e < 0) {
 	s = 0;
 	e = _input.size();
+      }
+
+      for (int i = s; i < e; ++ i) {
+
+	baseNode<dim, T>::box.update(_input[i]);
+
       }
 
       auto middle = std::partition(_input.begin() + s, _input.begin() + e, [&](T& elem) {
