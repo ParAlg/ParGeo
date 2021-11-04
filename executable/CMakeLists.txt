@@ -28,6 +28,9 @@ target_link_libraries(spanner pargeoLib spatialGraphLib)
 add_executable(knn knn.cpp)
 target_link_libraries(knn pargeoLib)
 
+add_executable(dynKdTree dynKdTree.cpp)
+target_link_libraries(dynKdTree pargeoLib)
+
 add_executable(zorder zorder.cpp)
 target_link_libraries(zorder pargeoLib)
 
