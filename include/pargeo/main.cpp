@@ -24,7 +24,7 @@ int main() {
 
   static const int dim = 2;
 
-  int n = 2000;
+  int n = 2000000;
 
   /* Generate test data */
 
@@ -34,7 +34,7 @@ int main() {
     rawData[i] = rand() / (double)RAND_MAX;
   }
 
-  vector<point<dim>> points;
+  container<point<dim>> points;
 
   for (int i = 0; i < n / dim; ++ i) {
     points.push_back(point<dim>(&rawData[dim * i]));

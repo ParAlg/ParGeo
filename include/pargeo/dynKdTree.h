@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "../parlay/parallel.h"
-
+#include "../parlay/sequence.h"
 
 #ifndef PARLAY_PARALLEL_H_
 
@@ -21,6 +21,17 @@ namespace parlay {
 
 #endif
 
+#ifndef PARLAY_SEQUENCE_H_
+
+template <typename T>
+using container = std::vector<T>;
+
+#else
+
+template <typename T>
+using container = parlay::sequence<T>;
+
+#endif
 
 namespace dynKdTree {
 
@@ -67,7 +78,7 @@ namespace dynKdTree {
     boundingBox() { };
 
     template<typename T>
-    boundingBox(std::vector<T>& _input, int s = -1, int e = -1) {
+    boundingBox(container<T>& _input, int s = -1, int e = -1) {
 
       if (s < 0 || e < 0) {
 	s = 0;
@@ -122,13 +133,13 @@ namespace dynKdTree {
 
     virtual ~baseNode() { };
 
-    virtual baseNode* insert(std::vector<T>& _input, int s = -1, int e = -1) {
+    virtual baseNode* insert(container<T>& _input, int s = -1, int e = -1) {
 
       return nullptr;
 
     }
 
-    virtual int erase(std::vector<T>& _input, int s = -1, int e = -1) { return 0; };
+    virtual int erase(container<T>& _input, int s = -1, int e = -1) { return 0; };
 
   };
 
@@ -141,9 +152,9 @@ namespace dynKdTree {
 
   private:
 
-    std::vector<T> data;
+    container<T> data;
 
-    std::vector<char> flag;
+    container<char> flag;
 
   public:
 
@@ -151,7 +162,7 @@ namespace dynKdTree {
 
     bool internal() { return false; }
 
-    dataNode(std::vector<T>& _input, int s = -1, int e = -1) {
+    dataNode(container<T>& _input, int s = -1, int e = -1) {
 
       if (s < 0 || e < 0) {
 	s = 0;
@@ -160,8 +171,8 @@ namespace dynKdTree {
 
       baseNode<dim, T>::box = boundingBox<dim>(_input, s, e);
 
-      data = std::vector<T>();
-      flag = std::vector<char>();
+      data = container<T>();
+      flag = container<char>();
 
       for (int i = s; i < e; ++ i) {
 	data.push_back(_input[i]);
@@ -170,7 +181,7 @@ namespace dynKdTree {
 
     }
 
-    baseNode<dim, T>* insert(std::vector<T>& _input, int s = -1, int e = -1) {
+    baseNode<dim, T>* insert(container<T>& _input, int s = -1, int e = -1) {
 
       if (s < 0 || e < 0) {
 	s = 0;
@@ -202,7 +213,7 @@ namespace dynKdTree {
 
     }
 
-    int erase(std::vector<T>& _input, int s = -1, int e = -1) {
+    int erase(container<T>& _input, int s = -1, int e = -1) {
 
       if (s < 0 || e < 0) {
 	s = 0;
@@ -257,7 +268,7 @@ namespace dynKdTree {
 
     int size() { return n; }
 
-    splitNode(std::vector<T>& _input, int s = -1, int e = -1, int _splitDim = 0):
+    splitNode(container<T>& _input, int s = -1, int e = -1, int _splitDim = 0):
       splitDim(_splitDim) {
 
       if (s < 0 || e < 0) {
@@ -304,7 +315,7 @@ namespace dynKdTree {
 
     }
 
-    baseNode<dim, T>* insert(std::vector<T>& _input, int s = -1, int e = -1) {
+    baseNode<dim, T>* insert(container<T>& _input, int s = -1, int e = -1) {
 
       if (s < 0 || e < 0) {
 	s = 0;
@@ -356,7 +367,7 @@ namespace dynKdTree {
 
     }
 
-    int erase(std::vector<T>& _input, int s = -1, int e = -1) {
+    int erase(container<T>& _input, int s = -1, int e = -1) {
 
       if (s < 0 || e < 0) {
 	s = 0;
