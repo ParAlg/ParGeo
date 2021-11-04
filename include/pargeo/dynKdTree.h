@@ -4,7 +4,22 @@
 #include <iostream>
 #include <vector>
 
-#include "../parallel/parallel.h"
+#include "../parlay/parallel.h"
+
+
+#ifndef PARLAY_PARALLEL_H_
+
+namespace parlay {
+
+  template <typename Lf, typename Rf>
+  inline void par_do(Lf left, Rf right) {
+    left();
+    right();
+  }
+
+}
+
+#endif
 
 
 namespace dynKdTree {
@@ -308,19 +323,34 @@ namespace dynKdTree {
 	return elem[splitDim] < split;
       });
 
-      auto newLeft = left->insert(_input, s, std::distance(_input.begin(), middle));
+      auto insertLeft = [&] () {
 
-      if (newLeft) {
-	delete left;
-	left = newLeft;
-      }
+	auto newLeft = left->insert(_input, s, std::distance(_input.begin(), middle));
 
-      auto newRight = right->insert(_input, std::distance(_input.begin(), middle), e);
+	if (newLeft) {
+	  delete left;
+	  left = newLeft;
+	}
 
-      if (newRight) {
-	delete right;
-	right = newRight;
-      }
+      };
+
+      auto insertRight = [&] () {
+
+	auto newRight = right->insert(_input, std::distance(_input.begin(), middle), e);
+
+	if (newRight) {
+	  delete right;
+	  right = newRight;
+	}
+
+      };
+
+      if (e - s < 2000) {
+
+	insertLeft();
+	insertRight();
+
+      } else parlay::par_do(insertLeft, insertRight);
 
       return nullptr;
 
@@ -339,9 +369,22 @@ namespace dynKdTree {
 	return elem[splitDim] < split;
       });
 
-      int leftErased = left->erase(_input, s, std::distance(_input.begin(), middle));
+      int leftErased, rightErased;
 
-      int rightErased = right->erase(_input, std::distance(_input.begin(), middle), e);
+      auto eraseLeft = [&] () {
+	leftErased = left->erase(_input, s, std::distance(_input.begin(), middle));
+      };
+
+      auto eraseRight = [&] () {
+	rightErased = right->erase(_input, std::distance(_input.begin(), middle), e);
+      };
+
+      if (e - s < 2000) {
+
+	eraseLeft();
+	eraseRight();
+
+      } else parlay::par_do(eraseLeft, eraseRight);
 
       n -= leftErased + rightErased;
 
