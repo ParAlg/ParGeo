@@ -44,6 +44,11 @@ target_link_libraries(kdTree_test PRIVATE
   pargeoLib ${GTest_LIBRARIES})
 add_test(NAME kdTree_test COMMAND kdTree_test)
 
+add_executable(dynKdTree_test dynKdTree_test.cpp)
+target_link_libraries(dynKdTree_test PRIVATE
+  pargeoLib ${GTest_LIBRARIES})
+add_test(NAME dynKdTree_test COMMAND dynKdTree_test)
+
 add_executable(closestPair_test closestPair_test.cpp)
 target_link_libraries(closestPair_test PRIVATE
   pargeoLib ${GTest_LIBRARIES})

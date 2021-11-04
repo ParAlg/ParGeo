@@ -14,7 +14,7 @@ using namespace pargeo::IO;
 
 template<int dim>
 void timeKnn(parlay::sequence<pargeo::point<dim>> &P, size_t k, char const *outFile) {
-  using namespace dynKdTree;
+  using namespace pargeo::dynKdTree;
 
   int n = P.size();
 
@@ -24,8 +24,8 @@ void timeKnn(parlay::sequence<pargeo::point<dim>> &P, size_t k, char const *outF
   pargeo::timer t;
   t.start();
 
-  unique_ptr<splitNode<dim, point<dim>>>
-    tree(new splitNode<dim, point<dim>>(P, 0, n / 2));
+  unique_ptr<node<dim, point<dim>>>
+    tree(new node<dim, point<dim>>(P, 0, n / 2));
 
   std::cout << "build-time = " << t.get_next() << "\n";
 

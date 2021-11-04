@@ -33,6 +33,8 @@ using container = parlay::sequence<T>;
 
 #endif
 
+namespace pargeo {
+
 namespace dynKdTree {
 
 
@@ -123,9 +125,11 @@ namespace dynKdTree {
 
     static const int threshold = 16; // for splitting
 
+  public:
+
     boundingBox<dim> box;
 
-  public:
+    virtual int size() { return 0; }
 
     virtual bool internal() { return true; }
 
@@ -144,7 +148,7 @@ namespace dynKdTree {
   };
 
 
-  template<int dim, typename T> class splitNode;
+  template<int dim, typename T> class node;
 
 
   template<int dim, typename T>
@@ -152,11 +156,11 @@ namespace dynKdTree {
 
   private:
 
-    container<T> data;
-
     container<char> flag;
 
   public:
+
+    container<T> data;
 
     int size() { return data.size(); }
 
@@ -196,7 +200,7 @@ namespace dynKdTree {
 
       if ((e - s) + data.size() >= baseNode<dim, T>::threshold) {
 
-	splitNode<dim, T>* newNode = new splitNode<dim, T>(_input, s, e);
+	node<dim, T>* newNode = new node<dim, T>(_input, s, e);
 
 	return newNode;
 
@@ -250,7 +254,7 @@ namespace dynKdTree {
 
 
   template<int dim, typename T>
-  class splitNode: public baseNode<dim, T> { // internal node
+  class node: public baseNode<dim, T> { // internal node
 
   private:
 
@@ -268,7 +272,7 @@ namespace dynKdTree {
 
     int size() { return n; }
 
-    splitNode(container<T>& _input, int s = -1, int e = -1, int _splitDim = 0):
+    node(container<T>& _input, int s = -1, int e = -1, int _splitDim = 0):
       splitDim(_splitDim) {
 
       if (s < 0 || e < 0) {
@@ -297,7 +301,7 @@ namespace dynKdTree {
 
       } else {
 
-	left = new splitNode(_input, s, s + (e - s) / 2, (splitDim + 1) % dim);
+	left = new node(_input, s, s + (e - s) / 2, (splitDim + 1) % dim);
 
       }
 
@@ -309,7 +313,7 @@ namespace dynKdTree {
 
       } else {
 
-	right = new splitNode(_input, s + (e - s) / 2, e, (splitDim + 1) % dim);
+	right = new node(_input, s + (e - s) / 2, e, (splitDim + 1) % dim);
 
       }
 
@@ -403,7 +407,7 @@ namespace dynKdTree {
 
     }
 
-    ~splitNode() {
+    ~node() {
 
       delete left;
       delete right;
@@ -414,3 +418,5 @@ namespace dynKdTree {
 
 
 }; // End namespace dynKdTree
+
+}; // End namespace pargeo
