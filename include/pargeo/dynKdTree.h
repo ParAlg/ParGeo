@@ -38,16 +38,18 @@ namespace pargeo {
 namespace dynKdTree {
 
 
-  template<int dim, typename floatT = double>
+  template<int dim, typename _floatT = double>
   class coordinate {
 
   protected:
 
-    floatT data[dim];
+    _floatT data[dim];
 
   public:
 
-    coordinate(floatT* _data) {
+    typedef _floatT floatT;
+
+    coordinate(_floatT* _data) {
 
       for (int i = 0; i < dim; ++ i) data[i] = _data[i];
 
@@ -62,7 +64,7 @@ namespace dynKdTree {
 
     coordinate() { }
 
-    floatT& operator[](int i) {
+    _floatT& operator[](int i) {
 
       return data[i];
 
@@ -73,9 +75,15 @@ namespace dynKdTree {
 
   template<int dim> class boundingBox {
 
+  private:
+
+    coordinate<dim> minCoords, maxCoords;
+
   public:
 
-    coordinate<dim> topLeft, lowerRight;
+    coordinate<dim> getMin() { return minCoords; }
+
+    coordinate<dim> getMax() { return maxCoords; }
 
     boundingBox() { };
 
@@ -89,14 +97,14 @@ namespace dynKdTree {
 
       if ((e - s) < 2) return;
 
-      topLeft = coordinate<dim>(_input[s]);
-      lowerRight = coordinate<dim>(_input[s]);
+      minCoords = coordinate<dim>(_input[s]);
+      maxCoords = coordinate<dim>(_input[s]);
 
       for (int j = s; j < e; ++ j) {
 	T p = _input[j];
 	for (int i = 0; i < dim; ++ i) {
-	  topLeft[i] = std::min(p[i], topLeft[i]);
-	  lowerRight[i] = std::max(p[i], lowerRight[i]);
+	  minCoords[i] = std::min(p[i], minCoords[i]);
+	  maxCoords[i] = std::max(p[i], maxCoords[i]);
 	}
       }
 
@@ -106,9 +114,20 @@ namespace dynKdTree {
     void update(T& p) {
 
       for (int i = 0; i < dim; ++ i) {
-	topLeft[i] = std::min(p[i], topLeft[i]);
-	lowerRight[i] = std::max(p[i], lowerRight[i]);
+	minCoords[i] = std::min(p[i], minCoords[i]);
+	maxCoords[i] = std::max(p[i], maxCoords[i]);
       }
+
+    }
+
+    template <typename T>
+    bool contains(T x) {
+
+      for (int i = 0; i < dim; ++ i) {
+	if (x[i] < minCoords[i]) return false;
+	if (x[i] > maxCoords[i]) return false;
+      }
+      return true;
 
     }
 
@@ -123,27 +142,25 @@ namespace dynKdTree {
 
   protected:
 
+    boundingBox<dim> box;
+
     static const int threshold = 16; // for splitting
 
   public:
 
-    boundingBox<dim> box;
+    boundingBox<dim>& getBox() { return box; }
 
-    virtual int size() { return 0; }
+    virtual int size() = 0;
 
-    virtual bool internal() { return true; }
-
-    baseNode() { }
+    baseNode() { };
 
     virtual ~baseNode() { };
 
-    virtual baseNode* insert(container<T>& _input, int s = -1, int e = -1) {
+    virtual baseNode* insert(container<T>& _input, int s = -1, int e = -1) = 0;
 
-      return nullptr;
+    virtual int erase(container<T>& _input, int s = -1, int e = -1) = 0;
 
-    }
-
-    virtual int erase(container<T>& _input, int s = -1, int e = -1) { return 0; };
+    virtual bool check() = 0;
 
   };
 
@@ -156,15 +173,13 @@ namespace dynKdTree {
 
   private:
 
+    container<T> data;
+
     container<char> flag;
 
   public:
 
-    container<T> data;
-
     int size() { return data.size(); }
-
-    bool internal() { return false; }
 
     dataNode(container<T>& _input, int s = -1, int e = -1) {
 
@@ -247,6 +262,18 @@ namespace dynKdTree {
       }
 
       return erased;
+
+    }
+
+    bool check() {
+
+      for (auto x: data) {
+
+	if (!baseNode<dim, T>::box.contains(x)) return false;
+
+      }
+
+      return true;
 
     }
 
@@ -411,6 +438,20 @@ namespace dynKdTree {
 
       delete left;
       delete right;
+
+    }
+
+    bool check() {
+
+      boundingBox<dim> leftBox = left->getBox();
+      boundingBox<dim> rightBox = right->getBox();
+
+      if (!baseNode<dim, T>::box.contains(leftBox.getMin()) ||
+	  !baseNode<dim, T>::box.contains(leftBox.getMax())) {
+	return false;
+      }
+
+      return left->check() && right->check();
 
     }
 

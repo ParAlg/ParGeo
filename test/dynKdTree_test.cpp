@@ -5,16 +5,16 @@
 #include "pargeo/dynKdTree.h"
 #include "gtest/gtest.h"
 
+
 template <int dim>
 inline void testKdTree(parlay::sequence<pargeo::point<dim>>& P) {
   using namespace pargeo::dynKdTree;
-  using namespace pargeo;
 
-  using nodeT = node<dim, point<dim>>;
+  using nodeT = node<dim, pargeo::point<dim>>;
 
-  nodeT *tree1 = new nodeT(P); // todo rename the node
+  std::unique_ptr<nodeT> tree1 = std::unique_ptr<nodeT>(new nodeT(P));
 
-  delete tree1;
+  EXPECT_TRUE(tree1->check());
 }
 
 template <int dim>
