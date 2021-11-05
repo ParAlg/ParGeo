@@ -159,6 +159,8 @@ namespace dynKdTree {
 
     virtual void setSiblin(baseNode* _siblin) = 0;
 
+    virtual baseNode<dim, T>* getSiblin() = 0;
+
     virtual bool isRoot() = 0;
 
     virtual int size() = 0;
@@ -195,6 +197,8 @@ namespace dynKdTree {
     int size() { return data.size(); }
 
     void setSiblin(baseNode<dim, T>* _siblin) { siblin = _siblin; }
+
+    baseNode<dim, T>* getSiblin() { return siblin; }
 
     bool isRoot() { return false; }
 
@@ -322,6 +326,8 @@ namespace dynKdTree {
 
     void setSiblin(baseNode<dim, T>* _siblin) { siblin = _siblin; }
 
+    baseNode<dim, T>* getSiblin() { return siblin; }
+
     internalNode(container<T>& _input, int s = -1, int e = -1, int _splitDim = 0):
       splitDim(_splitDim) {
 
@@ -399,6 +405,9 @@ namespace dynKdTree {
 	if (newLeft) {
 	  delete left;
 	  left = newLeft;
+
+	  left->setSiblin(right);
+	  right->setSiblin(left);
 	}
 
       };
@@ -410,6 +419,9 @@ namespace dynKdTree {
 	if (newRight) {
 	  delete right;
 	  right = newRight;
+
+	  left->setSiblin(right);
+	  right->setSiblin(left);
 	}
 
       };
@@ -470,6 +482,9 @@ namespace dynKdTree {
 
     bool check() {
 
+      if (left->getSiblin() != right) return false;
+      if (right->getSiblin() != left) return false;
+
       boundingBox<dim> leftBox = left->getBox();
       boundingBox<dim> rightBox = right->getBox();
 
@@ -488,6 +503,12 @@ namespace dynKdTree {
   class rootNode: public internalNode<dim, T> { // root node
 
   public:
+
+    baseNode<dim, T>* getSiblin() {
+
+      throw std::runtime_error("dynKdTree: error, cannot get siblin of root\n");
+
+    }
 
     bool isRoot() { return true; }
 
