@@ -10,9 +10,13 @@ template <int dim>
 inline void testKdTree(parlay::sequence<pargeo::point<dim>>& P) {
   using namespace pargeo::dynKdTree;
 
-  using nodeT = node<dim, pargeo::point<dim>>;
+  using nodeT = rootNode<dim, pargeo::point<dim>>;
 
   std::unique_ptr<nodeT> tree1 = std::unique_ptr<nodeT>(new nodeT(P));
+
+  tree1->insert(P);
+
+  tree1->erase(P);
 
   EXPECT_TRUE(tree1->check());
 }

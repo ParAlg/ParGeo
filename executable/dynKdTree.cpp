@@ -24,8 +24,8 @@ void timeKnn(parlay::sequence<pargeo::point<dim>> &P, size_t k, char const *outF
   pargeo::timer t;
   t.start();
 
-  unique_ptr<node<dim, point<dim>>>
-    tree(new node<dim, point<dim>>(P, 0, n / 2));
+  unique_ptr<rootNode<dim, point<dim>>>
+    tree(new rootNode<dim, point<dim>>(P, 0, n / 2));
 
   std::cout << "build-time = " << t.get_next() << "\n";
 

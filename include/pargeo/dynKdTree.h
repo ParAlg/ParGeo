@@ -85,7 +85,14 @@ namespace dynKdTree {
 
     coordinate<dim> getMax() { return maxCoords; }
 
-    boundingBox() { };
+    boundingBox() {
+
+      for (int i = 0; i < dim; ++ i) {
+	minCoords[i] = 0;
+	maxCoords[i] = 0;
+      }
+
+    };
 
     template<typename T>
     boundingBox(container<T>& _input, int s = -1, int e = -1) {
@@ -150,6 +157,10 @@ namespace dynKdTree {
 
     boundingBox<dim>& getBox() { return box; }
 
+    virtual void setSiblin(baseNode* _siblin) = 0;
+
+    virtual bool isRoot() = 0;
+
     virtual int size() = 0;
 
     baseNode() { };
@@ -165,13 +176,15 @@ namespace dynKdTree {
   };
 
 
-  template<int dim, typename T> class node;
+  template<int dim, typename T> class internalNode;
 
 
   template<int dim, typename T>
   class dataNode: public baseNode<dim, T> { // leaf node
 
   private:
+
+    baseNode<dim, T>* siblin;
 
     container<T> data;
 
@@ -180,6 +193,10 @@ namespace dynKdTree {
   public:
 
     int size() { return data.size(); }
+
+    void setSiblin(baseNode<dim, T>* _siblin) { siblin = _siblin; }
+
+    bool isRoot() { return false; }
 
     dataNode(container<T>& _input, int s = -1, int e = -1) {
 
@@ -215,7 +232,7 @@ namespace dynKdTree {
 
       if ((e - s) + data.size() >= baseNode<dim, T>::threshold) {
 
-	node<dim, T>* newNode = new node<dim, T>(_input, s, e);
+	internalNode<dim, T>* newNode = new internalNode<dim, T>(_input, s, e);
 
 	return newNode;
 
@@ -281,9 +298,11 @@ namespace dynKdTree {
 
 
   template<int dim, typename T>
-  class node: public baseNode<dim, T> { // internal node
+  class internalNode: public baseNode<dim, T> { // internal node
 
   private:
+
+    baseNode<dim, T>* siblin;
 
     baseNode<dim, T>* left = nullptr;
 
@@ -299,7 +318,11 @@ namespace dynKdTree {
 
     int size() { return n; }
 
-    node(container<T>& _input, int s = -1, int e = -1, int _splitDim = 0):
+    bool isRoot() { return false; }
+
+    void setSiblin(baseNode<dim, T>* _siblin) { siblin = _siblin; }
+
+    internalNode(container<T>& _input, int s = -1, int e = -1, int _splitDim = 0):
       splitDim(_splitDim) {
 
       if (s < 0 || e < 0) {
@@ -328,7 +351,7 @@ namespace dynKdTree {
 
       } else {
 
-	left = new node(_input, s, s + (e - s) / 2, (splitDim + 1) % dim);
+	left = new internalNode(_input, s, s + (e - s) / 2, (splitDim + 1) % dim);
 
       }
 
@@ -340,9 +363,13 @@ namespace dynKdTree {
 
       } else {
 
-	right = new node(_input, s + (e - s) / 2, e, (splitDim + 1) % dim);
+	right = new internalNode(_input, s + (e - s) / 2, e, (splitDim + 1) % dim);
 
       }
+
+      left->setSiblin(right);
+
+      right->setSiblin(left);
 
     }
 
@@ -434,7 +461,7 @@ namespace dynKdTree {
 
     }
 
-    ~node() {
+    ~internalNode() {
 
       delete left;
       delete right;
@@ -454,6 +481,18 @@ namespace dynKdTree {
       return left->check() && right->check();
 
     }
+
+  };
+
+  template<int dim, typename T>
+  class rootNode: public internalNode<dim, T> { // root node
+
+  public:
+
+    bool isRoot() { return true; }
+
+    rootNode(container<T>& _input, int s = -1, int e = -1, int _splitDim = 0):
+      internalNode<dim, T>(_input, s, e, _splitDim) { };
 
   };
 
