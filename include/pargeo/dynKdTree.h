@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <queue>
 #include <vector>
 
 #include "../parlay/parallel.h"
@@ -81,6 +82,8 @@ namespace dynKdTree {
 
   public:
 
+    enum relation { exclude, include, overlap };
+
     coordinate<dim> getMin() { return minCoords; }
 
     coordinate<dim> getMax() { return maxCoords; }
@@ -142,6 +145,25 @@ namespace dynKdTree {
 
     }
 
+    relation compare(boundingBox other) {
+
+      bool exc = false;
+      bool inc = true;
+
+      for (int i = 0; i < dim; ++ i) {
+	if (maxCoords[i] < other.minCoords[i] || minCoords[i] > other.maxCoords[i])
+	  exc = true;
+
+	if (maxCoords[i] < other.maxCoords[i] || minCoords[i] > other.minCoords[i])
+	  inc = false;
+      }
+
+      if (exc) return exclude;
+      else if (inc) return include;
+      else return overlap;
+
+    }
+
   };
 
 
@@ -174,6 +196,8 @@ namespace dynKdTree {
     virtual int erase(container<T>& _input, int s = -1, int e = -1) = 0;
 
     virtual bool check() = 0;
+
+    virtual std::vector<T> kNNHelper(T query, std::priority_queue<std::pair<double, T> >& kQueue) = 0;
 
   };
 
@@ -286,6 +310,12 @@ namespace dynKdTree {
 
     }
 
+    std::vector<T> kNNHelper(T query,
+			     std::priority_queue<std::pair<double, T> >& kQueue) {
+      // data node knn helper to be implemented
+      return std::vector<T>();
+    }
+
     bool check() {
 
       for (auto x: data) {
@@ -304,7 +334,7 @@ namespace dynKdTree {
   template<int dim, typename T>
   class internalNode: public baseNode<dim, T> { // internal node
 
-  private:
+  protected:
 
     baseNode<dim, T>* siblin;
 
@@ -480,6 +510,12 @@ namespace dynKdTree {
 
     }
 
+    std::vector<T> kNNHelper(T query,
+			     std::priority_queue<std::pair<double, T> >& kQueue) {
+      // internal node knn helper to be implemented
+      return std::vector<T>();
+    }
+
     bool check() {
 
       if (left->getSiblin() != right) return false;
@@ -512,8 +548,26 @@ namespace dynKdTree {
 
     bool isRoot() { return true; }
 
+    std::vector<T> kNNHelper(T query,
+			     std::priority_queue<std::pair<double, T> >& kQueue) {
+      // root node knn helper to be implemented
+      return std::vector<T>();
+    }
+
     rootNode(container<T>& _input, int s = -1, int e = -1, int _splitDim = 0):
       internalNode<dim, T>(_input, s, e, _splitDim) { };
+
+    std::vector<T> kNN(T query, int k) {
+
+      std::priority_queue<std::pair<double, T> > kQueue;
+
+      internalNode<dim, T>::left->kNNHelper(query, kQueue);
+
+      internalNode<dim, T>::right->kNNHelper(query, kQueue);
+
+      return std::vector<T>(); // todo
+
+    }
 
   };
 

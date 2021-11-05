@@ -19,6 +19,8 @@ inline void testKdTree(parlay::sequence<pargeo::point<dim>>& P) {
   tree1->erase(P);
 
   EXPECT_TRUE(tree1->check());
+
+  tree1->kNN(P[0], 10);
 }
 
 template <int dim>
