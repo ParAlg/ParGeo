@@ -26,8 +26,6 @@ inline void testKdTree(parlay::sequence<pargeo::point<dim>>& P) {
   tree1->erase(P);
 
   EXPECT_TRUE(tree1->check());
-
-  tree1->kNN(P[0], 10);
 }
 
 
@@ -97,6 +95,61 @@ TEST(dynKdTree, kBuffer) {
 
   ASSERT_EQ(kBuf.getK().first, 0.4);
 }
+
+
+TEST(dynKdTree, kNN) {
+  using namespace pargeo::dynKdTree;
+  static const int dim = 2;
+
+  using nodeT = rootNode<dim, pargeo::point<dim>>;
+
+  double data[12] = {
+    0, 0,
+    0.1, 0.1,
+    0.2, 0.2,
+    0.3, 0.3,
+    0.4, 0.4,
+    0.5, 0.5,
+  };
+
+  parlay::sequence<pargeo::point<dim>> P;
+  P.emplace_back(data);
+  P.emplace_back(data + 2);
+  P.emplace_back(data + 4);
+  parlay::sequence<pargeo::point<dim>> P2;
+  P2.emplace_back(data + 6);
+  P2.emplace_back(data + 8);
+  P2.emplace_back(data + 10);
+
+  std::unique_ptr<nodeT> tree1 = std::unique_ptr<nodeT>(new nodeT(P));
+
+  EXPECT_TRUE(tree1->check());
+
+  tree1->insert(P2);
+
+  EXPECT_TRUE(tree1->check());
+
+  double queryData[2] = {0, 0};
+
+  parlay::sequence<pargeo::point<dim>> nns =
+    tree1->kNN(pargeo::point<dim>(queryData), 3);
+
+  EXPECT_EQ(nns.size(), 3);
+  EXPECT_EQ(nns[0][0], 0);
+  EXPECT_EQ(nns[1][0], 0.1);
+  EXPECT_EQ(nns[2][0], 0.2);
+
+  double queryData2[2] = {0.31, 0.31};
+
+  parlay::sequence<pargeo::point<dim>> nns2 =
+    tree1->kNN(pargeo::point<dim>(queryData2), 3);
+
+  EXPECT_EQ(nns2.size(), 3);
+  EXPECT_EQ(nns2[0][0], 0.3);
+  EXPECT_EQ(nns2[1][0], 0.4);
+  EXPECT_EQ(nns2[2][0], 0.2);
+}
+
 
 
 int main(int argc, char **argv) {

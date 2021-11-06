@@ -1,9 +1,8 @@
 #pragma once
 
 #include <algorithm>
-#include <iostream>
+#include <math.h>
 #include <queue>
-#include <vector>
 
 #include "../parlay/parallel.h"
 #include "../parlay/sequence.h"
@@ -23,6 +22,8 @@ namespace parlay {
 #endif
 
 #ifndef PARLAY_SEQUENCE_H_
+
+#include <vector>
 
 template <typename T>
 using container = std::vector<T>;
@@ -71,6 +72,19 @@ namespace dynKdTree {
 
     }
 
+    template<typename T>
+    _floatT& dist(const T& other) {
+
+      _floatT total = 0.0;
+
+      for (int i = 0; i < dim; ++ i) {
+	_floatT tmp = abs(other[i] - data[i]);
+	total += tmp * tmp;
+      }
+
+      return sqrt(total);
+    }
+
   };
 
 
@@ -105,7 +119,7 @@ namespace dynKdTree {
 	e = _input.size();
       }
 
-      if ((e - s) < 2) return;
+      if ((e - s) < 1) return;
 
       minCoords = coordinate<dim>(_input[s]);
       maxCoords = coordinate<dim>(_input[s]);
@@ -122,7 +136,6 @@ namespace dynKdTree {
 
     template<typename T>
     void update(T& p) {
-
       for (int i = 0; i < dim; ++ i) {
 	minCoords[i] = std::min(p[i], minCoords[i]);
 	maxCoords[i] = std::max(p[i], maxCoords[i]);
@@ -193,6 +206,7 @@ namespace dynKdTree {
 
     }
 
+    bool hasK() { return queueT::size() >= k; }
   };
 
 
@@ -216,7 +230,7 @@ namespace dynKdTree {
 
     virtual int size() = 0;
 
-    baseNode() { };
+    baseNode() {  };
 
     virtual ~baseNode() { };
 
@@ -226,7 +240,24 @@ namespace dynKdTree {
 
     virtual bool check() = 0;
 
-    virtual std::vector<T> kNNHelper(T query, std::priority_queue<std::pair<double, T> >& kQueue) = 0;
+    virtual void iterate(std::function<void(T)> func) = 0;
+
+    virtual void kNNHelper(T query, kBuffer<T>& buffer) = 0;
+
+    void kNNRange(T query,
+		  double radius,
+		  kBuffer<T>& buffer) {
+
+      iterate([&](T x) {
+
+	double d = query.dist(x);
+
+	if (d <= radius)
+	  buffer.insertK({d, x});
+
+      });
+
+    }
 
   };
 
@@ -339,10 +370,36 @@ namespace dynKdTree {
 
     }
 
-    std::vector<T> kNNHelper(T query,
-			     std::priority_queue<std::pair<double, T> >& kQueue) {
-      // data node knn helper to be implemented
-      return std::vector<T>();
+    void iterate(std::function<void(T)> func) {
+
+      int i = 0;
+      for (auto exist: flag) {
+
+	if (exist) func(data[i++]);
+
+      }
+
+    }
+
+    void kNNHelper(T query,
+		   kBuffer<T>& buffer) {
+
+      if (baseNode<dim, T>::box.contains(query)) {
+
+	iterate([&](T x) { buffer.insertK({query.dist(x), x}); });
+
+	if (buffer.hasK()) {
+
+	  siblin->kNNRange(query, buffer.getK().first, buffer);
+
+	} else {
+
+	  siblin->iterate([&](T x) { buffer.insertK({query.dist(x), x}); });
+
+	}
+
+      }
+
     }
 
     bool check() {
@@ -539,10 +596,35 @@ namespace dynKdTree {
 
     }
 
-    std::vector<T> kNNHelper(T query,
-			     std::priority_queue<std::pair<double, T> >& kQueue) {
-      // internal node knn helper to be implemented
-      return std::vector<T>();
+    void iterate(std::function<void(T)> func) {
+
+      left->iterate(func);
+
+      right->iterate(func);
+
+    }
+
+    void kNNHelper(T query,
+		   kBuffer<T>& buffer) {
+
+      if (baseNode<dim, T>::box.contains(query)) {
+
+	left->kNNHelper(query, buffer);
+
+	right->kNNHelper(query, buffer);
+
+	if (buffer.hasK()) {
+
+	  siblin->kNNRange(query, buffer.getK().first, buffer);
+
+	} else {
+
+	  siblin->iterate([&](T x) { buffer.insertK({query.dist(x), x}); });
+
+	}
+
+      }
+
     }
 
     bool check() {
@@ -577,25 +659,50 @@ namespace dynKdTree {
 
     bool isRoot() { return true; }
 
-    std::vector<T> kNNHelper(T query,
-			     std::priority_queue<std::pair<double, T> >& kQueue) {
-      // root node knn helper to be implemented
-      return std::vector<T>();
+    template<typename F>
+    void iterate(F func) {
+
+      internalNode<dim, T>::left->iterate(func);
+
+      internalNode<dim, T>::right->iterate(func);
+
+    }
+
+    void kNNHelper(T query,
+		   kBuffer<T>& buffer) {
+
+      if (internalNode<dim, T>::box.contains(query)) {
+
+	internalNode<dim, T>::left->kNNHelper(query, buffer);
+
+	internalNode<dim, T>::right->kNNHelper(query, buffer);
+
+      }
+
+      if (!buffer.hasK()) {
+
+	throw std::runtime_error("dynKdTree: error, insufficient elems compared with k."); //todo handle
+
+      }
     }
 
     rootNode(container<T>& _input, int s = -1, int e = -1, int _splitDim = 0):
       internalNode<dim, T>(_input, s, e, _splitDim) { };
 
-    std::vector<T> kNN(T query, int k) {
+    container<T> kNN(T query, int k) {
 
-      std::priority_queue<std::pair<double, T> > kQueue;
+      kBuffer<T> buffer(k);
 
-      internalNode<dim, T>::left->kNNHelper(query, kQueue);
+      kNNHelper(query, buffer);
 
-      internalNode<dim, T>::right->kNNHelper(query, kQueue);
+      auto nns = container<T>(k);
 
-      return std::vector<T>(); // todo
+      for (int i = 0; i < k; ++ i) {
+	nns[k - 1 - i] = buffer.top().second;
+	buffer.pop();
+      }
 
+      return nns;
     }
 
   };
