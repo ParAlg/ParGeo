@@ -83,6 +83,22 @@ TEST(dynKdTree, boundingBox) {
 }
 
 
+TEST(dynKdTree, kBuffer) {
+  using namespace pargeo::dynKdTree;
+
+  auto kBuf = kBuffer<int>(4);
+
+  kBuf.insertK({0.1, 1});
+  kBuf.insertK({0.4, 1});
+  kBuf.insertK({0.6, 1});
+  kBuf.insertK({0.2, 1});
+  kBuf.insertK({0.5, 1});
+  kBuf.insertK({0.3, 1});
+
+  ASSERT_EQ(kBuf.getK().first, 0.4);
+}
+
+
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();

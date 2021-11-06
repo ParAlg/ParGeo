@@ -167,6 +167,35 @@ namespace dynKdTree {
   };
 
 
+  template <typename T>
+  class kBuffer: public std::priority_queue<std::pair<double, T>> {
+
+    using queueT = std::priority_queue<std::pair<double, T>>;
+
+  private:
+    int k;
+
+  public:
+
+    kBuffer(int _k): queueT(), k(_k) { };
+
+    void insertK(std::pair<double, T> elem) {
+
+      queueT::push(elem);
+
+      if (queueT::size() > k) queueT::pop();
+
+    };
+
+    std::pair<double, T> getK() {
+
+      return queueT::top();
+
+    }
+
+  };
+
+
   template<int dim, typename T> class baseNode {
 
   protected:
