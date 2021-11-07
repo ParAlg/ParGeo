@@ -1,5 +1,6 @@
-#include <iostream>
 #include <algorithm>
+#include <assert.h>
+#include <iostream>
 #include "parlay/parallel.h"
 #include "pargeo/point.h"
 #include "pargeo/dynKdTree.h"
@@ -35,12 +36,25 @@ void timeKnn(parlay::sequence<pargeo::point<dim>> &P, size_t k, char const *outF
 
   std::cout << "insert-time = " << t.get_next() << "\n";
 
+  parlay::parallel_for (0, 1000, [&](size_t i) {
+    tree->kNN(P[i], 5);
+  });
+
+  std::cout << "knn-time = " << t.get_next() << "\n";
+
   tree->erase(P, n / 2, n);
 
   std::cout << "size-after-erase = " << tree->size() << "\n";
 
   std::cout << "erase-time = " << t.get_next() << "\n";
 
+  parlay::parallel_for (0, 1000, [&](size_t i) {
+    tree->kNN(P[i], 5);
+  });
+
+  std::cout << "knn-time = " << t.get_next() << "\n";
+
+  assert(tree->check());
   assert(tree->size() == n / 2);
 }
 

@@ -280,9 +280,11 @@ namespace dynKdTree {
 
     container<char> flag;
 
+    int n;
+
   public:
 
-    int size() { return data.size(); }
+    int size() { return n; }
 
     void setSiblin(baseNode<dim, T>* _siblin) { siblin = _siblin; }
 
@@ -297,14 +299,18 @@ namespace dynKdTree {
 	e = _input.size();
       }
 
+      n = e - s;
+
       baseNode<dim, T>::box = boundingBox<dim>(_input, s, e);
 
-      data = container<T>();
-      flag = container<char>();
+      data = container<T>(n);
+      flag = container<char>(n);
 
+      int j = 0;
       for (int i = s; i < e; ++ i) {
-	data.push_back(_input[i]);
-	flag.push_back(1);
+	data[j] = _input[i];
+	flag[j] = 1;
+	j++;
       }
 
     }
@@ -316,22 +322,35 @@ namespace dynKdTree {
 	e = _input.size();
       }
 
-      for (int i = s; i < e; ++ i) {
+      if (e - s + size() >= baseNode<dim, T>::threshold) {
 
-	baseNode<dim, T>::box.update(_input[i]);
+	container<T> tmp(e - s + size());
 
-	data.push_back(_input[i]);
+	int i = 0;
+	for (int j = s; j < e; ++ j) tmp[i++] = _input[j];
 
-	flag.push_back(1);
-      }
+	iterate([&](T p) { tmp[i++] = p; });
 
-      if (data.size() >= baseNode<dim, T>::threshold) {
-
-	internalNode<dim, T>* newNode = new internalNode<dim, T>(data);
+	internalNode<dim, T>* newNode = new internalNode<dim, T>(tmp);
 
 	return newNode;
 
-      } else return nullptr;
+      } else {
+
+	for (int i = s; i < e; ++ i) {
+
+	  baseNode<dim, T>::box.update(_input[i]);
+
+	  data.push_back(_input[i]);
+
+	  flag.push_back(1);
+	}
+
+	n += e - s;
+
+	return nullptr;
+
+      }
 
     }
 
@@ -364,6 +383,8 @@ namespace dynKdTree {
 	}
       }
 
+      n -= erased;
+
       return erased;
 
     }
@@ -373,7 +394,8 @@ namespace dynKdTree {
       int i = 0;
       for (auto exist: flag) {
 
-	if (exist) func(data[i++]);
+	if (exist) func(data[i]);
+	i++;
 
       }
 
