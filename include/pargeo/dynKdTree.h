@@ -653,8 +653,7 @@ namespace dynKdTree {
 
     bool isRoot() { return true; }
 
-    template<typename F>
-    void iterate(F func) {
+    void iterate(std::function<void(T)> func) {
 
       internalNode<dim, T>::left->iterate(func);
 
