@@ -384,19 +384,15 @@ namespace dynKdTree {
     void kNNHelper(T query,
 		   kBuffer<T>& buffer) {
 
-      if (baseNode<dim, T>::box.contains(query)) {
+      iterate([&](T x) { buffer.insertK({query.dist(x), x}); });
 
-	iterate([&](T x) { buffer.insertK({query.dist(x), x}); });
+      if (buffer.hasK()) {
 
-	if (buffer.hasK()) {
+	siblin->kNNRange(query, buffer.getK().first, buffer);
 
-	  siblin->kNNRange(query, buffer.getK().first, buffer);
+      } else {
 
-	} else {
-
-	  siblin->iterate([&](T x) { buffer.insertK({query.dist(x), x}); });
-
-	}
+	siblin->iterate([&](T x) { buffer.insertK({query.dist(x), x}); });
 
       }
 
@@ -453,6 +449,9 @@ namespace dynKdTree {
       }
 
       n = e - s;
+
+      if (n < 2)
+	throw std::runtime_error("dynKdTree: error, construction requires input size >= 2.");
 
       baseNode<dim, T>::box = boundingBox<dim>(_input, s, e);
 
@@ -607,21 +606,16 @@ namespace dynKdTree {
     void kNNHelper(T query,
 		   kBuffer<T>& buffer) {
 
-      if (baseNode<dim, T>::box.contains(query)) {
+      if (query[splitDim] < split) left->kNNHelper(query, buffer);
+      else right->kNNHelper(query, buffer);
 
-	left->kNNHelper(query, buffer);
+      if (buffer.hasK()) {
 
-	right->kNNHelper(query, buffer);
+	siblin->kNNRange(query, buffer.getK().first, buffer);
 
-	if (buffer.hasK()) {
+      } else {
 
-	  siblin->kNNRange(query, buffer.getK().first, buffer);
-
-	} else {
-
-	  siblin->iterate([&](T x) { buffer.insertK({query.dist(x), x}); });
-
-	}
+	siblin->iterate([&](T x) { buffer.insertK({query.dist(x), x}); });
 
       }
 
@@ -671,19 +665,11 @@ namespace dynKdTree {
     void kNNHelper(T query,
 		   kBuffer<T>& buffer) {
 
-      if (internalNode<dim, T>::box.contains(query)) {
-
+      if (query[internalNode<dim, T>::splitDim] < internalNode<dim, T>::split)
 	internalNode<dim, T>::left->kNNHelper(query, buffer);
-
+      else
 	internalNode<dim, T>::right->kNNHelper(query, buffer);
 
-      }
-
-      if (!buffer.hasK()) {
-
-	throw std::runtime_error("dynKdTree: error, insufficient elems compared with k."); //todo handle
-
-      }
     }
 
     rootNode(container<T>& _input, int s = -1, int e = -1, int _splitDim = 0):
@@ -695,10 +681,18 @@ namespace dynKdTree {
 
       kNNHelper(query, buffer);
 
-      auto nns = container<T>(k);
+      int kOut = buffer.size();
 
-      for (int i = 0; i < k; ++ i) {
-	nns[k - 1 - i] = buffer.top().second;
+      if (kOut < k) {
+
+	std::cout << "dynKdTree: warning, kNN outputs fewer than k.\n";
+
+      }
+
+      auto nns = container<T>(kOut);
+
+      for (int i = 0; i < kOut; ++ i) {
+	nns[kOut - 1 - i] = buffer.top().second;
 	buffer.pop();
       }
 
