@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <math.h>
 #include <queue>
+#include <iostream>
 
 #include "../parlay/parallel.h"
 #include "../parlay/sequence.h"
@@ -51,7 +52,7 @@ namespace dynKdTree {
 
     typedef _floatT floatT;
 
-    coordinate(_floatT* _data) {
+    coordinate(const _floatT* _data) {
 
       for (int i = 0; i < dim; ++ i) data[i] = _data[i];
 
@@ -73,7 +74,7 @@ namespace dynKdTree {
     }
 
     template<typename T>
-    _floatT& dist(const T& other) {
+    _floatT& dist(T other) {
 
       _floatT total = 0.0;
 
@@ -135,7 +136,7 @@ namespace dynKdTree {
     }
 
     template<typename T>
-    void update(T& p) {
+    void update(T p) {
       for (int i = 0; i < dim; ++ i) {
 	minCoords[i] = std::min(p[i], minCoords[i]);
 	maxCoords[i] = std::max(p[i], maxCoords[i]);
@@ -180,10 +181,10 @@ namespace dynKdTree {
   };
 
 
-  template <typename T>
-  class kBuffer: public std::priority_queue<std::pair<double, T>> {
+  template <typename T, typename _floatT = double>
+  class kBuffer: public std::priority_queue<std::pair<_floatT, T>> {
 
-    using queueT = std::priority_queue<std::pair<double, T>>;
+    using queueT = std::priority_queue<std::pair<_floatT, T>>;
 
   private:
     int k;
@@ -192,7 +193,7 @@ namespace dynKdTree {
 
     kBuffer(int _k): queueT(), k(_k) { };
 
-    void insertK(std::pair<double, T> elem) {
+    void insertK(std::pair<_floatT, T> elem) {
 
       queueT::push(elem);
 
@@ -200,7 +201,7 @@ namespace dynKdTree {
 
     };
 
-    std::pair<double, T> getK() {
+    std::pair<_floatT, T> getK() {
 
       return queueT::top();
 
@@ -210,7 +211,8 @@ namespace dynKdTree {
   };
 
 
-  template<int dim, typename T> class baseNode {
+  template<int dim, typename T, typename _floatT = double>
+  class baseNode {
 
   protected:
 
@@ -219,6 +221,8 @@ namespace dynKdTree {
     static const int threshold = 16; // for splitting
 
   public:
+
+    using floatT = _floatT;
 
     boundingBox<dim>& getBox() { return box; }
 
@@ -245,12 +249,12 @@ namespace dynKdTree {
     virtual void kNNHelper(T query, kBuffer<T>& buffer) = 0;
 
     void kNNRange(T query,
-		  double radius,
+		  floatT radius,
 		  kBuffer<T>& buffer) {
 
       iterate([&](T x) {
 
-	double d = query.dist(x);
+	floatT d = query.dist(x);
 
 	if (d <= radius)
 	  buffer.insertK({d, x});
@@ -316,24 +320,18 @@ namespace dynKdTree {
 
 	baseNode<dim, T>::box.update(_input[i]);
 
+	data.push_back(_input[i]);
+
+	flag.push_back(1);
       }
 
-      if ((e - s) + data.size() >= baseNode<dim, T>::threshold) {
+      if (data.size() >= baseNode<dim, T>::threshold) {
 
-	internalNode<dim, T>* newNode = new internalNode<dim, T>(_input, s, e);
+	internalNode<dim, T>* newNode = new internalNode<dim, T>(data);
 
 	return newNode;
 
-      } else {
-
-	for (int i = s; i < e; ++ i) {
-	  data.push_back(_input[i]);
-	  flag.push_back(1);
-	}
-
-	return nullptr;
-
-      }
+      } else return nullptr;
 
     }
 
@@ -426,7 +424,7 @@ namespace dynKdTree {
 
     int splitDim = -1;
 
-    double split = -1;
+    typename baseNode<dim, T>::floatT split = -1;
 
     int n;
 
@@ -639,6 +637,7 @@ namespace dynKdTree {
     }
 
   };
+
 
   template<int dim, typename T>
   class rootNode: public internalNode<dim, T> { // root node
