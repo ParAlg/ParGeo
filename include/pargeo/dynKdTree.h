@@ -103,6 +103,10 @@ namespace dynKdTree {
 
     coordinate<dim> getMax() { return maxCoords; }
 
+    void setMin(int i, typename coordinate<dim>::floatT val) { minCoords[i] = val; }
+
+    void setMax(int i, typename coordinate<dim>::floatT val) { maxCoords[i] = val; }
+
     boundingBox() {
 
       for (int i = 0; i < dim; ++ i) {
@@ -248,18 +252,25 @@ namespace dynKdTree {
 
     virtual void kNNHelper(T query, kBuffer<T>& buffer) = 0;
 
+    virtual void kNNRangeHelper(T query,
+				floatT radius,
+				boundingBox<dim> bb,
+				kBuffer<T>& buffer) = 0;
+
     void kNNRange(T query,
 		  floatT radius,
 		  kBuffer<T>& buffer) {
 
-      iterate([&](T x) {
+      boundingBox<dim> bb;
 
-	floatT d = query.dist(x);
+      for (int i = 0; i < dim; ++ i) {
 
-	if (d <= radius)
-	  buffer.insertK({d, x});
+	bb.setMin(i, query[i] - radius);
+	bb.setMax(i, query[i] + radius);
 
-      });
+      }
+
+      kNNRangeHelper(query, radius, bb, buffer);
 
     }
 
@@ -415,6 +426,22 @@ namespace dynKdTree {
 	siblin->iterate([&](T x) { buffer.insertK({query.dist(x), x}); });
 
       }
+
+    }
+
+    void kNNRangeHelper(T query,
+			typename baseNode<dim, T>::floatT radius,
+			boundingBox<dim> bb,
+			kBuffer<T>& buffer) {
+
+      iterate([&](T x) {
+
+	typename baseNode<dim, T>::floatT d = query.dist(x);
+
+	if (d <= radius)
+	  buffer.insertK({d, x});
+
+      });
 
     }
 
@@ -636,6 +663,33 @@ namespace dynKdTree {
       } else {
 
 	siblin->iterate([&](T x) { buffer.insertK({query.dist(x), x}); });
+
+      }
+
+    }
+
+    void kNNRangeHelper(T query,
+			typename baseNode<dim, T>::floatT radius,
+			boundingBox<dim> bb,
+			kBuffer<T>& buffer) {
+
+      typename boundingBox<dim>::relation rel = bb.compare(baseNode<dim, T>::box);
+
+      if (rel == boundingBox<dim>::relation::include) {
+
+	iterate([&](T x) {
+
+	  typename baseNode<dim, T>::floatT d = query.dist(x);
+
+	  if (d <= radius)
+	    buffer.insertK({d, x});
+
+	});
+
+      } else if (rel == boundingBox<dim>::relation::overlap) {
+
+	left->kNNRangeHelper(query, radius, bb, buffer);
+	right->kNNRangeHelper(query, radius, bb, buffer);
 
       }
 

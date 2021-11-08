@@ -36,7 +36,7 @@ void timeKnn(parlay::sequence<pargeo::point<dim>> &P, size_t k, char const *outF
 
   std::cout << "insert-time = " << t.get_next() << "\n";
 
-  parlay::parallel_for (0, 1000, [&](size_t i) {
+  parlay::parallel_for (0, n, [&](size_t i) {
     tree->kNN(P[i], 5);
   });
 
@@ -48,7 +48,7 @@ void timeKnn(parlay::sequence<pargeo::point<dim>> &P, size_t k, char const *outF
 
   std::cout << "erase-time = " << t.get_next() << "\n";
 
-  parlay::parallel_for (0, 1000, [&](size_t i) {
+  parlay::parallel_for (0, n, [&](size_t i) {
     tree->kNN(P[i], 5);
   });
 
