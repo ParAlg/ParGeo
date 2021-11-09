@@ -4,42 +4,53 @@
 #include <math.h>
 #include <queue>
 #include <iostream>
+#include <vector>
 
 #include "../parlay/parallel.h"
 #include "../parlay/sequence.h"
 
-#ifndef PARLAY_PARALLEL_H_
-
-namespace parlay {
-
-  template <typename Lf, typename Rf>
-  inline void par_do(Lf left, Rf right) {
-    left();
-    right();
-  }
-
-}
-
-#endif
-
-#ifndef PARLAY_SEQUENCE_H_
-
-#include <vector>
-
-template <typename T>
-using container = std::vector<T>;
-
-#else
-
 template <typename T>
 using container = parlay::sequence<T>;
-
-#endif
 
 namespace pargeo {
 
 namespace dynKdTree {
 
+  template <typename In_Seq, typename Bool_Seq>
+  size_t split_two(In_Seq const &In, Bool_Seq const &Fl, parlay::flags fl = parlay::no_flag) {
+    using namespace parlay;
+    using namespace parlay::internal;
+    using T = typename In_Seq::value_type;
+    size_t n = In.size();
+    size_t l = num_blocks(n, _block_size);
+    sequence<size_t> Sums(l);
+    sliced_for(n, _block_size,
+	       [&](size_t i, size_t s, size_t e) {
+		 size_t c = 0;
+		 for (size_t j = s; j < e; j++) c += (Fl[j] == false);
+		 Sums[i] = c;
+	       },
+	       fl);
+    size_t m = scan_inplace(make_slice(Sums), addm<size_t>());
+    sequence<T> Out = sequence<T>::uninitialized(n);
+    sliced_for(n, _block_size,
+	       [&](size_t i, size_t s, size_t e) {
+		 size_t c0 = Sums[i];
+		 size_t c1 = s + (m - c0);
+		 for (size_t j = s; j < e; j++) {
+		   if (Fl[j] == false)
+		     assign_uninitialized(Out[c0++], In[j]);
+		   else
+		     assign_uninitialized(Out[c1++], In[j]);
+		 }
+	       },
+	       fl);
+    //return std::make_pair(std::move(Out), m);
+    parallel_for(0, n, [&](size_t i) {
+      In[i] = Out[i];
+    });
+    return m;
+  }
 
   template<int dim, typename _floatT = double>
   class coordinate {
@@ -185,33 +196,90 @@ namespace dynKdTree {
   };
 
 
-  template <typename T, typename _floatT = double>
-  class kBuffer: public std::priority_queue<std::pair<_floatT, T>> {
+  // template <typename T, typename _floatT = double>
+  // class kBuffer: public std::priority_queue<std::pair<_floatT, T>> {
 
-    using queueT = std::priority_queue<std::pair<_floatT, T>>;
+  //   using queueT = std::priority_queue<std::pair<_floatT, T>>;
+
+  // private:
+  //   int k;
+
+  // public:
+
+  //   kBuffer(int _k): queueT(), k(_k) { };
+
+  //   void insertK(std::pair<_floatT, T> elem) {
+
+  //     queueT::push(elem);
+
+  //     if (queueT::size() > k) queueT::pop();
+
+  //   };
+
+  //   std::pair<_floatT, T> getK() {
+
+  //     return queueT::top();
+
+  //   }
+
+  //   bool hasK() { return queueT::size() >= k; }
+  // };
+
+
+  template <typename T, typename _floatT = double>
+  class kBuffer {
 
   private:
     int k;
+    int writePt;
+    std::vector<std::pair<_floatT, T>> A;
 
   public:
 
-    kBuffer(int _k): queueT(), k(_k) { };
+    kBuffer(int _k): k(_k), writePt(0) {
+
+      A = std::vector<std::pair<_floatT, T>>(k + 1);
+
+    };
 
     void insertK(std::pair<_floatT, T> elem) {
 
-      queueT::push(elem);
+      A[writePt ++] = elem;
 
-      if (queueT::size() > k) queueT::pop();
+      if (writePt >= k + 1) {
+
+	std::nth_element(A.begin(), A.begin() + k, A.end());
+
+	writePt --;
+
+      }
 
     };
 
     std::pair<_floatT, T> getK() {
 
-      return queueT::top();
+      return A[k - 1];
 
     }
 
-    bool hasK() { return queueT::size() >= k; }
+    bool hasK() { return writePt >= k; }
+
+    int size() { return writePt; }
+
+    std::pair<_floatT, T> top() {
+
+      return A[writePt - 1];
+
+    }
+
+    void pop() { writePt --; }
+
+    void sort() {
+
+      std::sort(A.begin(), A.begin() + k);
+
+    }
+
   };
 
 
@@ -502,12 +570,18 @@ namespace dynKdTree {
 
       baseNode<dim, T>::box = boundingBox<dim>(_input, s, e);
 
-      std::nth_element(_input.begin() + s,
-		       _input.begin() + s + (e - s) / 2,
-		       _input.begin() + e,
-		       [&](T& a, T& b){
-			 return a[splitDim] < b[splitDim];
-		       });
+      if (n < 2000) {
+	std::nth_element(_input.begin() + s,
+			 _input.begin() + s + (e - s) / 2,
+			 _input.begin() + e,
+			 [&](T& a, T& b){
+			   return a[splitDim] < b[splitDim];
+			 });
+      } else {
+	parlay::sort_inplace(_input.cut(s, e), [&](T a, T b){
+	  return a[splitDim] < b[splitDim];
+	});
+      }
 
       split = _input[s + (e - s) / 2][splitDim];
 
@@ -556,13 +630,27 @@ namespace dynKdTree {
 
       }
 
-      auto middle = std::partition(_input.begin() + s, _input.begin() + e, [&](T& elem) {
-	return elem[splitDim] < split;
-      });
+      int middleIdx;
+
+      if (e - s < 2000) {
+	auto middle = std::partition(_input.begin() + s, _input.begin() + e, [&](T& elem) {
+	  return elem[splitDim] < split;
+	});
+
+	middleIdx = std::distance(_input.begin(), middle);
+      } else {
+	parlay::sequence<bool> flag(e - s);
+
+	parlay::parallel_for(0, e - s, [&](size_t i) {
+	  flag[i] = _input[s + i][splitDim] >= split;
+	});
+
+	middleIdx = s + split_two(_input.cut(s, e), flag);
+      }
 
       auto insertLeft = [&] () {
 
-	auto newLeft = left->insert(_input, s, std::distance(_input.begin(), middle));
+	auto newLeft = left->insert(_input, s, middleIdx);
 
 	if (newLeft) {
 	  delete left;
@@ -576,7 +664,7 @@ namespace dynKdTree {
 
       auto insertRight = [&] () {
 
-	auto newRight = right->insert(_input, std::distance(_input.begin(), middle), e);
+	auto newRight = right->insert(_input, middleIdx, e);
 
 	if (newRight) {
 	  delete right;
@@ -608,18 +696,32 @@ namespace dynKdTree {
 
       if (e - s <= 0) return 0;
 
-      auto middle = std::partition(_input.begin() + s, _input.begin() + e, [&](T& elem) {
-	return elem[splitDim] < split;
-      });
+      int middleIdx;
+
+      if (e - s < 2000) {
+	auto middle = std::partition(_input.begin() + s, _input.begin() + e, [&](T& elem) {
+	  return elem[splitDim] < split;
+	});
+
+	middleIdx = std::distance(_input.begin(), middle);
+      } else {
+	parlay::sequence<bool> flag(e - s);
+
+	parlay::parallel_for(0, e - s, [&](size_t i) {
+	  flag[i] = _input[s + i][splitDim] >= split;
+	});
+
+	middleIdx = s + split_two(_input.cut(s, e), flag);
+      }
 
       int leftErased, rightErased;
 
       auto eraseLeft = [&] () {
-	leftErased = left->erase(_input, s, std::distance(_input.begin(), middle));
+	leftErased = left->erase(_input, s, middleIdx);
       };
 
       auto eraseRight = [&] () {
-	rightErased = right->erase(_input, std::distance(_input.begin(), middle), e);
+	rightErased = right->erase(_input, middleIdx, e);
       };
 
       if (e - s < 2000) {
@@ -764,6 +866,8 @@ namespace dynKdTree {
       }
 
       auto nns = container<T>(kOut);
+
+      buffer.sort();
 
       for (int i = 0; i < kOut; ++ i) {
 	nns[kOut - 1 - i] = buffer.top().second;
