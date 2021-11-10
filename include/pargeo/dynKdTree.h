@@ -16,6 +16,8 @@ namespace pargeo {
 
 namespace dynKdTree {
 
+  static const bool spatialMedian = true;
+
   template <typename In_Seq, typename Bool_Seq>
   size_t split_two(In_Seq const &In, Bool_Seq const &Fl, parlay::flags fl = parlay::no_flag) {
     using namespace parlay;
@@ -570,42 +572,76 @@ namespace dynKdTree {
 
       baseNode<dim, T>::box = boundingBox<dim>(_input, s, e);
 
-      if (n < 2000) {
-	std::nth_element(_input.begin() + s,
-			 _input.begin() + s + (e - s) / 2,
-			 _input.begin() + e,
-			 [&](T& a, T& b){
-			   return a[splitDim] < b[splitDim];
-			 });
+      int leftSize;
+
+      if (spatialMedian) {
+
+	split = (baseNode<dim, T>::box.getMax()[splitDim] +
+		 baseNode<dim, T>::box.getMin()[splitDim]) / 2;
+
+	if (e - s < 2000) {
+	  auto middle = std::partition(_input.begin() + s, _input.begin() + e, [&](T& elem) {
+	    return elem[splitDim] < split;
+	  });
+
+	  leftSize = std::distance(_input.begin(), middle) - s;
+	} else {
+	  parlay::sequence<bool> flag(e - s);
+
+	  parlay::parallel_for(0, e - s, [&](size_t i) {
+	    flag[i] = _input[s + i][splitDim] >= split;
+	  });
+
+	  leftSize = split_two(_input.cut(s, e), flag);
+
+	}
+
+	if (leftSize == 0 || leftSize == n) {
+	  splitDim = (splitDim + 1) % dim;
+	  goto computeObjectMedian;
+	}
+
       } else {
-	parlay::sort_inplace(_input.cut(s, e), [&](T a, T b){
-	  return a[splitDim] < b[splitDim];
-	});
+      computeObjectMedian:
+
+	if (n < 2000) {
+	  std::nth_element(_input.begin() + s,
+			   _input.begin() + s + (e - s) / 2,
+			   _input.begin() + e,
+			   [&](T& a, T& b){
+			     return a[splitDim] < b[splitDim];
+			   });
+	} else {
+	  parlay::sort_inplace(_input.cut(s, e), [&](T a, T b){
+	    return a[splitDim] < b[splitDim];
+	  });
+	}
+
+	split = _input[s + (e - s) / 2][splitDim];
+
+	leftSize = s + (e - s) / 2 - s;
+
       }
-
-      split = _input[s + (e - s) / 2][splitDim];
-
-      int leftSize = s + (e - s) / 2 - s;
 
       if (leftSize < baseNode<dim, T>::threshold) {
 
-	left = new dataNode<dim, T>(_input, s, s + (e - s) / 2);
+	left = new dataNode<dim, T>(_input, s, s + leftSize);
 
       } else {
 
-	left = new internalNode(_input, s, s + (e - s) / 2, (splitDim + 1) % dim);
+	left = new internalNode(_input, s, s + leftSize, (splitDim + 1) % dim);
 
       }
 
-      int rightSize = e - s + (e - s) / 2;
+      int rightSize = e - s - leftSize;;
 
       if (rightSize < baseNode<dim, T>::threshold) {
 
-	right = new dataNode<dim, T>(_input, s + (e - s) / 2, e);
+	right = new dataNode<dim, T>(_input, s + leftSize, e);
 
       } else {
 
-	right = new internalNode(_input, s + (e - s) / 2, e, (splitDim + 1) % dim);
+	right = new internalNode(_input, s + leftSize, e, (splitDim + 1) % dim);
 
       }
 
@@ -861,7 +897,8 @@ namespace dynKdTree {
 
       if (kOut < k) {
 
-	std::cout << "dynKdTree: warning, kNN outputs fewer than k.\n";
+	std::cout << "dynKdTree: warning, kNN outputs ";
+	std::cout << kOut << ", fewer than k.\n";
 
       }
 
