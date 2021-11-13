@@ -1,6 +1,3 @@
 add_subdirectory(bruteforce)
 add_subdirectory(serialQuickHull)
-add_subdirectory(parallelQuickHull)
-add_subdirectory(divideConquer)
-add_subdirectory(sampling)
 add_subdirectory(pseudoHull)

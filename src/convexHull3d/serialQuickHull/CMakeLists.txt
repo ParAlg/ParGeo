@@ -2,9 +2,6 @@
 
 add_library(serialHull3dLib
   hull.cpp
-  # hullInternal.cpp
-  # hullInternal2.cpp
-  # hullInternal3.cpp
   )
 
 target_link_libraries(serialHull3dLib

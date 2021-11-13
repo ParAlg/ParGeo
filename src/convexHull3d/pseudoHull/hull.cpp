@@ -1,4 +1,4 @@
-#include "convexHull3d/parallelQuickHull/hull.h"
+#include "convexHull3d/serialQuickHull/hull.h"
 #include "convexHull3d/pseudo/hull.h"
 
 #include <iostream>
@@ -216,7 +216,7 @@ pargeo::hull3d::pseudo::compute(parlay::slice<pointT*, pointT*> P) {
   std::cout << Q.size() << "\n";
 #endif
 
-  auto H = pargeo::hull3d::parallelQuickHull::compute(make_slice(Q));
+  auto H = pargeo::hull3d::serialQuickHull::compute(make_slice(Q));
 
 #ifdef PSEUDO_HULL_VERBOSE
   std::cout << "hull-time = " << t.get_next() << "\n";

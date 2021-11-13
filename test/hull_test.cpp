@@ -1,10 +1,6 @@
-#include "convexHull3d/bruteforce/hull.h"
 #include "convexHull3d/serialQuickHull/hull.h"
-#include "convexHull3d/parallelQuickHull/hull.h"
+#include "convexHull3d/bruteforce/hull.h"
 #include "convexHull3d/pseudo/hull.h"
-#include "convexHull3d/sampling/hull.h"
-#include "convexHull3d/divideConquer/hull.h"
-#include "convexHull3d/gift/hull.h"
 
 #include "parlay/primitives.h"
 #include "pargeo/pointIO.h"
@@ -61,41 +57,9 @@ TEST(hull3d_serial, compareFacet) {
   EXPECT_TRUE(compareFacets(H1, H2));
 }
 
-TEST(hull3d_parallel, compareFacet) {
-  auto P = data();
-  auto H1 = pargeo::hull3d::parallelQuickHull::compute(make_slice(P));
-  auto H2 = pargeo::hull3d::bruteforce::compute(make_slice(P));
-  EXPECT_EQ(H1.size(), H2.size());
-  EXPECT_TRUE(compareFacets(H1, H2));
-}
-
-TEST(hull3d_divideConquer, compareFacet) {
-  auto P = data();
-  auto H1 = pargeo::hull3d::divideConquer::compute(make_slice(P), 2);
-  auto H2 = pargeo::hull3d::bruteforce::compute(make_slice(P));
-  EXPECT_EQ(H1.size(), H2.size());
-  EXPECT_TRUE(compareFacets(H1, H2));
-}
-
 TEST(hull3d_pseudo, compareFacet) {
   auto P = data();
   auto H1 = pargeo::hull3d::pseudo::compute(make_slice(P));
-  auto H2 = pargeo::hull3d::bruteforce::compute(make_slice(P));
-  EXPECT_EQ(H1.size(), H2.size());
-  EXPECT_TRUE(compareFacets(H1, H2));
-}
-
-TEST(hull3d_samping, compareFacet) {
-  auto P = data();
-  auto H1 = pargeo::hull3d::sampling::compute(make_slice(P));
-  auto H2 = pargeo::hull3d::bruteforce::compute(make_slice(P));
-  EXPECT_EQ(H1.size(), H2.size());
-  EXPECT_TRUE(compareFacets(H1, H2));
-}
-
-TEST(hull3d_gift, compareFacet) {
-  auto P = data();
-  auto H1 = pargeo::hull3d::gift::compute(make_slice(P));
   auto H2 = pargeo::hull3d::bruteforce::compute(make_slice(P));
   EXPECT_EQ(H1.size(), H2.size());
   EXPECT_TRUE(compareFacets(H1, H2));

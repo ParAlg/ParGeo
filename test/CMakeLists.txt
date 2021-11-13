@@ -62,9 +62,7 @@ add_test(NAME wspd_test COMMAND wspd_test)
 add_executable(hull_test hull_test.cpp)
 target_link_libraries(hull_test PRIVATE
   pargeoLib
-  divideConquerHull3dLib
   bruteforceHull3dLib
-  samplingHull3dLib
   pseudoHull3dLib
   serialHull3dLib
   ${GTest_LIBRARIES})
