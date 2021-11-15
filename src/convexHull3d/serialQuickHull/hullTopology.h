@@ -22,23 +22,23 @@
 
 #pragma once
 
-#include <iostream>
-#include <fstream>
 #include <atomic>
+#include <fstream>
+#include <iostream>
 #include <stack>
 #include <tuple>
-#include "parlay/sequence.h"
-#include "parlay/hash_table.h"
-#include "pargeo/point.h"
 #include "pargeo/getTime.h"
+#include "pargeo/point.h"
+#include "parlay/hash_table.h"
+#include "parlay/sequence.h"
 
-namespace pargeo {
-namespace hull3d {
+namespace pargeo::hull3d {
 
 // Example for hashing numeric values.
 // T must be some integer type
-template <class T>
+template <typename T>
 struct hash_pointer {
+
   using eType = T;
   using kType = T;
   eType empty() { return nullptr; }
@@ -51,6 +51,7 @@ struct hash_pointer {
     return std::atomic_compare_exchange_strong_explicit(
       reinterpret_cast<std::atomic<eType>*>(p), &o, n, std::memory_order_relaxed, std::memory_order_relaxed);
   }
+
 };
 
 template <class facetT, class vertexT>
@@ -58,9 +59,10 @@ class _hullTopology {
 
 protected:
 
-  static constexpr typename vertexT::floatT numericKnob = vertexT::pointT::eps;
+  static constexpr typename vertexT::floatT eps = vertexT::pointT::eps;
 
 public:
+
   // The number of facets in H
   std::atomic<size_t> hSize;
 
@@ -70,7 +72,7 @@ public:
   facetT* H;
 
   inline bool visible(facetT* f, vertexT p) {
-    return (f->a - p).dot(f->area) > numericKnob;
+    return (f->a - p).dot(f->area) > eps;
   }
 
   /* Depth-first hull traversal (no facet repeat)
@@ -457,5 +459,4 @@ e.b==e.ff.a    e.a==e.ff.c
   }
 };
 
-} // End namespace hull3d
-} // End namespace pargeo
+} // End namespaces

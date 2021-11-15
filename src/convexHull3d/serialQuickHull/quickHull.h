@@ -27,8 +27,8 @@
 #include "pargeo/getTime.h"
 #include "pargeo/point.h"
 
-#include "convexHull3d/serialQuickHull/hullImpl.h"
-#include "convexHull3d/serialQuickHull/linkedFacet.h"
+#include "hullImpl.h"
+#include "linkedFacet.h"
 #include "convexHull3d/vertex.h"
 
 // #define HULL_SERIAL_VERBOSE

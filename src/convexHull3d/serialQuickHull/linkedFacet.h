@@ -24,21 +24,20 @@
 
 #include <vector>
 #include "convexHull3d/vertex.h"
-#include "parlay/sequence.h"
 #include "pargeo/algebra.h"
+#include "parlay/sequence.h"
 
-namespace pargeo {
-  namespace hull3d {
-    namespace serialQuickHull {
-      template<class pointT>
-      class linkedFacet;
-    }
-  }
+namespace pargeo::hull3d::serialQuickHull {
+
+  template<class pointT> class linkedFacet;
+
 }
 
 template<class pointT>
 class pargeo::hull3d::serialQuickHull::linkedFacet {
+
 public:
+
   using vertexT = pargeo::hull3d::vertex<linkedFacet, pointT>;
   using floatT = typename vertexT::floatT;
   using seqT = std::vector<vertexT>;
@@ -112,47 +111,3 @@ public:
   }
 
 };
-
-/* static std::ostream& operator<<(std::ostream& os, const linkedFacet& v) { */
-/* #ifdef HULL_SERIAL_VERBOSE */
-/*   os << "(" << v.a.i << "," << v.b.i << "," << v.c.i << ")"; */
-/* #else */
-/*   os << "(" << v.a << "," << v.b << "," << v.c << ")"; */
-/* #endif */
-/*   return os; */
-/* } */
-
-// class pointOrigin {
-//   using vertexT = pargeo::hullInternal::vertex;
-//   using facetT = linkedFacet<vertexT>;
-
-//   static constexpr typename pargeo::fpoint<3>::floatT numericKnob = 1e-5;
-
-//   vertexT o;
-
-// public:
-
-//   void setOrigin(vertexT _o) { o = _o; }
-
-//   inline vertexT get() {return o;};
-
-//   pointOrigin() {}
-
-//   template<class pt>
-//   pointOrigin(pt _o) {
-//     o = vertexT(_o.coords());
-//   }
-
-//   inline bool visible(facetT* f, vertexT p) {
-//     return (f->a - p).dot(f->area) > numericKnob;
-//   }
-
-//   inline bool keep(facetT* f, vertexT p) {
-//     if ((f->a - p).dot(f->area) > numericKnob)
-//       return f->a != p && f->b != p && f->c != p;
-//     else
-//       return false;
-//   }
-
-// };
-
