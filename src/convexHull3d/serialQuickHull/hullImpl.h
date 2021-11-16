@@ -53,6 +53,8 @@ class pargeo::hull3d::serialQuickHull::hullTopology :
 
   }
 
+  ~hullTopology() { }
+
   inline bool keep(facetT* f, vertexT p) {
 
     if ((f->a - p).dot(f->area) > baseT::eps)

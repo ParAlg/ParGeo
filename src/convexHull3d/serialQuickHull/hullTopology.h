@@ -248,6 +248,19 @@ e.b==e.ff.a    e.a==e.ff.c
 
   _hullTopology() {}
 
+  virtual ~_hullTopology() {
+
+    std::vector<facetT*> facets;
+
+    auto fVisit = [&](facetT* f) { return true;};
+    auto fDo = [&](facetT* f) { facets.push_back(f);};
+    auto fStop = [&]() { return false;};
+    dfsFacet(H, fVisit, fDo, fStop);
+
+    for (auto f: facets) delete f;
+
+  }
+
   /* Compute a frontier of edges in the clockwise order
       and facets to delete
    */

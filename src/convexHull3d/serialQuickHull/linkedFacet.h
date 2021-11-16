@@ -96,4 +96,6 @@ public:
     area = crossProduct3d(b-a, c-a);
   }
 
+  ~linkedFacet() { }
+
 };
