@@ -25,7 +25,6 @@
 #include <vector>
 #include "convexHull3d/vertex.h"
 #include "pargeo/algebra.h"
-#include "parlay/sequence.h"
 
 namespace pargeo::hull3d::serialQuickHull {
 
@@ -40,7 +39,6 @@ public:
 
   using vertexT = pargeo::hull3d::vertex<linkedFacet, pointT>;
   using floatT = typename vertexT::floatT;
-  using seqT = std::vector<vertexT>;
 
   vertexT a, b, c;
 
@@ -52,26 +50,20 @@ public:
 
   vertexT area;
 
-  // seqT *seeList;
-  seqT seeList;
+  std::vector<vertexT> seeList;
 
-  //size_t numPts() { return seeList->size(); }
   size_t numPts() { return seeList.size(); }
 
-  //vertexT& pts(size_t i) { return seeList->at(i); }
   vertexT& pts(size_t i) { return seeList.at(i); }
 
-  //void clear() { seeList->clear(); }
   void clear() { seeList.clear(); }
 
-  //void push_back(vertexT v) { seeList->push_back(v); }
   void push_back(vertexT v) { seeList.push_back(v); }
 
   vertexT furthest() {
     auto apex = vertexT();
     typename vertexT::floatT m = pointT::eps;
     for (size_t i=0; i<numPts(); ++i) {
-      //auto m2 = (a-pts(i)).dot(crossProduct3d(b-a, c-a));
       auto m2 = (a-pts(i)).dot(area);
       if (m2 > m) {
 	m = m2;
@@ -99,15 +91,9 @@ public:
     if (pargeo::determinant3by3(a, b, c) > pointT::eps)
       std::swap(b, c);
 
-    //seeList = new seqT();
-    seeList = seqT();
+    seeList = std::vector<vertexT>();
 
     area = crossProduct3d(b-a, c-a);
-    //area = crossProduct3d(b, c); //todo, minus is problematic
-  }
-
-  ~linkedFacet() {
-    //delete seeList;
   }
 
 };

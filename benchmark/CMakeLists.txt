@@ -58,18 +58,8 @@ target_link_libraries(hull2d_bench PRIVATE
 
 add_executable(hull3d_bench hull3d_bench.cpp)
 target_link_libraries(hull3d_bench PRIVATE
-  divideConquerHull3dLib
-  bruteforceHull3dLib
-  samplingHull3dLib
-  pseudoHull3dLib
   serialHull3dLib
-  parallelHull3dLib
-  pargeoLib
-  benchmark_main)
-
-add_executable(hull_sampling hull_sampling.cpp)
-target_link_libraries(hull_sampling PRIVATE
-  samplingHull3dLib
+  pseudoHull3dLib
   pargeoLib
   benchmark_main)
 

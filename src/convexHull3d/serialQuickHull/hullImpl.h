@@ -62,8 +62,8 @@ class pargeo::hull3d::serialQuickHull::hullTopology :
 
   }
 
-  void redistribute(parlay::slice<facetT**, facetT**> facetsBeneath,
-		    parlay::slice<facetT**, facetT**> newFacets) {
+  void redistribute(std::vector<facetT*>& facetsBeneath,
+		    std::vector<facetT*>& newFacets) {
 
     baseT::hSize += newFacets.size() - facetsBeneath.size();
 
@@ -121,4 +121,3 @@ class pargeo::hull3d::serialQuickHull::hullTopology :
   }
 
 };
-

@@ -27,32 +27,12 @@
 #include <iostream>
 #include <stack>
 #include <tuple>
+#include <vector>
+#include <unordered_map>
 #include "pargeo/getTime.h"
 #include "pargeo/point.h"
-#include "parlay/hash_table.h"
-#include "parlay/sequence.h"
 
 namespace pargeo::hull3d {
-
-// Example for hashing numeric values.
-// T must be some integer type
-template <typename T>
-struct hash_pointer {
-
-  using eType = T;
-  using kType = T;
-  eType empty() { return nullptr; }
-  kType getKey(eType v) { return v; }
-  size_t hash(kType v) { return static_cast<size_t>(parlay::hash64(size_t(v))); }
-  int cmp(kType v, kType b) { return (v > b) ? 1 : ((v == b) ? 0 : -1); }
-  bool replaceQ(eType, eType) { return 0; }
-  eType update(eType v, eType) { return v; }
-  bool cas(eType* p, eType o, eType n) {
-    return std::atomic_compare_exchange_strong_explicit(
-      reinterpret_cast<std::atomic<eType>*>(p), &o, n, std::memory_order_relaxed, std::memory_order_relaxed);
-  }
-
-};
 
 template <class facetT, class vertexT>
 class _hullTopology {
@@ -80,9 +60,9 @@ public:
   template <class F, class G, class H>
   void dfsFacet(facetT* start, F& fVisit, G& fDo, H& fStop) {
 
-    parlay::hashtable<hash_pointer<facetT*>> V(hSize, hash_pointer<facetT*>());
-    auto mark = [&](facetT* f) {V.insert(f);};
-    auto visited = [&](facetT* f) {return V.find(f) != nullptr;};
+    std::unordered_map<facetT*, int> V;
+    auto mark = [&](facetT* f) { V[f] = 1; };
+    auto visited = [&](facetT* f) { return V.find(f) != V.end(); };
 
     std::stack<_edge> S;
 
@@ -114,13 +94,13 @@ public:
 
     // Quadratic iteration of V seems to be fast
     // as the involved facets are few
-    parlay::sequence<edgeT> V;
+    std::vector<edgeT> V;
     auto mark = [&](edgeT f) {V.push_back(f);};
     auto visited = [&](edgeT f) {
-		     for (auto g: V) {
-		       if (f == g) return true;
-		     }
-		     return false;};
+      for (auto g: V) {
+	if (f == g) return true;
+      }
+      return false;};
 
     std::stack<edgeT> S;
 
@@ -266,26 +246,17 @@ e.b==e.ff.a    e.a==e.ff.c
 
   void setHull(facetT* _H) {H = _H;}
 
-/*   facetT* constructorParallel(slice<vertexT*, vertexT*> P) { */
-
-/*     return f0; */
-/*   } */
-
-  // originT getOrigin() {
-  //   return origin;
-  // }
-
   _hullTopology() {}
 
   /* Compute a frontier of edges in the clockwise order
       and facets to delete
    */
-  std::tuple<parlay::sequence<_edge>, parlay::sequence<facetT*>> computeFrontier(vertexT apex) {
-    using namespace parlay;
+  std::tuple<std::vector<_edge>, std::vector<facetT*>> computeFrontier(vertexT apex) {
+
     facetT* fVisible = apex.seeFacet;
 
-    auto frontier = sequence<_edge>();
-    auto facets = sequence<facetT*>();
+    auto frontier = std::vector<_edge>();
+    auto facets = std::vector<facetT*>();
     auto facetVisited = [&](facetT* f) {
 			  for (size_t i=0; i<facets.size(); ++i) {
 			    if (f == facets.at(i)) return true;
@@ -388,21 +359,9 @@ e.b==e.ff.a    e.a==e.ff.c
     else dfsFacet(H, fVisit, fDo, fStop);
   }
 
-  // template<class pt, class facet3d>
-  // void getHull(parlay::sequence<facet3d>& out) {
-  //   auto fVisit = [&](facetT* f) { return true;};
-  //   auto fDo = [&](facetT* f) {
-  // 		 out.emplace_back(pt((f->a+interiorPt).coords()),
-  // 				  pt((f->b+interiorPt).coords()),
-  // 				  pt((f->c+interiorPt).coords()));};
-  //   auto fStop = [&]() { return false;};
-
-  //   dfsFacet(H, fVisit, fDo, fStop);
-  // }
-
-  template<class facet3d>
-  void getFacet(parlay::sequence<facet3d>& out) {
-    using pt = typename facet3d::pointT;
+  template <class seqT>
+  void getFacet(seqT& out) {
+    using pt = vertexT;
     auto fVisit = [&](facetT* f) { return true;};
     auto fDo = [&](facetT* f) {
 		 out.emplace_back(pt((f->a+interiorPt).coords()),
@@ -411,36 +370,6 @@ e.b==e.ff.a    e.a==e.ff.c
     auto fStop = [&]() { return false;};
 
     dfsFacet(H, fVisit, fDo, fStop);
-  }
-
-  parlay::sequence<vertexT> getVertex() {
-    parlay::sequence<vertexT> out;
-    auto fVisit = [&](facetT* f) { return true;};
-    auto fDo = [&](facetT* f) {
-		 out.emplace_back(vertexT((f->a+interiorPt).coords()));
-		 out.emplace_back(vertexT((f->b+interiorPt).coords()));
-		 out.emplace_back(vertexT((f->c+interiorPt).coords()));
-  	       };
-    auto fStop = [&]() { return false;};
-
-    dfsFacet(H, fVisit, fDo, fStop);
-    parlay::sort_inplace(out);
-    return parlay::unique(out);
-  }
-
-  parlay::sequence<vertexT> getHullPts() {
-    parlay::sequence<vertexT> out;
-    auto fVisit = [&](facetT* f) { return true;};
-    auto fDo = [&](facetT* f) {
-		 for (size_t i = 0; i < f->numPts(); ++i) {
-		   out.push_back(f->pts(i) + interiorPt);
-		 }
-	       };
-    auto fStop = [&]() { return false;};
-
-    dfsFacet(H, fVisit, fDo, fStop);
-    parlay::sort_inplace(out);
-    return parlay::unique(out);
   }
 
   void writeHull(char const *fileName) {
