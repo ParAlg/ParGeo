@@ -1,13 +1,15 @@
-# Pargeo: A Library for Parallal Algorithms in Computational Geometry
+# ParGeo: A Library for Parallal Algorithms in Computational Geometry
 
-Pargeo uses the [parlaylib](https://github.com/cmuparlay/parlaylib), a wonderful library developed at CMU for multi-core parallel programming. We also use [pybind11](https://github.com/pybind/pybind11) for Python binding. These modules are included in the project as submodules, initialize them before building the project:
+## Tutorial
+
+ParGeo uses the [parlaylib](https://github.com/cmuparlay/parlaylib) as a submodule for multi-core parallel programming. Before building the project, initialize the submodules:
 
 ```
 git submodule init
 git submodule update
 ```
 
-We use CMake as the build system. To build the project:
+ParGeo uses CMake as the build system. To build the project:
 
 ```
 mkdir build
