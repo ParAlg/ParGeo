@@ -51,12 +51,6 @@ target_link_libraries(hull2d pargeoLib
   bruteforceHull2dLib
   )
 
-add_executable(hullSampling hullSampling.cpp)
-target_link_libraries(hullSampling pargeoLib
-  samplingHull3dLib
-  serialHull3dLib
-  )
-
 add_executable(seb seb.cpp)
 target_link_libraries(seb pargeoLib
   samplingSebLib

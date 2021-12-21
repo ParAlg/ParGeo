@@ -68,11 +68,6 @@ target_link_libraries(hull_test PRIVATE
   ${GTest_LIBRARIES})
 add_test(NAME hull_test COMMAND hull_test)
 
-add_executable(hullTopology_test hullTopology_test.cpp)
-target_link_libraries(hullTopology_test PRIVATE
-  pargeoLib ${GTest_LIBRARIES})
-add_test(NAME hullTopology_test COMMAND hullTopology_test)
-
 add_executable(dataset_test dataset_test.cpp)
 target_link_libraries(dataset_test PRIVATE
   pargeoLib ${GTest_LIBRARIES})

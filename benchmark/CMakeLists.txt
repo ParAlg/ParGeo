@@ -70,3 +70,8 @@ target_link_libraries(seb_bench PRIVATE
   scanSebLib
   samplingSebLib
   benchmark_main)
+
+add_executable(all_bench all_bench.cpp)
+target_link_libraries(all_bench PRIVATE
+  pargeoLib
+  benchmark_main)
