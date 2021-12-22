@@ -198,91 +198,91 @@ namespace dynKdTree {
   };
 
 
-  // template <typename T, typename _floatT = double>
-  // class kBuffer: public std::priority_queue<std::pair<_floatT, T>> {
-
-  //   using queueT = std::priority_queue<std::pair<_floatT, T>>;
-
-  // private:
-  //   int k;
-
-  // public:
-
-  //   kBuffer(int _k): queueT(), k(_k) { };
-
-  //   void insertK(std::pair<_floatT, T> elem) {
-
-  //     queueT::push(elem);
-
-  //     if (queueT::size() > k) queueT::pop();
-
-  //   };
-
-  //   std::pair<_floatT, T> getK() {
-
-  //     return queueT::top();
-
-  //   }
-
-  //   bool hasK() { return queueT::size() >= k; }
-  // };
-
-
   template <typename T, typename _floatT = double>
-  class kBuffer {
+  class kBuffer: public std::priority_queue<std::pair<_floatT, T>> {
+
+    using queueT = std::priority_queue<std::pair<_floatT, T>>;
 
   private:
     int k;
-    int writePt;
-    std::vector<std::pair<_floatT, T>> A;
 
   public:
 
-    kBuffer(int _k): k(_k), writePt(0) {
-
-      A = std::vector<std::pair<_floatT, T>>(k + 1);
-
-    };
+    kBuffer(int _k): queueT(), k(_k) { };
 
     void insertK(std::pair<_floatT, T> elem) {
 
-      A[writePt ++] = elem;
+      queueT::push(elem);
 
-      if (writePt >= k + 1) {
-
-	std::nth_element(A.begin(), A.begin() + k, A.end());
-
-	writePt --;
-
-      }
+      if (queueT::size() > k) queueT::pop();
 
     };
 
     std::pair<_floatT, T> getK() {
 
-      return A[k - 1];
+      return queueT::top();
 
     }
 
-    bool hasK() { return writePt >= k; }
-
-    int size() { return writePt; }
-
-    std::pair<_floatT, T> top() {
-
-      return A[writePt - 1];
-
-    }
-
-    void pop() { writePt --; }
-
-    void sort() {
-
-      std::sort(A.begin(), A.begin() + k);
-
-    }
-
+    bool hasK() { return queueT::size() >= k; }
   };
+
+
+  // template <typename T, typename _floatT = double>
+  // class kBuffer {
+
+  // private:
+  //   int k;
+  //   int writePt;
+  //   std::vector<std::pair<_floatT, T>> A;
+
+  // public:
+
+  //   kBuffer(int _k): k(_k), writePt(0) {
+
+  //     A = std::vector<std::pair<_floatT, T>>(k + 1);
+
+  //   };
+
+  //   void insertK(std::pair<_floatT, T> elem) {
+
+  //     A[writePt ++] = elem;
+
+  //     if (writePt >= k + 1) {
+
+  // 	std::nth_element(A.begin(), A.begin() + k, A.end());
+
+  // 	writePt --;
+
+  //     }
+
+  //   };
+
+  //   std::pair<_floatT, T> getK() {
+
+  //     return A[k - 1];
+
+  //   }
+
+  //   bool hasK() { return writePt >= k; }
+
+  //   int size() { return writePt; }
+
+  //   std::pair<_floatT, T> top() {
+
+  //     return A[writePt - 1];
+
+  //   }
+
+  //   void pop() { writePt --; }
+
+  //   void sort() {
+
+  //     std::sort(A.begin(), A.begin() + k);
+
+  //   }
+
+  // };
 
 
   template<int dim, typename T, typename _floatT = double>
