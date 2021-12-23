@@ -7,6 +7,13 @@
 #include "pargeo/kdTreeRange.h"
 #include "pargeo/bccp.h"
 #include "pargeo/wspd.h"
+#include "pargeo/dynKdTree.h"
+#include "euclideanMst/euclideanMst.h"
+#include "pargeo/zorderSort.h"
+#include "convexHull2d/divideConquer/hull.h"
+#include "convexHull3d/pseudo/hull.h"
+#include "enclosingBall/sampling/seb.h"
+#include "spatialGraph/spatialGraph.h"
 
 int N = 1000000;
 
@@ -115,11 +122,275 @@ static void kdTree_wspd_s2_2d(benchmark::State& state) {
   }
 }
 
+static void kdTree_build_5d(benchmark::State& state) {
+  using namespace pargeo;
+  auto points = data5d();
+
+  for (auto _ : state) {
+    kdNode<5, point<5>>* tree =
+      buildKdt<5, point<5>>(points, true, true);
+  }
+}
+
+static void kdTree_knn_5d(benchmark::State& state) {
+  using namespace pargeo;
+  auto points = data5d();
+
+  kdNode<5, point<5>>* tree =
+    buildKdt<5, point<5>>(points, true, true);
+
+  for (auto _ : state) {
+    kdTreeKnn(points, 5, tree);
+  }
+
+}
+
+static void kdTree_rangeSearch_5d(benchmark::State& state) {
+  using namespace pargeo;
+  auto points = data5d();
+
+  kdNode<5, point<5>>* tree =
+    buildKdt<5, point<5>>(points, true, true);
+
+  for (auto _ : state) {
+
+    parlay::parallel_for(0, N, [&](size_t i){
+
+      // Spherical range search with random radius
+      kdTreeRange(points, tree, points[i],
+		  parlay::hash64(i)/numeric_limits<size_t>::max());
+
+    });
+
+  }
+}
+
+static void kdTree_orthRangeSearch_5d(benchmark::State& state) {
+  using namespace pargeo;
+  auto points = data5d();
+
+  kdNode<5, point<5>>* tree =
+    buildKdt<5, point<5>>(points, true, true);
+
+  for (auto _ : state) {
+
+    parlay::parallel_for(0, N, [&](size_t i){
+
+      // Orthogonal range search with random box
+      kdTreeOrthRange(points, tree, points[i],
+		      parlay::hash64(i)/numeric_limits<size_t>::max());
+
+    });
+
+  }
+}
+
+static void kdTree_bccp_5d(benchmark::State& state) {
+  using namespace pargeo;
+  auto points = data5d();
+
+  kdNode<5, point<5>>* tree1 =
+    buildKdt<5, point<5>>(points.cut(0, N/2), true, true);
+
+  kdNode<5, point<5>>* tree2 =
+    buildKdt<5, point<5>>(points.cut(N/2, N), true, true);
+
+  for (auto _ : state) {
+    bccp(tree1, tree2);
+  }
+}
+
+static void kdTree_wspd_s2_5d(benchmark::State& state) {
+  using namespace pargeo;
+  auto points = data5d();
+
+  kdNode<5, point<5>>* tree =
+    buildKdt<5, point<5>>(points, true, true);
+
+  for (auto _ : state) {
+    wspdParallel(tree, 2);
+  }
+}
+
+static void dynamic_kdTree_build_2d(benchmark::State& state) {
+  using namespace pargeo;
+  using namespace pargeo::dynKdTree;
+  static const int dim = 2;
+  auto P = data2d();
+
+  using nodeT = rootNode<dim, pargeo::point<dim>>;
+
+  for (auto _ : state) {
+    std::unique_ptr<nodeT> tree1 = std::unique_ptr<nodeT>(new nodeT(P));
+  }
+}
+
+static void dynamic_kdTree_insert_2d(benchmark::State& state) {
+  using namespace pargeo;
+  using namespace pargeo::dynKdTree;
+  static const int dim = 2;
+  auto P = data2d();
+
+  using nodeT = rootNode<dim, pargeo::point<dim>>;
+
+  std::unique_ptr<nodeT> tree1 = std::unique_ptr<nodeT>(new nodeT(P));
+
+  for (auto _ : state) {
+    tree1->insert(P);
+  }
+}
+
+static void dynamic_kdTree_erase_2d(benchmark::State& state) {
+  using namespace pargeo;
+  using namespace pargeo::dynKdTree;
+  static const int dim = 2;
+  auto P = data2d();
+
+  using nodeT = rootNode<dim, pargeo::point<dim>>;
+
+  std::unique_ptr<nodeT> tree1 = std::unique_ptr<nodeT>(new nodeT(P));
+
+  for (auto _ : state) {
+    tree1->erase(P);
+  }
+}
+
+static void emst_2d(benchmark::State& state) {
+  using namespace pargeo;
+  using namespace pargeo::dynKdTree;
+  static const int dim = 2;
+  auto P = data2d();
+
+  for (auto _ : state) {
+    euclideanMst<dim>(P);
+  }
+}
+
+static void hdbscan_2d(benchmark::State& state) {
+  using namespace pargeo;
+  using namespace pargeo::dynKdTree;
+  static const int dim = 2;
+  auto P = data2d();
+
+  for (auto _ : state) {
+    euclideanMst<dim>(P);
+  }
+}
+
+static void zorder_2d(benchmark::State& state) {
+  using namespace pargeo;
+  static const int dim = 2;
+  auto P = data2d();
+
+  for (auto _ : state) {
+    zorderSort2d(P);
+  }
+}
+
+static void hull_2d(benchmark::State& state) {
+  using namespace pargeo;
+  static const int dim = 2;
+  auto P = data2d();
+
+  for (auto _ : state) {
+    pargeo::hull2d::divideConquer::compute(parlay::make_slice(P));
+  }
+}
+
+static void hull_3d(benchmark::State& state) {
+  using namespace pargeo;
+  static const int dim = 3;
+  auto P = data3d();
+
+  for (auto _ : state) {
+    pargeo::hull3d::pseudo::compute(parlay::make_slice(P));
+  }
+}
+
+static void seb_2d(benchmark::State& state) {
+  using namespace pargeo;
+  static const int dim = 2;
+  auto P = data2d();
+
+  for (auto _ : state) {
+    pargeo::seb::sampling::compute<dim>(parlay::make_slice(P));
+  }
+}
+
+static void seb_5d(benchmark::State& state) {
+  using namespace pargeo;
+  static const int dim = 5;
+  auto P = data5d();
+
+  for (auto _ : state) {
+    pargeo::seb::sampling::compute<dim>(parlay::make_slice(P));
+  }
+}
+
+static void knnGraph_2d(benchmark::State& state) {
+  static const int dim = 2;
+  auto P = data2d();
+
+  for (auto _ : state)
+    parlay::sequence<pargeo::dirEdge> E = pargeo::knnGraph(P, 1);
+}
+
+static void delaunayGraph_2d(benchmark::State& state) {
+  static const int dim = 2;
+  auto P = data2d();
+
+  for (auto _ : state)
+    parlay::sequence<pargeo::edge> E = pargeo::delaunayGraph(P);
+}
+
+static void gabrielGraph_2d(benchmark::State& state) {
+  static const int dim = 2;
+  auto P = data2d();
+
+  for (auto _ : state)
+    parlay::sequence<pargeo::edge> E = pargeo::gabrielGraph(P);
+}
+
+static void betaSkeleton_2d(benchmark::State& state) {
+  static const int dim = 2;
+  auto P = data2d();
+
+  for (auto _ : state)
+    parlay::sequence<pargeo::edge> E = pargeo::betaSkeleton(P, 1);
+}
+
+static void spanner_2d(benchmark::State& state) {
+  static const int dim = 2;
+  auto P = data2d();
+
+  for (auto _ : state)
+    parlay::sequence<pargeo::edge> E = pargeo::spanner(P, 40);
+}
+
 BENCHMARK(kdTree_build_2d)->Unit(benchmark::kMillisecond);
 BENCHMARK(kdTree_knn_2d)->Unit(benchmark::kMillisecond);
 BENCHMARK(kdTree_rangeSearch_2d)->Unit(benchmark::kMillisecond);
 BENCHMARK(kdTree_orthRangeSearch_2d)->Unit(benchmark::kMillisecond);
 BENCHMARK(kdTree_bccp_2d)->Unit(benchmark::kMillisecond);
 BENCHMARK(kdTree_wspd_s2_2d)->Unit(benchmark::kMillisecond);
+BENCHMARK(kdTree_build_5d)->Unit(benchmark::kMillisecond);
+BENCHMARK(kdTree_knn_5d)->Unit(benchmark::kMillisecond);
+BENCHMARK(kdTree_rangeSearch_5d)->Unit(benchmark::kMillisecond);
+BENCHMARK(kdTree_orthRangeSearch_5d)->Unit(benchmark::kMillisecond);
+BENCHMARK(kdTree_bccp_5d)->Unit(benchmark::kMillisecond);
+BENCHMARK(kdTree_wspd_s2_5d)->Unit(benchmark::kMillisecond);
+BENCHMARK(dynamic_kdTree_build_2d)->Unit(benchmark::kMillisecond);
+BENCHMARK(dynamic_kdTree_insert_2d)->Unit(benchmark::kMillisecond);
+BENCHMARK(dynamic_kdTree_erase_2d)->Unit(benchmark::kMillisecond);
+BENCHMARK(emst_2d)->Unit(benchmark::kMillisecond);
+BENCHMARK(hull_2d)->Unit(benchmark::kMillisecond);
+BENCHMARK(hull_3d)->Unit(benchmark::kMillisecond);
+BENCHMARK(seb_2d)->Unit(benchmark::kMillisecond);
+BENCHMARK(seb_5d)->Unit(benchmark::kMillisecond);
+BENCHMARK(knnGraph_2d)->Unit(benchmark::kMillisecond);
+BENCHMARK(delaunayGraph_2d)->Unit(benchmark::kMillisecond);
+BENCHMARK(gabrielGraph_2d)->Unit(benchmark::kMillisecond);
+BENCHMARK(betaSkeleton_2d)->Unit(benchmark::kMillisecond);
+BENCHMARK(spanner_2d)->Unit(benchmark::kMillisecond);
 
 BENCHMARK_MAIN();

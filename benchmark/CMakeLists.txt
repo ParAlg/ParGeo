@@ -73,5 +73,10 @@ target_link_libraries(seb_bench PRIVATE
 
 add_executable(all_bench all_bench.cpp)
 target_link_libraries(all_bench PRIVATE
+  emstLib
+  divideHull2dLib
+  pseudoHull3dLib
+  samplingSebLib
+  spatialGraphLib
   pargeoLib
   benchmark_main)
