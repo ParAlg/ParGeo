@@ -23,18 +23,10 @@ target_link_libraries(zorder pargeoLib)
 add_executable(uniformData uniformData.cpp)
 target_link_libraries(uniformData pargeoLib)
 
-add_executable(hull3d hull3d.cpp)
-target_link_libraries(hull3d pargeoLib
-  pseudoHull3dLib
-  )
-
-add_executable(hull2d hull2d.cpp)
-target_link_libraries(hull2d pargeoLib
-  quickHull2dLib
+add_executable(hull hull.cpp)
+target_link_libraries(hull pargeoLib
   divideHull2dLib
-  randIncHull2dLib
-  samplingHull2dLib
-  bruteforceHull2dLib
+  pseudoHull3dLib
   )
 
 add_executable(seb seb.cpp)

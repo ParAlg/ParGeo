@@ -173,7 +173,7 @@ namespace IO {
       });
     xToString(Bs + L[n-1], A[n-1]);
     Bs[m] = Bs[m-1] = '\n';
-    
+
     parlay::sequence<char> C = parlay::filter(B, [&] (char c) {return c != 0;}); 
     C[C.size()-1] = 0;
     return C;
