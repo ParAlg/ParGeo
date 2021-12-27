@@ -904,7 +904,7 @@ namespace dynKdTree {
 
       auto nns = container<T>(kOut);
 
-      buffer.sort();
+      // buffer.sort();
 
       for (int i = 0; i < kOut; ++ i) {
 	nns[kOut - 1 - i] = buffer.top().second;
