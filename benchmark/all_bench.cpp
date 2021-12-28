@@ -1,5 +1,6 @@
 #include <benchmark/benchmark.h>
 
+#include "closestPair/closestPair.h"
 #include "dataset/uniform.h"
 #include "parlay/utilities.h"
 #include "pargeo/kdTree.h"
@@ -367,6 +368,20 @@ static void spanner_2d(benchmark::State& state) {
     parlay::sequence<pargeo::edge> E = pargeo::spanner(P, 40);
 }
 
+static void closestPair_2d(benchmark::State& state) {
+  static const int dim = 2;
+  auto P = data2d();
+  for (auto _ : state) pargeo::closestPair(P);
+}
+
+static void closestPair_5d(benchmark::State& state) {
+  static const int dim = 2;
+  auto P = data5d();
+  for (auto _ : state) pargeo::closestPair(P);
+}
+
+BENCHMARK(closestPair_2d)->Unit(benchmark::kMillisecond);
+BENCHMARK(closestPair_5d)->Unit(benchmark::kMillisecond);
 BENCHMARK(kdTree_build_2d)->Unit(benchmark::kMillisecond);
 BENCHMARK(kdTree_knn_2d)->Unit(benchmark::kMillisecond);
 BENCHMARK(kdTree_rangeSearch_2d)->Unit(benchmark::kMillisecond);

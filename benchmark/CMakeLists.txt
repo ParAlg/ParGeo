@@ -78,5 +78,6 @@ target_link_libraries(all_bench PRIVATE
   pseudoHull3dLib
   samplingSebLib
   spatialGraphLib
+  closestPairLib
   pargeoLib
   benchmark_main)
