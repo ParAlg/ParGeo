@@ -21,8 +21,6 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#pragma once
-
 #include <tuple>
 #include <limits>
 #include "pargeo/point.h"
@@ -30,11 +28,11 @@
 #include "parlay/internal/sample_sort.h"
 #include "parlay/primitives.h"
 #include "parlay/sequence.h"
-
-namespace pargeo {
+#include "closestPair/closestPair.h"
 
 using namespace std;
 using namespace parlay;
+using namespace pargeo;
 
 static constexpr double floatMax = std::numeric_limits<double>::max();
 
@@ -268,8 +266,8 @@ pointPair<dim> divideConquerParallel(slice<point<dim>*,point<dim>*> P, int k) {
  * @param serial optional boolean variable which should be set to true if wish to run serialy.
  * @return the closest pair
  */
-template<int dim>
-pointPair<dim> closestPairDC(sequence<point<dim>>& P, bool serial = false) {
+template<int dim> std::pair<pargeo::point<dim>, pargeo::point<dim>>
+pargeo::closestPair(parlay::sequence<pargeo::point<dim>>& P, bool serial) {
   using pt = point<dim>;
   auto Pp = sequence<pt>(P);
   pointPair<dim> r;
@@ -281,7 +279,23 @@ pointPair<dim> closestPairDC(sequence<point<dim>>& P, bool serial = false) {
 
   //cout << "brute = " << bruteForceSerial<dim>(make_slice(P)).dist << endl;
   //cout << "brute = " << bruteForceParallel<dim>(make_slice(P)).dist << endl;
-  return r;
+  return {r.u, r.v};
 }
 
-} // End namespace pargeo
+template std::pair<pargeo::point<2>, pargeo::point<2>>
+pargeo::closestPair(parlay::sequence<pargeo::point<2>>&, bool);
+
+template std::pair<pargeo::point<3>, pargeo::point<3>>
+pargeo::closestPair(parlay::sequence<pargeo::point<3>>&, bool);
+
+template std::pair<pargeo::point<4>, pargeo::point<4>>
+pargeo::closestPair(parlay::sequence<pargeo::point<4>>&, bool);
+
+template std::pair<pargeo::point<5>, pargeo::point<5>>
+pargeo::closestPair(parlay::sequence<pargeo::point<5>>&, bool);
+
+template std::pair<pargeo::point<6>, pargeo::point<6>>
+pargeo::closestPair(parlay::sequence<pargeo::point<6>>&, bool);
+
+template std::pair<pargeo::point<7>, pargeo::point<7>>
+pargeo::closestPair(parlay::sequence<pargeo::point<7>>&, bool);

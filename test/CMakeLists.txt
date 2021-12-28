@@ -51,7 +51,9 @@ add_test(NAME dynKdTree_test COMMAND dynKdTree_test)
 
 add_executable(closestPair_test closestPair_test.cpp)
 target_link_libraries(closestPair_test PRIVATE
-  pargeoLib ${GTest_LIBRARIES})
+  closestPairLib
+  pargeoLib
+  ${GTest_LIBRARIES})
 add_test(NAME cloestPair_test COMMAND closestPair_test)
 
 add_executable(wspd_test wspd_test.cpp)
