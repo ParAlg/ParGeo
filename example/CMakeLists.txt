@@ -1,9 +1,6 @@
 add_executable(closestPair closestPair.cpp)
 target_link_libraries(closestPair closestPairLib pargeoLib)
 
-add_executable(delaunay2d delaunay2d.cpp)
-target_link_libraries(delaunay2d pargeoLib delaunay2dLib)
-
 add_executable(graphGenerator graphGenerator.cpp)
 target_link_libraries(graphGenerator
   pargeoLib
