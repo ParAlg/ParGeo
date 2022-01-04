@@ -1,38 +1,38 @@
+#include "convexHull3d/bruteforce/hull.h"
+
 #include <iostream>
 #include <fstream>
-
-#include "convexHull3d/bruteforce/hull.h"
-#include "pargeo/getTime.h"
-#include "pargeo/parlayAddon.h"
-#include "pargeo/point.h"
 #include "parlay/parallel.h"
 #include "parlay/sequence.h"
+#include "pargeo/getTime.h"
+#include "pargeo/point.h"
+#include "pargeo/parlayAddon.h"
 
-template <typename pointT>
-class internalFacet: public pargeo::hull3d::facet<pointT> {
+template <class vertexT>
+struct internalFacet {
+  static constexpr typename vertexT::floatT numericKnob = vertexT::eps;
 
-private:
+  vertexT a, b, c;
 
-  static constexpr typename pointT::floatT eps = pointT::eps;
+  vertexT area;
 
-public:
-
-  using baseT = pargeo::hull3d::facet<pointT>;
-
-  pointT area;
-
-  typename pointT::floatT signedVolume(pointT d) {
-    return (baseT::a - d).dot(area);
+  template <class pt>
+  inline typename pt::floatT signedVolume(pt d) {
+    return (a-d).dot(area);
   }
 
-  bool visible(pointT p) {
-    return signedVolume(p) > eps;
+  bool visible(vertexT p) {
+    return signedVolume(p) > numericKnob;
   }
 
-  internalFacet(pointT _a, pointT _b, pointT _c):
-    baseT(_a, _b, _c) {
+  internalFacet(vertexT _a, vertexT _b, vertexT _c):
+    a(_a), b(_b), c(_c) {
+    if (pargeo::determinant3by3(a, b, c) > numericKnob)
+      std::swap(b, c);
+    area = crossProduct3d(b-a, c-a);
+  }
 
-    area = crossProduct3d(_b - _a, _c - _a);
+  ~internalFacet() {
   }
 
 };
@@ -40,13 +40,17 @@ public:
 template<class pointT>
 parlay::sequence<pargeo::hull3d::facet<pointT>>
 pargeo::hull3d::bruteforce::compute(parlay::slice<pointT*, pointT*> P) {
+  using namespace parlay;
+  using floatT = typename pointT::floatT;
+  using facetT = pargeo::hull3d::facet<pointT>;
+  using fc = internalFacet<pointT>;
 
-  parlay::sequence<pargeo::hull3d::facet<pointT>> H;
+  sequence<facetT> H;
 
   for (size_t i = 0; i < P.size(); ++ i) {
     for (size_t j = i + 1; j < P.size(); ++ j) {
       for (size_t k = j + 1; k < P.size(); ++ k) {
-	auto f = internalFacet<pointT>(P[i], P[j], P[k]);
+	auto f = fc(P[i], P[j], P[k]);
 
 	bool dir;
 	size_t l = 0;
@@ -68,7 +72,6 @@ pargeo::hull3d::bruteforce::compute(parlay::slice<pointT*, pointT*> P) {
 	if (onHull) {
 	  H.emplace_back(f.a, f.b, f.c);
 	}
-
       }
     }
   }

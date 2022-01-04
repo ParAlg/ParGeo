@@ -22,17 +22,20 @@
 
 #pragma once
 
-#include "hullTopology.h"
-#include "linkedFacet.h"
+#include "convexHull3d/hullTopology.h"
+#include "convexHull3d/serialQuickHull/linkedFacet.h"
 
 #include "parlay/parallel.h"
 #include "pargeo/algebra.h"
 #include "pargeo/parlayAddon.h"
 
-namespace pargeo::hull3d::serialQuickHull {
-
-  template<class pointT> class hullTopology;
-
+namespace pargeo {
+  namespace hull3d {
+    namespace serialQuickHull {
+      template<class pointT>
+      class hullTopology;
+    }
+  }
 }
 
 template<class pointT>
@@ -47,29 +50,25 @@ class pargeo::hull3d::serialQuickHull::hullTopology :
 
   hullTopology(facetT* f, parlay::sequence<vertexT>& P, vertexT interiorPt):
     baseT() {
-
+    // baseT::origin = _origin; // todo change it in the base class
+    // baseT::H = initialize(P);
     baseT::interiorPt = interiorPt;
     baseT::H = f;
-
   }
 
-  ~hullTopology() { }
-
   inline bool keep(facetT* f, vertexT p) {
-
-    if ((f->a - p).dot(f->area) > baseT::eps)
+    if ((f->a - p).dot(f->area) > baseT::numericKnob) // todo make numeric knob in one place
       return f->a != p && f->b != p && f->c != p;
     else
       return false;
-
   }
 
-  void redistribute(std::vector<facetT*>& facetsBeneath,
-		    std::vector<facetT*>& newFacets) {
+  void redistribute(parlay::slice<facetT**, facetT**> facetsBeneath,
+		    parlay::slice<facetT**, facetT**> newFacets) {
 
     baseT::hSize += newFacets.size() - facetsBeneath.size();
 
-    // Redistribute the visible points
+    // Redistribute the outside points
 
     int nf = facetsBeneath.size();
     int nnf = newFacets.size();
@@ -91,7 +90,6 @@ class pargeo::hull3d::serialQuickHull::hullTopology :
   }
 
   facetT* facetWalk() {
-
     facetT* f = baseT::H;
     size_t fSize = f->numPts();
 
@@ -105,21 +103,20 @@ class pargeo::hull3d::serialQuickHull::hullTopology :
     auto fStop = [&]() { return false; };
     baseT::dfsFacet(f, fVisit, fDo, fStop);
     return f;
-
   }
 
   vertexT furthestApex(facetT *f=nullptr) {
-
     vertexT apex = vertexT();
 
     auto fVisit = [&](facetT* f) {return true;};
     auto fDo = [&](facetT* f) {
+		 //if (f->numPts() > 0) apex = f->furthestSample(1000);
 		 if (f->numPts() > 0) apex = f->furthest();
 	       };
     auto fStop = [&]() { return !apex.isEmpty(); };
     baseT::dfsFacet(f ? f : baseT::H, fVisit, fDo, fStop);
     return apex;
-
   }
 
 };
+

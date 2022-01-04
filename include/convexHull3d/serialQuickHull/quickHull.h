@@ -22,11 +22,14 @@
 
 #pragma once
 
-#include "convexHull3d/vertex.h"
-#include "hullImpl.h"
-#include "linkedFacet.h"
+#include "parlay/parallel.h"
+#include "parlay/sequence.h"
 #include "pargeo/getTime.h"
 #include "pargeo/point.h"
+
+#include "convexHull3d/serialQuickHull/hullImpl.h"
+#include "convexHull3d/serialQuickHull/linkedFacet.h"
+#include "convexHull3d/vertex.h"
 
 // #define HULL_SERIAL_VERBOSE
 
@@ -44,6 +47,7 @@ namespace pargeo {
 template<class linkedFacet3d, class vertex3d, class pointT>
 void pargeo::hull3d::serialQuickHull::quickHullSerial(pargeo::hull3d::serialQuickHull::hullTopology<pointT> *context) {
   using namespace pargeo;
+  using namespace parlay;
 
 #ifdef HULL_SERIAL_VERBOSE
   timer t;
@@ -99,7 +103,7 @@ void pargeo::hull3d::serialQuickHull::quickHullSerial(pargeo::hull3d::serialQuic
     }
 
     // Create new facets
-    auto newFacets = std::vector<linkedFacet3d*>(frontierEdges.size());
+    auto newFacets = sequence<linkedFacet3d*>(frontierEdges.size());
 
     for (size_t i=0; i<frontierEdges.size(); ++i) {
       typename pargeo::hull3d::_hullTopology<linkedFacet3d, vertex3d>::_edge e = frontierEdges.at(i);
@@ -121,7 +125,7 @@ void pargeo::hull3d::serialQuickHull::quickHullSerial(pargeo::hull3d::serialQuic
     createTime += t.get_next();
 #endif
 
-    context->redistribute(facetsBeneath, newFacets);
+    context->redistribute(make_slice(facetsBeneath), make_slice(newFacets));
 
 #ifdef HULL_SERIAL_VERBOSE
     splitTime += t.stop();

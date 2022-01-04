@@ -24,21 +24,24 @@
 
 #include <vector>
 #include "convexHull3d/vertex.h"
+#include "parlay/sequence.h"
 #include "pargeo/algebra.h"
 
-namespace pargeo::hull3d::serialQuickHull {
-
-  template<class pointT> class linkedFacet;
-
+namespace pargeo {
+  namespace hull3d {
+    namespace serialQuickHull {
+      template<class pointT>
+      class linkedFacet;
+    }
+  }
 }
 
 template<class pointT>
 class pargeo::hull3d::serialQuickHull::linkedFacet {
-
 public:
-
   using vertexT = pargeo::hull3d::vertex<linkedFacet, pointT>;
   using floatT = typename vertexT::floatT;
+  using seqT = std::vector<vertexT>;
 
   vertexT a, b, c;
 
@@ -50,20 +53,26 @@ public:
 
   vertexT area;
 
-  std::vector<vertexT> seeList;
+  // seqT *seeList;
+  seqT seeList;
 
+  //size_t numPts() { return seeList->size(); }
   size_t numPts() { return seeList.size(); }
 
+  //vertexT& pts(size_t i) { return seeList->at(i); }
   vertexT& pts(size_t i) { return seeList.at(i); }
 
+  //void clear() { seeList->clear(); }
   void clear() { seeList.clear(); }
 
+  //void push_back(vertexT v) { seeList->push_back(v); }
   void push_back(vertexT v) { seeList.push_back(v); }
 
   vertexT furthest() {
     auto apex = vertexT();
     typename vertexT::floatT m = pointT::eps;
     for (size_t i=0; i<numPts(); ++i) {
+      //auto m2 = (a-pts(i)).dot(crossProduct3d(b-a, c-a));
       auto m2 = (a-pts(i)).dot(area);
       if (m2 > m) {
 	m = m2;
@@ -91,11 +100,58 @@ public:
     if (pargeo::determinant3by3(a, b, c) > pointT::eps)
       std::swap(b, c);
 
-    seeList = std::vector<vertexT>();
+    //seeList = new seqT();
+    seeList = seqT();
 
     area = crossProduct3d(b-a, c-a);
+    //area = crossProduct3d(b, c); //todo, minus is problematic
   }
 
-  ~linkedFacet() { }
+  ~linkedFacet() {
+    //delete seeList;
+  }
 
 };
+
+/* static std::ostream& operator<<(std::ostream& os, const linkedFacet& v) { */
+/* #ifdef HULL_SERIAL_VERBOSE */
+/*   os << "(" << v.a.i << "," << v.b.i << "," << v.c.i << ")"; */
+/* #else */
+/*   os << "(" << v.a << "," << v.b << "," << v.c << ")"; */
+/* #endif */
+/*   return os; */
+/* } */
+
+// class pointOrigin {
+//   using vertexT = pargeo::hullInternal::vertex;
+//   using facetT = linkedFacet<vertexT>;
+
+//   static constexpr typename pargeo::fpoint<3>::floatT numericKnob = 1e-5;
+
+//   vertexT o;
+
+// public:
+
+//   void setOrigin(vertexT _o) { o = _o; }
+
+//   inline vertexT get() {return o;};
+
+//   pointOrigin() {}
+
+//   template<class pt>
+//   pointOrigin(pt _o) {
+//     o = vertexT(_o.coords());
+//   }
+
+//   inline bool visible(facetT* f, vertexT p) {
+//     return (f->a - p).dot(f->area) > numericKnob;
+//   }
+
+//   inline bool keep(facetT* f, vertexT p) {
+//     if ((f->a - p).dot(f->area) > numericKnob)
+//       return f->a != p && f->b != p && f->c != p;
+//     else
+//       return false;
+//   }
+
+// };

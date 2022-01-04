@@ -4,5 +4,5 @@ add_library(pseudoHull3dLib
 
 target_link_libraries(pseudoHull3dLib
   pargeoLib
-  serialHull3dLib
+  parallelHull3dLib
   )
