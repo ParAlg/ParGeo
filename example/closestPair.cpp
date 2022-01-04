@@ -1,11 +1,10 @@
-#include <iostream>
 #include <algorithm>
-
+#include <iostream>
+#include "pargeo/getTime.h"
 #include "parlay/parallel.h"
+#include "pargeo/parseCommandLine.h"
 #include "pargeo/point.h"
 #include "pargeo/pointIO.h"
-#include "pargeo/getTime.h"
-#include "pargeo/parseCommandLine.h"
 
 #include "closestPair/closestPair.h"
 
@@ -32,7 +31,6 @@ void callClosestPair(parlay::sequence<pargeo::point<dim>>& P) {
 int main(int argc, char* argv[]) {
   using namespace pargeo;
   using namespace pargeo::pointIO;
-
   commandLine P(argc, argv, "<inFile>");
   char* iFile = P.getArgument(0);
 

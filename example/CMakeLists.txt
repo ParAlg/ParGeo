@@ -8,27 +8,27 @@ target_link_libraries(graphGenerator
   emstLib
   spatialGraphLib)
 
-add_executable(knn knn.cpp)
-target_link_libraries(knn pargeoLib)
+add_executable(kNearestNeighbor kNearestNeighbor.cpp)
+target_link_libraries(kNearestNeighbor pargeoLib)
 
-add_executable(dynKdTree dynKdTree.cpp)
-target_link_libraries(dynKdTree pargeoLib)
+add_executable(dynamicKdTreeKNN dynamicKdTreeKNN.cpp)
+target_link_libraries(dynamicKdTreeKNN pargeoLib)
 
-add_executable(zorder zorder.cpp)
-target_link_libraries(zorder pargeoLib)
+add_executable(mortonSort mortonSort.cpp)
+target_link_libraries(mortonSort pargeoLib)
 
-add_executable(uniformData uniformData.cpp)
-target_link_libraries(uniformData pargeoLib)
+add_executable(uniformDataGenerator uniformDataGenerator.cpp)
+target_link_libraries(uniformDataGenerator pargeoLib)
 
-add_executable(hull hull.cpp)
-target_link_libraries(hull pargeoLib
+add_executable(convexHull convexHull.cpp)
+target_link_libraries(convexHull pargeoLib
   divideHull2dLib
   pseudoHull3dLib
   )
 
-add_executable(seb seb.cpp)
-target_link_libraries(seb pargeoLib
+add_executable(smallestEnclosingBall smallestEnclosingBall.cpp)
+target_link_libraries(smallestEnclosingBall pargeoLib
   samplingSebLib
-  welzlSebLib
-  scanSebLib
+  # welzlSebLib
+  # scanSebLib
   )

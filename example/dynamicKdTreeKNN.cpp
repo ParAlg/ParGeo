@@ -3,7 +3,6 @@
 #include <iostream>
 #include "pargeo/dynKdTree.h" /* Include dynamic kdTree */
 #include "pargeo/getTime.h"
-#include "parlay/parallel.h"
 #include "pargeo/point.h"
 
 int main(int argc, char* argv[]) {
