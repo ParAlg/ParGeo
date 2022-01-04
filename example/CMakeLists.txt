@@ -11,6 +11,9 @@ target_link_libraries(graphGenerator
 add_executable(kNearestNeighbor kNearestNeighbor.cpp)
 target_link_libraries(kNearestNeighbor pargeoLib)
 
+add_executable(rangeSearch rangeSearch.cpp)
+target_link_libraries(rangeSearch pargeoLib)
+
 add_executable(dynamicKdTreeKNN dynamicKdTreeKNN.cpp)
 target_link_libraries(dynamicKdTreeKNN pargeoLib)
 

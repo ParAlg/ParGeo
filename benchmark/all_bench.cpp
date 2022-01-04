@@ -267,27 +267,6 @@ static void emst_2d(benchmark::State& state) {
   }
 }
 
-static void hdbscan_2d(benchmark::State& state) {
-  using namespace pargeo;
-  using namespace pargeo::dynKdTree;
-  static const int dim = 2;
-  auto P = data2d();
-
-  for (auto _ : state) {
-    euclideanMst<dim>(P);
-  }
-}
-
-static void zorder_2d(benchmark::State& state) {
-  using namespace pargeo;
-  static const int dim = 2;
-  auto P = data2d();
-
-  for (auto _ : state) {
-    zorderSort2d(P);
-  }
-}
-
 static void hull_2d(benchmark::State& state) {
   using namespace pargeo;
   static const int dim = 2;
@@ -375,13 +354,22 @@ static void closestPair_2d(benchmark::State& state) {
 }
 
 static void closestPair_5d(benchmark::State& state) {
-  static const int dim = 2;
+  static const int dim = 5;
   auto P = data5d();
   for (auto _ : state) pargeo::closestPair(P);
 }
 
-BENCHMARK(closestPair_2d)->Unit(benchmark::kMillisecond);
-BENCHMARK(closestPair_5d)->Unit(benchmark::kMillisecond);
+static void mortonSort_2d(benchmark::State& state) {
+  auto P = data2d();
+  for (auto _ : state) pargeo::zorderSort2d(P);
+}
+
+static void mortonSort_3d(benchmark::State& state) {
+  auto P = data3d();
+  for (auto _ : state) pargeo::zorderSort3d(P);
+}
+
+
 BENCHMARK(kdTree_build_2d)->Unit(benchmark::kMillisecond);
 BENCHMARK(kdTree_knn_2d)->Unit(benchmark::kMillisecond);
 BENCHMARK(kdTree_rangeSearch_2d)->Unit(benchmark::kMillisecond);
@@ -402,6 +390,10 @@ BENCHMARK(hull_2d)->Unit(benchmark::kMillisecond);
 BENCHMARK(hull_3d)->Unit(benchmark::kMillisecond);
 BENCHMARK(seb_2d)->Unit(benchmark::kMillisecond);
 BENCHMARK(seb_5d)->Unit(benchmark::kMillisecond);
+BENCHMARK(closestPair_2d)->Unit(benchmark::kMillisecond);
+BENCHMARK(closestPair_5d)->Unit(benchmark::kMillisecond);
+BENCHMARK(mortonSort_2d)->Unit(benchmark::kMillisecond);
+BENCHMARK(mortonSort_3d)->Unit(benchmark::kMillisecond);
 BENCHMARK(knnGraph_2d)->Unit(benchmark::kMillisecond);
 BENCHMARK(delaunayGraph_2d)->Unit(benchmark::kMillisecond);
 BENCHMARK(gabrielGraph_2d)->Unit(benchmark::kMillisecond);
