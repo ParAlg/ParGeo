@@ -1,4 +1,4 @@
-# ParGeo: A Library for Parallel Algorithms in Computational Geometry
+# ParGeo: A Library for Parallel Computational Geometry
 
 ## Tutorial
 
