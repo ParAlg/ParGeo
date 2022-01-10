@@ -7,11 +7,6 @@
 #include "pargeo/pointIO.h"
 #include "pargeo/parseCommandLine.h"
 
-// using namespace std;
-// using namespace pargeo;
-// using namespace pargeo::pointIO;
-// using namespace pargeo::IO;
-
 template<int dim>
 void knn(parlay::sequence<pargeo::point<dim>> &P, size_t k, char const *outFile) {
   //timer t; t.start();
