@@ -20,17 +20,17 @@ int main(int argc, char* argv[]) {
   /* Build a tree */
 
   pargeo::kdNode<dim, pargeo::point<dim>>* tree =
-    pargeo::buildKdt<dim, pargeo::point<dim>>(P, true, true);
+    pargeo::buildKdTree2<dim, pargeo::point<dim>>(P, true, false);
 
-  /* Spherical range query example
-     surrounding P[0] with radius 0.1 */
+  // /* Spherical range query example
+  //    surrounding P[0] with radius 0.1 */
 
-  parlay::sequence<size_t> elems1 = pargeo::kdTreeRange(P, tree, P[0], 0.1);
+  // parlay::sequence<size_t> elems1 = pargeo::kdTreeRange(P, tree, P[0], 0.1);
 
-  /* Rectangular range query example
-     surrounding P[0] with half-length 0.1 */
+  // /* Rectangular range query example
+  //    surrounding P[0] with half-length 0.1 */
 
-  parlay::sequence<size_t> elems2 = pargeo::kdTreeOrthRange(P, tree, P[0], 0.1);
+  // parlay::sequence<size_t> elems2 = pargeo::kdTreeOrthRange(P, tree, P[0], 0.1);
 
   free(tree);
 }

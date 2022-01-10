@@ -22,10 +22,10 @@ int main(int argc, char* argv[]) {
   /* Build two kdTrees between the two point sets */
 
   pargeo::kdNode<dim, pargeo::point<dim>>* treeRed =
-    pargeo::buildKdt<dim, pargeo::point<dim>>(red, true, false);
+    pargeo::buildKdTree2<dim, pargeo::point<dim>>(red, true);
 
   pargeo::kdNode<dim, pargeo::point<dim>>* treeBlue =
-    pargeo::buildKdt<dim, pargeo::point<dim>>(blue, true, true);
+    pargeo::buildKdTree2<dim, pargeo::point<dim>>(blue, true);
 
   /* Compute bichromatic closest pair between blue and red point sets */
 

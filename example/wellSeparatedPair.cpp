@@ -20,7 +20,7 @@ int main(int argc, char* argv[]) {
   /* Build a kd-tree with leaf size 1 for the data set */
 
   pargeo::kdNode<dim, pargeo::point<dim>>* T =
-    pargeo::buildKdTree<dim, pargeo::point<dim>>(P, true, 1);
+    pargeo::buildKdTree2<dim, pargeo::point<dim>>(P, true, 1);
 
   /* Compute WSPD with s = 2 */
 

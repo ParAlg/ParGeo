@@ -448,4 +448,23 @@ namespace pargeo {
     return buildKdt<dim, objT>(parlay::make_slice(P), parallel, leafSize, items);
   }
 
+  // Unlike other constructing functions, this one automatically handles memory free
+  template<int dim, class objT>
+  kdNode<dim, objT>* buildKdTree2(parlay::sequence<objT>& P,
+			      bool parallel=true,
+			      size_t leafSize = 16,
+			      parlay::sequence<objT*>* items=nullptr) {
+
+    parlay::sequence<objT*>* tmp = new parlay::sequence<objT*>(P.size());
+
+    auto tree = buildKdt<dim, objT>(parlay::make_slice(P),
+				    parallel,
+				    leafSize,
+				    tmp);
+
+    delete tmp;
+
+    return tree;
+  }
+
 } // End namespace
