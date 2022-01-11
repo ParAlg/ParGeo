@@ -10,7 +10,7 @@
 #include "pargeo/wspd.h"
 #include "pargeo/dynKdTree.h"
 #include "euclideanMst/euclideanMst.h"
-#include "pargeo/zorderSort.h"
+#include "mortonSort/mortonSort.h"
 #include "convexHull2d/divideConquer/hull.h"
 #include "convexHull3d/pseudo/hull.h"
 #include "enclosingBall/sampling/seb.h"

@@ -38,11 +38,6 @@ target_link_libraries(wspd_bench PRIVATE
   pargeoLib
   benchmark_main)
 
-add_executable(zorder_bench zorder_bench.cpp)
-target_link_libraries(zorder_bench PRIVATE
-  pargeoLib
-  benchmark_main)
-
 add_executable(spatialSearch_bench spatialSearch_bench.cpp)
 target_link_libraries(spatialSearch_bench PRIVATE
   pargeoLib

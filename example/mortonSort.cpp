@@ -5,7 +5,7 @@
 #include "pargeo/pointIO.h"
 #include "pargeo/parseCommandLine.h"
 
-#include "pargeo/zorderSort.h"
+#include "mortonSort/mortonSort.h"
 
 void sort2d(parlay::sequence<pargeo::point<2>> &P, char const *outFile) {
   auto sorted = pargeo::zorderSort2d<pargeo::point<2>>(P);

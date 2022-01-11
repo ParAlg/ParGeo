@@ -6,7 +6,7 @@
 #include "pargeo/wspd.h"
 #include "pargeo/kdTree.h"
 #include "pargeo/bccp.h"
-#include "pargeo/kruskal.h"
+#include "euclideanMst/kruskal.h"
 #include "euclideanMst/euclideanMst.h"
 #include "wspdFilter.h"
 #include "mark.h"
