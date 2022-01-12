@@ -1,7 +1,7 @@
 #include <assert.h>
 #include "dataset/uniform.h"
 #include <iostream>
-#include "pargeo/kdTreeRange.h"
+#include "kdTree/kdTree.h"
 #include "pargeo/getTime.h"
 #include "pargeo/point.h"
 

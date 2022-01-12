@@ -1,15 +1,15 @@
 #include <benchmark/benchmark.h>
 
 #include "closestPair/closestPair.h"
-#include "dataset/uniform.h"
-#include "parlay/utilities.h"
-#include "pargeo/kdTree.h"
-#include "pargeo/dynKdTree.h"
-#include "euclideanMst/euclideanMst.h"
-#include "mortonSort/mortonSort.h"
 #include "convexHull2d/divideConquer/hull.h"
 #include "convexHull3d/pseudo/hull.h"
+#include "dataset/uniform.h"
+#include "euclideanMst/euclideanMst.h"
 #include "enclosingBall/sampling/seb.h"
+#include "kdTree/kdTree.h"
+#include "mortonSort/mortonSort.h"
+#include "parlay/utilities.h"
+#include "pargeo/dynKdTree.h"
 #include "spatialGraph/spatialGraph.h"
 
 int N = 1000000;

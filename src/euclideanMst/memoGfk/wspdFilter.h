@@ -26,9 +26,8 @@
 #include <atomic>
 #include <tuple>
 #include <limits>
-#include "pargeo/wspd.h"
-#include "pargeo/bccp.h"
-#include "pargeo/parBuf.h"
+#include "kdTree/kdTree.h"
+#include "pargeo/parBuffer.h"
 #include "pargeo/getTime.h"
 #include "parlay/utilities.h"
 

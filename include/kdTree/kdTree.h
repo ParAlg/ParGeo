@@ -23,7 +23,7 @@
 #pragma once
 
 #include "parlay/sequence.h"
-#include "point.h"
+#include "pargeo/point.h"
 #include <tuple>
 
 namespace pargeo {
@@ -31,9 +31,14 @@ namespace pargeo {
   template<int _dim, class _objT>
   class kdNode {
 
+  private:
+
     using intT = int;
+
     using floatT = double;
+
     using pointT = _objT;
+
     using nodeT = kdNode<_dim, _objT>;
 
     intT id;
@@ -88,6 +93,7 @@ namespace pargeo {
     void constructParallel(nodeT *space, parlay::slice<bool*, bool*> flags, intT leafSize);
 
   public:
+
     using objT = _objT;
 
     static constexpr int dim  = _dim;
@@ -169,21 +175,18 @@ namespace pargeo {
       else return boxOverlap;
     }
 
-    kdNode(parlay::slice<_objT**, _objT**> itemss, intT nn, nodeT *space,
-	   parlay::slice<bool*, bool*> flags, intT leafSize=16);
+    kdNode(parlay::slice<_objT**, _objT**> itemss,
+	   intT nn,
+	   nodeT *space,
+	   parlay::slice<bool*, bool*> flags,
+	   intT leafSize = 16);
 
-    kdNode(parlay::slice<_objT**, _objT**> itemss, intT nn, nodeT *space,
-	   intT leafSize=16);
+    kdNode(parlay::slice<_objT**, _objT**> itemss,
+	   intT nn,
+	   nodeT *space,
+	   intT leafSize = 16);
 
   };
-
-  // TODO move these two functions
-
-  template <typename nodeT>
-  double nodeDistance(nodeT* n1, nodeT* n2);
-
-  template <typename nodeT>
-  double nodeFarDistance(nodeT* n1, nodeT* n2);
 
   /* Kd-tree construction */
 
@@ -243,8 +246,8 @@ namespace pargeo {
 
 } // End namespace pargeo
 
-#include "kdTreeImpl.h"
-#include "kdTreeKnn.h"
-#include "kdTreeRange.h"
-#include "bccp.h"
-#include "wspd.h"
+#include "treeImpl.h"
+#include "knnImpl.h"
+#include "rangeSearchImpl.h"
+#include "bccpImpl.h"
+#include "wspdImpl.h"

@@ -2,7 +2,7 @@
 #include "parlay/parallel.h"
 #include "parlay/primitives.h"
 #include "pargeo/point.h"
-#include "pargeo/kdTreeKnn.h"
+#include "kdTree/kdTree.h"
 #include "spatialGraph/spatialGraph.h"
 
 #define SILENT

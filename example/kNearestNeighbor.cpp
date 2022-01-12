@@ -2,7 +2,7 @@
 #include <algorithm>
 #include "parlay/parallel.h"
 #include "pargeo/point.h"
-#include "pargeo/kdTreeKnn.h"
+#include "kdTree/kdTree.h"
 #include "pargeo/getTime.h"
 #include "pargeo/pointIO.h"
 #include "pargeo/parseCommandLine.h"

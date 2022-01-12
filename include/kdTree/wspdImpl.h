@@ -24,8 +24,8 @@
 
 #include "parlay/sequence.h"
 #include "pargeo/point.h"
-#include "pargeo/kdTree.h"
-#include "pargeo/parBuf.h"
+#include "kdTree.h"
+#include "pargeo/parBuffer.h"
 
 namespace pargeo {
 

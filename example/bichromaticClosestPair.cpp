@@ -2,8 +2,7 @@
 #include <iostream>
 #include "parlay/parallel.h"
 #include "pargeo/point.h"
-#include "pargeo/kdTree.h" // Include kdTree
-#include "pargeo/bccp.h" // Include BCCP
+#include "kdTree/kdTree.h"
 #include <tuple>
 
 int main(int argc, char* argv[]) {

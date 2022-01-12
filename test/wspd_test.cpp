@@ -1,6 +1,5 @@
 #include "pargeo/pointIO.h"
-#include "pargeo/kdTree.h"
-#include "pargeo/wspd.h"
+#include "kdTree/kdTree.h"
 #include "gtest/gtest.h"
 
 template <int dim>

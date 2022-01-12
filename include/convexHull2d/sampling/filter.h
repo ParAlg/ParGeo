@@ -3,7 +3,7 @@
 #include <math.h>
 #include <atomic>
 #include "pargeo/getTime.h"
-#include "pargeo/kdTree.h"
+#include "kdTree/kdTree.h"
 #include "pargeo/point.h"
 #include "parlay/sequence.h"
 #include "parlay/parallel.h"

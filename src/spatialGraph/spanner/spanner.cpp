@@ -1,8 +1,7 @@
+#include "kdTree/kdTree.h"
 #include "parlay/parallel.h"
 #include "parlay/primitives.h"
 #include "pargeo/point.h"
-#include "pargeo/kdTree.h"
-#include "pargeo/wspd.h"
 #include "pargeo/getTime.h"
 #include "spatialGraph/spatialGraph.h"
 
