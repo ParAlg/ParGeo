@@ -364,60 +364,19 @@ namespace pargeo {
     return sqrt(result);
   }
 
-  // todo deprecate "noCoarsen" API
-
-  template<int dim, class objT>
-  kdNode<dim, objT>* buildKdt(parlay::slice<objT*, objT*> P,
-			      bool parallel=true,
-			      bool noCoarsen=false,
-			      parlay::sequence<objT*>* items=nullptr) {
-    typedef kdNode<dim, objT> nodeT;
-
-    size_t n = P.size();
-
-    if (!items) {
-      items = new parlay::sequence<objT*>(n);
-    }
-
-    parlay::parallel_for(0, n, [&](size_t i) {items->at(i)=&P[i];});
-
-    parlay::slice<objT**, objT**> itemSlice = items->cut(0, items->size());
-
-    auto root = (nodeT*) malloc(sizeof(nodeT)*(2*n-1));
-
-    /* parlay::parallel_for(0, 2*n-1, [&](size_t i) { */
-    /* 	root[i].setEmpty(); */
-    /*   }); */
-
-    if (parallel) {
-      auto flags = parlay::sequence<bool>(n);
-      auto flagSlice = parlay::slice(flags.begin(), flags.end());
-      root[0] = nodeT(itemSlice, n, root+1, flagSlice, noCoarsen ? 1 : 16);
-    } else {
-      root[0] = nodeT(itemSlice, n, root+1, noCoarsen ? 1 : 16);
-    }
-    return root;
-  }
-
-  template<int dim, class objT>
-  kdNode<dim, objT>* buildKdt(parlay::sequence<objT>& P,
-			      bool parallel=true,
-			      bool noCoarsen=false,
-			      parlay::sequence<objT*>* items=nullptr) {
-    return buildKdt<dim, objT>(parlay::make_slice(P), parallel, noCoarsen, items);
-  }
-
   template<int dim, class objT>
   kdNode<dim, objT>* buildKdTree(parlay::slice<objT*, objT*> P,
-			      bool parallel=true,
-			      size_t leafSize = 16,
-			      parlay::sequence<objT*>* items=nullptr) {
+				  bool parallel = true,
+				  size_t leafSize = 16,
+				  parlay::sequence<objT*>* items = nullptr) {
     typedef kdNode<dim, objT> nodeT;
 
     size_t n = P.size();
 
+    bool freeItems = false;
     if (!items) {
       items = new parlay::sequence<objT*>(n);
+      freeItems = true;
     }
 
     parlay::parallel_for(0, n, [&](size_t i) {items->at(i)=&P[i];});
@@ -437,34 +396,18 @@ namespace pargeo {
     } else {
       root[0] = nodeT(itemSlice, n, root+1, leafSize);
     }
+
+    //if (freeItems) free(items);
+
     return root;
   }
 
   template<int dim, class objT>
   kdNode<dim, objT>* buildKdTree(parlay::sequence<objT>& P,
-			      bool parallel=true,
-			      size_t leafSize = 16,
-			      parlay::sequence<objT*>* items=nullptr) {
-    return buildKdt<dim, objT>(parlay::make_slice(P), parallel, leafSize, items);
-  }
-
-  // Unlike other constructing functions, this one automatically handles memory free
-  template<int dim, class objT>
-  kdNode<dim, objT>* buildKdTree2(parlay::sequence<objT>& P,
-			      bool parallel=true,
-			      size_t leafSize = 16,
-			      parlay::sequence<objT*>* items=nullptr) {
-
-    parlay::sequence<objT*>* tmp = new parlay::sequence<objT*>(P.size());
-
-    auto tree = buildKdt<dim, objT>(parlay::make_slice(P),
-				    parallel,
-				    leafSize,
-				    tmp);
-
-    delete tmp;
-
-    return tree;
+				  bool parallel=true,
+				  size_t leafSize = 16,
+				  parlay::sequence<objT*>* items = nullptr) {
+    return buildKdTree<dim, objT>(parlay::make_slice(P), parallel, leafSize, items);
   }
 
 } // End namespace

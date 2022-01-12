@@ -7,10 +7,10 @@ inline void testKdTree(parlay::sequence<pargeo::point<dim>>& P) {
   using namespace pargeo;
   using nodeT = kdNode<dim, point<dim>>;
 
-  nodeT* tree1 = buildKdt<dim, point<dim>>(P, true, false);
-  nodeT* tree2 = buildKdt<dim, point<dim>>(P, false, false);
-  nodeT* tree3 = buildKdt<dim, point<dim>>(P, true, true);
-  nodeT* tree4 = buildKdt<dim, point<dim>>(P, false, true);
+  nodeT* tree1 = buildKdTree<dim, point<dim>>(P, true);
+  nodeT* tree2 = buildKdTree<dim, point<dim>>(P, false);
+  nodeT* tree3 = buildKdTree<dim, point<dim>>(P, true, 1);
+  nodeT* tree4 = buildKdTree<dim, point<dim>>(P, false, 1);
 
   std::function<size_t(nodeT*)> checkSum =
     [&](nodeT* node)->size_t {

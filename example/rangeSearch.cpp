@@ -20,7 +20,7 @@ int main(int argc, char* argv[]) {
   /* Build a tree */
 
   pargeo::kdNode<dim, pargeo::point<dim>>* tree =
-    pargeo::buildKdTree2<dim, pargeo::point<dim>>(P, true, false);
+    pargeo::buildKdTree<dim, pargeo::point<dim>>(P, true, false);
 
   // /* Spherical range query example
   //    surrounding P[0] with radius 0.1 */

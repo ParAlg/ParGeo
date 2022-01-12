@@ -27,7 +27,7 @@ parlay::sequence<pargeo::edge> pargeo::spanner(parlay::sequence<pargeo::point<di
   timer t0;
   t0.start();
 
-  nodeT* tree = buildKdt<dim, point<dim>>(S, true, true);
+  nodeT* tree = buildKdTree<dim, point<dim>>(S, true, 1);
   // cout << "build-tree-time = " << t0.get_next() << endl;
 
   auto wspd = wspdParallel<dim>(tree, s);

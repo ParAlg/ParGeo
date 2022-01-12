@@ -55,7 +55,7 @@ TEST(wspd_test, testSerial2d) {
   parlay::sequence<pargeo::point<2>> P =
     readPointsFromFile<pargeo::point<2>>(filePath);
 
-  kdNode<2, point<2>>* tree = buildKdt<2, point<2>>(P, true, true);
+  kdNode<2, point<2>>* tree = buildKdTree<2, point<2>>(P, true, 1);
 
   auto pairs1 = wspdSerial(tree, 2);
 
@@ -77,7 +77,7 @@ TEST(wspd_test, testParallel2d) {
   parlay::sequence<pargeo::point<2>> P =
     readPointsFromFile<pargeo::point<2>>(filePath);
 
-  kdNode<2, point<2>>* tree = buildKdt<2, point<2>>(P, true, true);
+  kdNode<2, point<2>>* tree = buildKdTree<2, point<2>>(P, true, 1);
 
   auto pairs1 = wspdParallel(tree, 2);
 
@@ -99,7 +99,7 @@ TEST(wspd_test, testSerial3d) {
   parlay::sequence<pargeo::point<3>> P =
     readPointsFromFile<pargeo::point<3>>(filePath);
 
-  kdNode<3, point<3>>* tree = buildKdt<3, point<3>>(P, true, true);
+  kdNode<3, point<3>>* tree = buildKdTree<3, point<3>>(P, true, 1);
 
   auto pairs1 = wspdSerial(tree, 2);
 
@@ -121,7 +121,7 @@ TEST(wspd_test, testParallel3d) {
   parlay::sequence<pargeo::point<3>> P =
     readPointsFromFile<pargeo::point<3>>(filePath);
 
-  kdNode<3, point<3>>* tree = buildKdt<3, point<3>>(P, true, true);
+  kdNode<3, point<3>>* tree = buildKdTree<3, point<3>>(P, true, 1);
 
   auto pairs1 = wspdParallel(tree, 2);
 

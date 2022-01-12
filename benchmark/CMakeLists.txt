@@ -33,16 +33,6 @@ target_link_libraries(spatialGraph_bench PRIVATE
   emstLib
   benchmark_main)
 
-add_executable(wspd_bench wspd_bench.cpp)
-target_link_libraries(wspd_bench PRIVATE
-  pargeoLib
-  benchmark_main)
-
-add_executable(spatialSearch_bench spatialSearch_bench.cpp)
-target_link_libraries(spatialSearch_bench PRIVATE
-  pargeoLib
-  benchmark_main)
-
 add_executable(hull2d_bench hull2d_bench.cpp)
 target_link_libraries(hull2d_bench PRIVATE
   randIncHull2dLib

@@ -169,7 +169,7 @@ namespace pargeo {
     bool freeTree = false;
     if (!tree) {
       freeTree = true;
-      tree = buildKdTree2<dim, objT>(queries, true);
+      tree = buildKdTree<dim, objT>(queries, true);
     }
     auto out = parlay::sequence<elem<objT*>>(2*k*queries.size());
     auto idx = parlay::sequence<size_t>(k*queries.size());

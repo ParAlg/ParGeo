@@ -18,7 +18,8 @@ parlay::sequence<pargeo::wghEdge> pargeo::euclideanMst(parlay::sequence<pargeo::
 
   timer t;
 
-  nodeT* tree = buildKdt<dim, point<dim>>(S, true, true);
+  //nodeT* tree = buildKdt<dim, point<dim>>(S, true, true);
+  nodeT* tree = buildKdTree<dim, point<dim>>(S, true, 1);
 
   cout << "build-time = " << t.get_next() << endl;
 
