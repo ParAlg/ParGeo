@@ -1,6 +1,5 @@
-// This code is part of the project "Fast Parallel Algorithms for Euclidean
-// Minimum Spanning Tree and Hierarchical Spatial Clustering"
-// Copyright (c) 2021 Yiqiu Wang, Shangdi Yu, Yan Gu, Julian Shun
+// This code is part of the project "ParGeo: A Library for Parallel Computational Geometry"
+// Copyright (c) 2021-2022 Yiqiu Wang, Shangdi Yu, Laxman Dhulipala, Yan Gu, Julian Shun
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the
@@ -30,25 +29,6 @@
 
 namespace pargeo {
 
-  using namespace parlay;
-
-  // ------------ Well-separated pair struct --------------
-
-  template <typename nodeT>
-  struct wsp {
-    nodeT* u;
-    nodeT* v;
-    wsp(nodeT* uu, nodeT* vv): u(uu), v(vv) {}
-  };
-
-  // ------------ Functions to call --------------
-
-  template<int dim>
-  sequence<wsp<kdNode<dim, point<dim>>>> wspdSerial(kdNode<dim, point<dim>>* tree, double s = 2);
-
-  template<int dim>
-  sequence<wsp<kdNode<dim, point<dim>>>> wspdParallel(kdNode<dim, point<dim>>* tree, double s = 2);
-
   // ------------ Serial implementation --------------
 
   template<typename nodeT, typename floatT>
@@ -76,9 +56,9 @@ namespace pargeo {
   struct wspdNormalSerial {
     using floatT = double;
     using pType = wsp<nodeT>;
-    sequence<pType> *out;
+    parlay::sequence<pType> *out;
 
-    wspdNormalSerial(sequence<pType> *outt) : out(outt) {}
+    wspdNormalSerial(parlay::sequence<pType> *outt) : out(outt) {}
 
     inline void run(nodeT *u, nodeT *v) {out->emplace_back(u, v);}
     inline bool moveon(nodeT *u, nodeT *v) {return true;}
@@ -122,12 +102,13 @@ namespace pargeo {
   }
 
   template<int dim>
-  sequence<wsp<kdNode<dim, point<dim>>>> wspdSerial(kdNode<dim, point<dim>>* tree, double s) {
+  parlay::sequence<wsp<kdNode<dim, point<dim>>>>
+  wspdSerial(kdNode<dim, point<dim>>* tree, double s = 2) {
     using pointT = point<dim>;
     using nodeT = kdNode<dim, pointT>;
     using pairT = wsp<nodeT>;
 
-    sequence<pairT> out;
+    parlay::sequence<pairT> out;
 
     auto wg = wspdNormalSerial<nodeT>(&out);
 
@@ -147,28 +128,28 @@ namespace pargeo {
     bufT **out;
 
     wspdNormalParallel(size_t n) {
-      size_t procs = num_workers();
+      size_t procs = parlay::num_workers();
       out = (bufT**) malloc(sizeof(bufT*)*procs);
-      parallel_for(0, procs, [&](size_t p) {
+      parlay::parallel_for(0, procs, [&](size_t p) {
 			       out[p] = new bufT(n/procs);
 			     });
     }
 
     ~wspdNormalParallel() {
-      size_t procs = num_workers();
-      parallel_for(0, procs, [&](size_t p) {
+      size_t procs = parlay::num_workers();
+      parlay::parallel_for(0, procs, [&](size_t p) {
 			       delete out[p];});
       free(out);
     }
 
     inline void run(nodeT *u, nodeT *v) {
-      auto tmp = out[worker_id()]->increment();
+      auto tmp = out[parlay::worker_id()]->increment();
       tmp->u = u;
       tmp->v = v;
     }
 
-    sequence<pType> collectPairs() {
-      int procs = num_workers();
+    parlay::sequence<pType> collectPairs() {
+      int procs = parlay::num_workers();
       return parBufCollect<pType>(out, procs);
     }
 
@@ -190,17 +171,17 @@ namespace pargeo {
       if (u->isLeaf() && v->isLeaf()) {
 	throw std::runtime_error("error, leaves not well separated");
       } else if (u->isLeaf()) {
-	par_do([&](){findPairParallel(v->L(), u, f, s);},
+	parlay::par_do([&](){findPairParallel(v->L(), u, f, s);},
 	       [&](){findPairParallel(v->R(), u, f, s);});
       } else if (v->isLeaf()) {
-	par_do([&](){findPairParallel(u->L(), v, f, s);},
+	parlay::par_do([&](){findPairParallel(u->L(), v, f, s);},
 	       [&](){findPairParallel(u->R(), v, f, s);});
       } else {
 	if (u->lMax() > v->lMax()) {
-	  par_do([&](){findPairParallel(u->L(), v, f, s);},
+	  parlay::par_do([&](){findPairParallel(u->L(), v, f, s);},
 		 [&](){findPairParallel(u->R(), v, f, s);});
 	} else {
-	  par_do([&](){findPairParallel(v->L(), u, f, s);},
+	  parlay::par_do([&](){findPairParallel(v->L(), u, f, s);},
 		 [&](){findPairParallel(v->R(), u, f, s);});
 	}
       }}
@@ -211,14 +192,15 @@ namespace pargeo {
     if (nd->size() < 2000) {
       computeWspdSerial(nd, f, s);
     } else if (!nd->isLeaf() && f->start(nd)) {
-      par_do([&](){computeWspdParallel(nd->L(), f, s);},
+      parlay::par_do([&](){computeWspdParallel(nd->L(), f, s);},
 	     [&](){computeWspdParallel(nd->R(), f, s);});
       findPairParallel<nodeT, opT>(nd->L(), nd->R(), f, s);
     }
   }
 
   template<int dim>
-  sequence<wsp<kdNode<dim, point<dim>>>> wspdParallel(kdNode<dim, point<dim>>* tree, double s) {
+  parlay::sequence<wsp<kdNode<dim, point<dim>>>>
+  wspdParallel(kdNode<dim, point<dim>>* tree, double s) {
     using pointT = point<dim>;
     using nodeT = kdNode<dim, pointT>;
     using pairT = wsp<nodeT>;

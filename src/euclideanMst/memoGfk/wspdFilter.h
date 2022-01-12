@@ -82,13 +82,13 @@ struct wspGetSerial {
   floatT rhoLo;
   floatT rhoHi;
   floatT beta;
-  sequence<bcpT> out;
+  parlay::sequence<bcpT> out;
   nodeT *tree;
   UF *uf;
 
   wspGetSerial(floatT betaa, floatT rhoLoo, floatT rhoHii, nodeT *treee, UF *uff) :
     beta(betaa), rhoLo(rhoLoo), rhoHi(rhoHii), tree(treee), uf(uff) {
-    out = sequence<bcpT>();
+    out = parlay::sequence<bcpT>();
   }
 
   void run(nodeT *u, nodeT *v) {
@@ -116,13 +116,13 @@ struct wspGetSerial {
   }
 
   bool wellSeparated(nodeT* u, nodeT* v, floatT s) {return geomWellSeparated(u, v, s);}
-  sequence<bcpT> collect() { return out; };
+  parlay::sequence<bcpT> collect() { return out; };
 };
 
 template <class nodeT, class UF>
-sequence<std::tuple<typename nodeT::objT*,
-		    typename nodeT::objT*,
-		    typename nodeT::objT::floatT>>
+parlay::sequence<std::tuple<typename nodeT::objT*,
+			    typename nodeT::objT*,
+			    typename nodeT::objT::floatT>>
 filterWspdSerial(double t_beta,
 		 double t_rho_lo,
 		 double& t_rho_hi,
@@ -198,22 +198,22 @@ struct wspGetParallel {
 
   wspGetParallel(floatT betaa, floatT rhoLoo, floatT rhoHii, nodeT *treee, UF *uff) :
     beta(betaa), rhoLo(rhoLoo), rhoHi(rhoHii), tree(treee), uf(uff) {
-    size_t procs = num_workers();
+    size_t procs = parlay::num_workers();
     out = (bufT**) malloc(sizeof(bufT*)*procs);
-    parallel_for(0, procs, [&](size_t p) {
+    parlay::parallel_for(0, procs, [&](size_t p) {
 			     out[p] = new bufT(tree->size()/procs);
 			   });
   }
 
   ~wspGetParallel() {
-    size_t procs = num_workers();
-    parallel_for(0, procs, [&](size_t p) {
+    size_t procs = parlay::num_workers();
+    parlay::parallel_for(0, procs, [&](size_t p) {
 			     delete out[p];});
     free(out);
   }
 
-  sequence<bcpT> collect() {
-    int procs = num_workers();
+  parlay::sequence<bcpT> collect() {
+    int procs = parlay::num_workers();
       return parBufCollect<bcpT>(out, procs);
   }
 
@@ -222,7 +222,7 @@ struct wspGetParallel {
     if (u->size() + v->size() <= beta &&
 	std::get<2>(bcp) >= rhoLo &&
         std::get<2>(bcp) < rhoHi) {
-      auto tmp = out[worker_id()]->increment();
+      auto tmp = out[parlay::worker_id()]->increment();
       get<0>(*tmp) = get<0>(bcp);
       get<1>(*tmp) = get<1>(bcp);
       get<2>(*tmp) = get<2>(bcp);
@@ -247,9 +247,9 @@ struct wspGetParallel {
 };
 
 template <class nodeT, class UF>
-sequence<std::tuple<typename nodeT::objT*,
-		    typename nodeT::objT*,
-		    typename nodeT::objT::floatT>>
+parlay::sequence<std::tuple<typename nodeT::objT*,
+			    typename nodeT::objT*,
+			    typename nodeT::objT::floatT>>
 filterWspdParallel(double t_beta,
 		   double t_rho_lo,
 		   double& t_rho_hi,

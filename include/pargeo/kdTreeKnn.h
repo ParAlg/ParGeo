@@ -1,6 +1,5 @@
-// This code is part of the project "Fast Parallel Algorithms for Euclidean
-// Minimum Spanning Tree and Hierarchical Spatial Clustering"
-// Copyright (c) 2021 Yiqiu Wang, Shangdi Yu, Yan Gu, Julian Shun
+// This code is part of the project "ParGeo: A Library for Parallel Computational Geometry"
+// Copyright (c) 2021-2022 Yiqiu Wang, Shangdi Yu, Laxman Dhulipala, Yan Gu, Julian Shun
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the
@@ -23,8 +22,8 @@
 
 #pragma once
 
-#include <limits> // numeric_limits
-#include <algorithm> // nth_element
+#include <limits>
+#include <algorithm>
 #include "parlay/parallel.h"
 #include "parlay/sequence.h"
 #include "kdTree.h"
@@ -85,12 +84,9 @@ namespace pargeo {
     };
   }
 
-  using namespace knnBuf;
-  using namespace std;
-
   template<int dim, typename nodeT, typename objT>
   void knnRangeHelper(nodeT* tree, objT& q, point<dim> qMin, point<dim> qMax,
-		      double radius, buffer<objT*>& out) {
+		      double radius, knnBuf::buffer<objT*>& out) {
     int relation = tree->boxCompare(qMin, qMax, tree->getMin(), tree->getMax());
 
     if(relation == tree->boxExclude) {
@@ -98,14 +94,14 @@ namespace pargeo {
     } else if (relation == tree->boxInclude) {
       for (size_t i = 0; i < tree->size(); ++i) {
 	objT* p = tree->getItem(i);
-	out.insert(elem(q.dist(*p), p));
+	out.insert(knnBuf::elem(q.dist(*p), p));
       }
     } else { // intersect
       if (tree->isLeaf()) {
 	for (size_t i = 0; i < tree->size(); ++ i) {
 	  objT* p = tree->getItem(i);
 	  double dist = q.dist(*p);
-	  if (dist <= radius) {out.insert(elem(dist, p));}
+	  if (dist <= radius) {out.insert(knnBuf::elem(dist, p));}
 	}
       } else {
 	knnRangeHelper<dim, nodeT, objT>(tree->L(), q, qMin, qMax, radius, out);
@@ -115,7 +111,7 @@ namespace pargeo {
   }
 
   template<int dim, typename nodeT, typename objT>
-  void knnRange(nodeT* tree, objT& q, double radius, buffer<objT*>& out) {
+  void knnRange(nodeT* tree, objT& q, double radius, knnBuf::buffer<objT*>& out) {
     point<dim> qMin, qMax;
     for (size_t i=0; i<dim; i++) {
       auto tmp = q[i] - radius;
@@ -125,9 +121,8 @@ namespace pargeo {
     knnRangeHelper<dim, nodeT, objT>(tree, q, qMin, qMax, radius, out);
   }
 
-  // modify to take in the tree instead
   template<int dim, typename nodeT, typename objT>
-  void knnHelper(nodeT* tree, objT& q, buffer<objT*>& out) {
+  void knnHelper(nodeT* tree, objT& q, knnBuf::buffer<objT*>& out) {
     // find the leaf first
     int relation = tree->boxCompare(tree->getMin(), tree->getMax(),
 				    point<dim>(q.coords()),
@@ -139,7 +134,7 @@ namespace pargeo {
 	// basecase
 	for (size_t i = 0; i < tree->size(); ++ i) {
 	  objT* p = tree->getItem(i);
-	  out.insert(elem(q.dist(*p), p));}
+	  out.insert(knnBuf::elem(q.dist(*p), p));}
       } else {
 	knnHelper<dim, nodeT, objT>(tree->L(), q, out);
 	knnHelper<dim, nodeT, objT>(tree->R(), q, out);
@@ -152,10 +147,10 @@ namespace pargeo {
       }
       for (size_t i=0; i<tree->siblin()->size(); ++i) {
 	objT* p = tree->siblin()->getItem(i);
-	out.insert(elem(q.dist(*p), p));}
+	out.insert(knnBuf::elem(q.dist(*p), p));}
     } else { // Buffer filled to a least k
       if (tree->siblin() != NULL) {
-	elem tmp = out.keepK();
+	knnBuf::elem tmp = out.keepK();
 	knnRange<dim, nodeT, objT>(tree->siblin(), q, tmp.cost, out);}
     }
   }
@@ -163,26 +158,24 @@ namespace pargeo {
   template<int dim, class objT>
   parlay::sequence<size_t> kdTreeKnn(parlay::sequence<objT> &queries,
 				     size_t k,
-				     kdNode<dim, objT>* tree = nullptr,
-				     bool sorted = false) {
+				     kdNode<dim, objT>* tree,
+				     bool sorted) {
     using nodeT = kdNode<dim, objT>;
     bool freeTree = false;
     if (!tree) {
       freeTree = true;
       tree = buildKdTree<dim, objT>(queries, true);
     }
-    auto out = parlay::sequence<elem<objT*>>(2*k*queries.size());
+    auto out = parlay::sequence<knnBuf::elem<objT*>>(2*k*queries.size());
     auto idx = parlay::sequence<size_t>(k*queries.size());
     parlay::parallel_for(0, queries.size(), [&](size_t i) {
-					      buffer buf = buffer<objT*>(k, out.cut(i*2*k, (i+1)*2*k));
+					      knnBuf::buffer buf = knnBuf::buffer<objT*>(k, out.cut(i*2*k, (i+1)*2*k));
 					      knnHelper<dim, nodeT, objT>(tree, queries[i], buf);
 					      buf.keepK();
 					      if (sorted) buf.sort();
 					      for(size_t j=0; j<k; ++j) {
 						idx[i*k+j] = buf[j].entry - queries.data();
-						//cout << buf[j].cost << endl;
 					      }
-					      //cout << endl;
 					    });
     if (freeTree) free(tree);
     return idx;
@@ -190,11 +183,11 @@ namespace pargeo {
 
   template<int dim, typename objT>
   parlay::sequence<size_t> bruteforceKnn(parlay::sequence<objT> &queries, size_t k) {
-    auto out = parlay::sequence<elem<objT*>>(2*k*queries.size());
+    auto out = parlay::sequence<knnBuf::elem<objT*>>(2*k*queries.size());
     auto idx = parlay::sequence<size_t>(k*queries.size());
     parlay::parallel_for(0, queries.size(), [&](size_t i) {
 					      objT q = queries[i];
-					      buffer buf = buffer<objT*>(k, out.cut(i*2*k, (i+1)*2*k));
+					      knnBuf::buffer buf = knnBuf::buffer<objT*>(k, out.cut(i*2*k, (i+1)*2*k));
 					      for(size_t j=0; j<queries.size(); ++j) {
 						objT* p = &queries[j];
 						buf.insert(elem(q.dist(p), p));
@@ -202,9 +195,7 @@ namespace pargeo {
 					      buf.keepK();
 					      for(size_t j=0; j<k; ++j) {
 						idx[i*k+j] = buf[j].entry - queries.data();
-						//cout << buf[j].cost << endl;
 					      }
-					      //cout << endl;
 					    });
     return idx;
   }
