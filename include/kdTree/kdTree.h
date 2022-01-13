@@ -28,10 +28,43 @@
 
 namespace pargeo::kdTree {
 
+  template<int _dim, class _objT> class node;
+
+  template<int _dim, class _objT>
+  class tree: public node<_dim, _objT> {
+
+    private:
+
+    using baseT = node<_dim, _objT>;
+
+    parlay::sequence<_objT*>* items;
+
+    public:
+
+    tree(parlay::sequence<_objT*>* _items,
+	      typename baseT::intT n,
+	      baseT *space,
+	      typename baseT::intT leafSize = 16):
+        items(_items),
+        node<_dim, _objT>(_items->cut(0, _items->size()), n, space, leafSize) { }
+
+    tree(parlay::sequence<_objT*>* _items,
+	      typename baseT::intT n,
+	      baseT *space,
+	      parlay::slice<bool *, bool *> flags,
+	      typename baseT::intT leafSize = 16):
+        items(_items),
+        node<_dim, _objT>(_items->cut(0, _items->size()), n, space, flags, leafSize) { }
+
+    ~tree() {
+      delete items;
+    }
+  };
+
   template<int _dim, class _objT>
   class node {
 
-  private:
+  protected:
 
     using intT = int;
 
@@ -122,6 +155,10 @@ namespace pargeo::kdTree {
 
     inline floatT getMin(int i) {return pMin[i];}
 
+    // inline void setEmpty() { id = -2; }
+
+    // inline bool isEmpty() { return id == -2; }
+
     inline bool hasId() {
       return id != -1;
     }
@@ -186,21 +223,25 @@ namespace pargeo::kdTree {
 	   nodeT *space,
 	   intT leafSize = 16);
 
+    virtual ~node() {
+
+    }
+
   };
 
-  /* Kd-tree construction */
+  /* Kd-tree construction and destruction */
 
   template<int dim, class objT>
   node<dim, objT>* build(parlay::slice<objT*, objT*> P,
 				 bool parallel = true,
-				 size_t leafSize = 16,
-				 parlay::sequence<objT*>* items = nullptr);
+				 size_t leafSize = 16);
 
   template<int dim, class objT>
   node<dim, objT>* build(parlay::sequence<objT>& P,
 				 bool parallel = true,
-				 size_t leafSize = 16,
-				 parlay::sequence<objT*>* items = nullptr);
+				 size_t leafSize = 16);
+
+  template<int dim, class objT> void del(node<dim, objT>* tree);
 
   /* Kd-tree knn search */
 

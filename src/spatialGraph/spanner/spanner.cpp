@@ -41,6 +41,7 @@ parlay::sequence<pargeo::edge> pargeo::spanner(parlay::sequence<pargeo::point<di
     });
 
   // cout << "edge-count = " << edges.size() << endl;
+  kdTree::del(tree);
 
   return edges;
 }

@@ -140,9 +140,9 @@ namespace pargeo::kdTree {
 
       if (median == 0 || median == size()) {median = ceil(size()/2.0);}
 
-      /* if (!space[0].isEmpty() || !space[2*median-1].isEmpty()) { */
-      /*   throw std::runtime_error("Error, kdNode overwrite."); */
-      /* } */
+      // if (!space[0].isEmpty() || !space[2*median-1].isEmpty()) {
+      //   throw std::runtime_error("Error, kdNode overwrite.");
+      // }
 
       // Recursive construction
       space[0] = nodeT(items.cut(0, median), median, space+1, leafSize);
@@ -177,9 +177,9 @@ namespace pargeo::kdTree {
 
       if (median == 0 || median == size()) {median = (size()/2.0);}
 
-      /* if (!space[0].isEmpty() || !space[2*median-1].isEmpty()) { */
-      /*   throw std::runtime_error("Error, kdNode overwrite."); */
-      /* } */
+      // if (!space[0].isEmpty() || !space[2*median-1].isEmpty()) {
+      //   throw std::runtime_error("Error, kdNode overwrite.");
+      // }
 
       // Recursive construction
       parlay::par_do([&](){space[0] = nodeT(items.cut(0, median), median, space+1, flags.cut(0, median), leafSize);},
@@ -247,33 +247,30 @@ namespace pargeo::kdTree {
   template<int dim, class objT>
   node<dim, objT>* build(parlay::slice<objT*, objT*> P,
 				 bool parallel,
-				 size_t leafSize,
-				 parlay::sequence<objT*>* items) {
+				 size_t leafSize) {
+    typedef tree<dim, objT> treeT;
     typedef node<dim, objT> nodeT;
 
     size_t n = P.size();
 
-    bool freeItems = false;
-    if (!items) {
-      items = new parlay::sequence<objT*>(n);
-      freeItems = true;
-    }
+    parlay::sequence<objT*>* items =
+      new parlay::sequence<objT*>(n);
 
     parlay::parallel_for(0, n, [&](size_t i) {items->at(i)=&P[i];});
 
-    parlay::slice<objT**, objT**> itemSlice = items->cut(0, items->size());
-
     auto root = (nodeT*) malloc(sizeof(nodeT)*(2*n-1));
+
+    // parlay::parallel_for(0, 2*n-1, [&](size_t i) {
+    //   root[i].setEmpty();
+    // });
 
     if (parallel) {
       auto flags = parlay::sequence<bool>(n);
       auto flagSlice = parlay::slice(flags.begin(), flags.end());
-      root[0] = nodeT(itemSlice, n, root+1, flagSlice, leafSize);
+      root[0] = treeT(items, n, root + 1, flagSlice, leafSize);
     } else {
-      root[0] = nodeT(itemSlice, n, root+1, leafSize);
+      root[0] = treeT(items, n, root + 1, leafSize);
     }
-
-    //if (freeItems) free(items);
 
     return root;
   }
@@ -281,9 +278,13 @@ namespace pargeo::kdTree {
   template<int dim, class objT>
   node<dim, objT>* build(parlay::sequence<objT>& P,
 				 bool parallel,
-				 size_t leafSize,
-				 parlay::sequence<objT*>* items) {
-    return build<dim, objT>(parlay::make_slice(P), parallel, leafSize, items);
+				 size_t leafSize) {
+    return build<dim, objT>(parlay::make_slice(P), parallel, leafSize);
+  }
+
+  template<int dim, class objT>
+  void del(node<dim, objT>* tree) {
+    free(tree);
   }
 
 } // End namespace pargeo

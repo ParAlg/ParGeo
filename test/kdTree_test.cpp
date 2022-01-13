@@ -44,6 +44,11 @@ inline void testKdTree(parlay::sequence<pargeo::point<dim>>& P) {
   checkSum(tree2);
   checkSum(tree3);
   checkSum(tree4);
+
+  kdTree::del(tree1);
+  kdTree::del(tree2);
+  kdTree::del(tree3);
+  kdTree::del(tree4);
 }
 
 TEST(kdTree_structure, testSerial2d) {

@@ -154,6 +154,8 @@ namespace pargeo {
 	  flagVisible<pointT>(tree, &facets[i], make_slice(flag), data);
 	});
 
+	pargeo::kdTree::del(tree);
+
 #ifdef SAMPLE_HULL_VERBOSE
 	std::cout << " filter-time = " << t.get_next() << "\n";
 #endif

@@ -31,6 +31,6 @@ int main(int argc, char* argv[]) {
   std::tuple<pargeo::point<dim>, pargeo::point<dim>, double> myBccp =
     pargeo::kdTree::bccp(treeRed, treeBlue);
 
-  free(treeRed);
-  free(treeBlue);
+  pargeo::kdTree::del(treeRed);
+  pargeo::kdTree::del(treeBlue);
 }

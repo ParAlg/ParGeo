@@ -22,15 +22,15 @@ int main(int argc, char* argv[]) {
   pargeo::kdTree::node<dim, pargeo::point<dim>>* tree =
     pargeo::kdTree::build<dim, pargeo::point<dim>>(P, true, false);
 
-  // /* Spherical range query example
-  //    surrounding P[0] with radius 0.1 */
+  /* Spherical range query example
+     surrounding P[0] with radius 0.1 */
 
-  // parlay::sequence<size_t> elems1 = pargeo::rangeSearch(P, tree, P[0], 0.1);
+  parlay::sequence<size_t> elems1 = pargeo::kdTree::rangeSearch(P, tree, P[0], 0.1);
 
-  // /* Rectangular range query example
-  //    surrounding P[0] with half-length 0.1 */
+  /* Rectangular range query example
+     surrounding P[0] with half-length 0.1 */
 
-  // parlay::sequence<size_t> elems2 = pargeo::orthogonalRangeSearch(P, tree, P[0], 0.1);
+  parlay::sequence<size_t> elems2 = pargeo::kdTree::orthogonalRangeSearch(P, tree, P[0], 0.1);
 
-  free(tree);
+  pargeo::kdTree::del(tree);
 }

@@ -103,6 +103,7 @@ parlay::sequence<pargeo::wghEdge> pargeo::euclideanMst(parlay::sequence<pargeo::
   // cout << "wspd-time = " << wspdTime << endl;
   // cout << "kruskal-time = " << kruskalTime << endl;
   // cout << "mark-time = " << markTime << endl;
+  pargeo::kdTree::del(tree);
   return UF.getEdge();
 }
 
