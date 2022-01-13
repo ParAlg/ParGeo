@@ -27,8 +27,6 @@
 
 namespace pargeo {
 
-  using namespace std;
-
   namespace bccpInternal {
 
     template <typename objT>
@@ -93,13 +91,13 @@ namespace pargeo {
 
 	} else {
 
-	  pair<nodeT*, nodeT*> ordering[4]; //todo change to tuple
-	  ordering[0] = make_pair(n1->L(), n2->L());
-	  ordering[1] = make_pair(n1->L(), n2->R());
-	  ordering[2] = make_pair(n1->R(), n2->L());
-	  ordering[3] = make_pair(n1->R(), n2->R());
+	  std::pair<nodeT*, nodeT*> ordering[4]; //todo change to tuple
+	  ordering[0] = std::make_pair(n1->L(), n2->L());
+	  ordering[1] = std::make_pair(n1->L(), n2->R());
+	  ordering[2] = std::make_pair(n1->R(), n2->L());
+	  ordering[3] = std::make_pair(n1->R(), n2->R());
 
-	  auto cmp = [&](pair<nodeT*,nodeT*> p1, pair<nodeT*,nodeT*> p2) {
+	  auto cmp = [&](std::pair<nodeT*,nodeT*> p1, std::pair<nodeT*,nodeT*> p2) {
 									  return nodeDistance(p1.first, p1.second) < nodeDistance(p2.first, p2.second);};
 	  sort(ordering, ordering + 4, cmp);
 
@@ -114,7 +112,7 @@ namespace pargeo {
   } // End namespace bcpInternal
 
   template <typename nodeT>
-  tuple<typename nodeT::objT*,
+  std::tuple<typename nodeT::objT*,
 	typename nodeT::objT*,
 	typename nodeT::objT::floatT> bccp(nodeT* n1, nodeT* n2) {
     using namespace bccpInternal;
@@ -128,7 +126,7 @@ namespace pargeo {
     // if (r.u != verify.u || r.v != verify.v) {
     //   throw std::runtime_error("bcp wrong");
     // }
-    return tuple(r.u, r.v, r.dist);
+    return std::tuple(r.u, r.v, r.dist);
   }
 
 } // End namespace

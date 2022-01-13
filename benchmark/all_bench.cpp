@@ -65,7 +65,7 @@ static void kdTree_rangeSearch_2d(benchmark::State& state) {
 
       // Spherical range search with random radius
       kdTreeRange(points, tree, points[i],
-		  parlay::hash64(i)/numeric_limits<size_t>::max());
+		  parlay::hash64(i)/std::numeric_limits<size_t>::max());
 
     });
 
@@ -85,7 +85,7 @@ static void kdTree_orthRangeSearch_2d(benchmark::State& state) {
 
       // Orthogonal range search with random box
       kdTreeOrthRange(points, tree, points[i],
-		      parlay::hash64(i)/numeric_limits<size_t>::max());
+		      parlay::hash64(i)/std::numeric_limits<size_t>::max());
 
     });
 
@@ -155,7 +155,7 @@ static void kdTree_rangeSearch_5d(benchmark::State& state) {
 
       // Spherical range search with random radius
       kdTreeRange(points, tree, points[i],
-		  parlay::hash64(i)/numeric_limits<size_t>::max());
+		  parlay::hash64(i)/std::numeric_limits<size_t>::max());
 
     });
 
@@ -175,7 +175,7 @@ static void kdTree_orthRangeSearch_5d(benchmark::State& state) {
 
       // Orthogonal range search with random box
       kdTreeOrthRange(points, tree, points[i],
-		      parlay::hash64(i)/numeric_limits<size_t>::max());
+		      parlay::hash64(i)/std::numeric_limits<size_t>::max());
 
     });
 
