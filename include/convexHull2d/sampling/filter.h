@@ -41,7 +41,7 @@ namespace pargeo {
 
       template<class pointT>
       std::tuple<typename pointT::floatT, typename pointT::floatT>
-      nodeVol(kdNode<2, pointT>* r, facet<pointT>* f) {
+      nodeVol(kdTree::node<2, pointT>* r, facet<pointT>* f) {
 	using floatT = typename pointT::floatT;
 
 	floatT vMin = std::numeric_limits<floatT>::max();
@@ -69,7 +69,7 @@ namespace pargeo {
       }
 
       template<class pointT>
-      void flagVisible(kdNode<2, pointT>* r,
+      void flagVisible(kdTree::node<2, pointT>* r,
 		       facet<pointT>* f,
 		       parlay::slice<std::atomic<bool>*, std::atomic<bool>*> flag,
 		       pointT* base) {
@@ -137,8 +137,8 @@ namespace pargeo {
 	pargeo::timer t; t.start();
 #endif
 
-	pargeo::kdNode<2, pointT>* tree =
-	  buildKdTree<2, pointT>(P, true, 128); // todo manual leaf size
+	pargeo::kdTree::node<2, pointT>* tree =
+	  kdTree::build<2, pointT>(P, true, 128); // todo manual leaf size
 
 #ifdef SAMPLE_HULL_VERBOSE
 	std::cout << " build-tree-time = " << t.get_next() << "\n";

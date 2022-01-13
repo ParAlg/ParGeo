@@ -18,13 +18,13 @@ int main(int argc, char* argv[]) {
 
   /* Build a kd-tree with leaf size 1 for the data set */
 
-  pargeo::kdNode<dim, pargeo::point<dim>>* T =
-    pargeo::buildKdTree<dim, pargeo::point<dim>>(P, true, 1);
+  pargeo::kdTree::node<dim, pargeo::point<dim>>* T =
+    pargeo::kdTree::build<dim, pargeo::point<dim>>(P, true, 1);
 
   /* Compute WSPD with s = 2 */
 
-  parlay::sequence<pargeo::wsp<pargeo::kdNode<dim, pargeo::point<dim>>>> pairs =
-    pargeo::wspdParallel(T, 2);
+  parlay::sequence<pargeo::kdTree::wsp<pargeo::kdTree::node<dim, pargeo::point<dim>>>> pairs =
+    pargeo::kdTree::wellSeparatedPairDecomp(T, 2);
 
   free(T);
 }

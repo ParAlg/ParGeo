@@ -26,10 +26,10 @@
 #include "pargeo/point.h"
 #include <tuple>
 
-namespace pargeo {
+namespace pargeo::kdTree {
 
   template<int _dim, class _objT>
-  class kdNode {
+  class node {
 
   private:
 
@@ -39,7 +39,7 @@ namespace pargeo {
 
     using pointT = _objT;
 
-    using nodeT = kdNode<_dim, _objT>;
+    using nodeT = node<_dim, _objT>;
 
     intT id;
 
@@ -175,13 +175,13 @@ namespace pargeo {
       else return boxOverlap;
     }
 
-    kdNode(parlay::slice<_objT**, _objT**> itemss,
+    node(parlay::slice<_objT**, _objT**> itemss,
 	   intT nn,
 	   nodeT *space,
 	   parlay::slice<bool*, bool*> flags,
 	   intT leafSize = 16);
 
-    kdNode(parlay::slice<_objT**, _objT**> itemss,
+    node(parlay::slice<_objT**, _objT**> itemss,
 	   intT nn,
 	   nodeT *space,
 	   intT leafSize = 16);
@@ -191,13 +191,13 @@ namespace pargeo {
   /* Kd-tree construction */
 
   template<int dim, class objT>
-  kdNode<dim, objT>* buildKdTree(parlay::slice<objT*, objT*> P,
+  node<dim, objT>* build(parlay::slice<objT*, objT*> P,
 				 bool parallel = true,
 				 size_t leafSize = 16,
 				 parlay::sequence<objT*>* items = nullptr);
 
   template<int dim, class objT>
-  kdNode<dim, objT>* buildKdTree(parlay::sequence<objT>& P,
+  node<dim, objT>* build(parlay::sequence<objT>& P,
 				 bool parallel = true,
 				 size_t leafSize = 16,
 				 parlay::sequence<objT*>* items = nullptr);
@@ -205,22 +205,22 @@ namespace pargeo {
   /* Kd-tree knn search */
 
   template<int dim, class objT>
-  parlay::sequence<size_t> kdTreeKnn(parlay::sequence<objT> &queries,
+  parlay::sequence<size_t> batchKnn(parlay::sequence<objT> &queries,
 				     size_t k,
-				     kdNode<dim, objT>* tree = nullptr,
+				     node<dim, objT>* tree = nullptr,
 				     bool sorted = false);
 
   /* Kd-tree range search */
 
   template<int dim, typename objT>
-  parlay::sequence<size_t> kdTreeRange(parlay::sequence<objT>& A,
-				       kdNode<dim, objT>* tree,
+  parlay::sequence<size_t> rangeSearch(parlay::sequence<objT>& A,
+				       node<dim, objT>* tree,
 				       objT query,
 				       double radius);
 
   template<int dim, typename objT>
-  parlay::sequence<size_t> kdTreeOrthRange(parlay::sequence<objT>& A,
-					   kdNode<dim, objT>* tree,
+  parlay::sequence<size_t> orthogonalRangeSearch(parlay::sequence<objT>& A,
+					   node<dim, objT>* tree,
 					   objT query,
 					   double halfLen);
 
@@ -241,8 +241,8 @@ namespace pargeo {
   };
 
   template<int dim>
-  parlay::sequence<wsp<kdNode<dim, point<dim>>>>
-  wspdParallel(kdNode<dim, point<dim>>* tree, double s = 2);
+  parlay::sequence<wsp<node<dim, point<dim>>>>
+  wellSeparatedPairDecomp(node<dim, point<dim>>* tree, double s = 2);
 
 } // End namespace pargeo
 

@@ -26,7 +26,7 @@
 #include "parlay/utilities.h"
 #include "kdTree.h"
 
-namespace pargeo {
+namespace pargeo::kdTree {
 
   namespace kdTreeInternal {
 
@@ -69,7 +69,7 @@ namespace pargeo {
   } // End namespace kdTreeInternal
 
   template<int _dim, class _objT>
-  void kdNode<_dim, _objT>::boundingBoxSerial() {
+  void node<_dim, _objT>::boundingBoxSerial() {
     pMin = pointT(items[0]->coords());
     pMax = pointT(items[0]->coords());
     for(intT i=0; i<size(); ++i) {
@@ -79,7 +79,7 @@ namespace pargeo {
   }
 
   template<int _dim, class _objT>
-  void kdNode<_dim, _objT>::boundingBoxParallel() {
+  void node<_dim, _objT>::boundingBoxParallel() {
     intT P = parlay::num_workers()*8;
     intT blockSize = (size()+P-1)/P;
     pointT localMin[P];
@@ -103,8 +103,8 @@ namespace pargeo {
   }
 
   template<int _dim, class _objT>
-  typename kdNode<_dim, _objT>::intT
-  kdNode<_dim, _objT>::splitItemSerial(floatT xM) {
+  typename node<_dim, _objT>::intT
+  node<_dim, _objT>::splitItemSerial(floatT xM) {
     if (size() < 2) {
       throw std::runtime_error("Error, kdTree splitting singleton.");}
     intT lPt = 0;
@@ -126,7 +126,7 @@ namespace pargeo {
   }
 
   template<int _dim, class _objT>
-  void kdNode<_dim, _objT>::constructSerial(nodeT *space, intT leafSize) {
+  void node<_dim, _objT>::constructSerial(nodeT *space, intT leafSize) {
     boundingBoxSerial();
     sib = NULL;
     if (size() <= leafSize) {
@@ -155,7 +155,7 @@ namespace pargeo {
   }
 
   template<int _dim, class _objT>
-  void kdNode<_dim, _objT>::constructParallel(nodeT *space, parlay::slice<bool*, bool*> flags, intT leafSize) {
+  void node<_dim, _objT>::constructParallel(nodeT *space, parlay::slice<bool*, bool*> flags, intT leafSize) {
     boundingBoxParallel();
 
     sib = NULL;
@@ -192,7 +192,7 @@ namespace pargeo {
   }
 
   template<int _dim, class _objT>
-  kdNode<_dim, _objT>::kdNode(parlay::slice<_objT**, _objT**> itemss,
+  node<_dim, _objT>::node(parlay::slice<_objT**, _objT**> itemss,
 			      intT nn,
 			      nodeT *space,
 			      parlay::slice<bool*, bool*> flags,
@@ -204,7 +204,7 @@ namespace pargeo {
   }
 
   template<int _dim, class _objT>
-  kdNode<_dim, _objT>::kdNode(parlay::slice<_objT**, _objT**> itemss,
+  node<_dim, _objT>::node(parlay::slice<_objT**, _objT**> itemss,
 			      intT nn,
 			      nodeT *space,
 			      intT leafSize): items(itemss)
@@ -245,11 +245,11 @@ namespace pargeo {
   }
 
   template<int dim, class objT>
-  kdNode<dim, objT>* buildKdTree(parlay::slice<objT*, objT*> P,
+  node<dim, objT>* build(parlay::slice<objT*, objT*> P,
 				 bool parallel,
 				 size_t leafSize,
 				 parlay::sequence<objT*>* items) {
-    typedef kdNode<dim, objT> nodeT;
+    typedef node<dim, objT> nodeT;
 
     size_t n = P.size();
 
@@ -279,11 +279,11 @@ namespace pargeo {
   }
 
   template<int dim, class objT>
-  kdNode<dim, objT>* buildKdTree(parlay::sequence<objT>& P,
+  node<dim, objT>* build(parlay::sequence<objT>& P,
 				 bool parallel,
 				 size_t leafSize,
 				 parlay::sequence<objT*>* items) {
-    return buildKdTree<dim, objT>(parlay::make_slice(P), parallel, leafSize, items);
+    return build<dim, objT>(parlay::make_slice(P), parallel, leafSize, items);
   }
 
 } // End namespace pargeo

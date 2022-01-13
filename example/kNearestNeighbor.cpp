@@ -11,7 +11,7 @@ template<int dim>
 void knn(parlay::sequence<pargeo::point<dim>> &P, size_t k, char const *outFile) {
   //timer t; t.start();
   parlay::sequence<size_t> I =
-    pargeo::kdTreeKnn<dim, pargeo::point<dim>>(P, k);
+    pargeo::kdTree::batchKnn<dim, pargeo::point<dim>>(P, k);
   //cout << "time = " << t.stop() << endl;
   if (outFile != NULL) pargeo::IO::writeIntSeqToFile(I, outFile);
 }

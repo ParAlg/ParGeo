@@ -29,7 +29,7 @@
 #include "kdTree.h"
 #include "pargeo/point.h"
 
-namespace pargeo {
+namespace pargeo::kdTree {
 
   namespace knnBuf {
 
@@ -156,15 +156,15 @@ namespace pargeo {
   }
 
   template<int dim, class objT>
-  parlay::sequence<size_t> kdTreeKnn(parlay::sequence<objT> &queries,
+  parlay::sequence<size_t> batchKnn(parlay::sequence<objT> &queries,
 				     size_t k,
-				     kdNode<dim, objT>* tree,
+				     node<dim, objT>* tree,
 				     bool sorted) {
-    using nodeT = kdNode<dim, objT>;
+    using nodeT = node<dim, objT>;
     bool freeTree = false;
     if (!tree) {
       freeTree = true;
-      tree = buildKdTree<dim, objT>(queries, true);
+      tree = build<dim, objT>(queries, true);
     }
     auto out = parlay::sequence<knnBuf::elem<objT*>>(2*k*queries.size());
     auto idx = parlay::sequence<size_t>(k*queries.size());

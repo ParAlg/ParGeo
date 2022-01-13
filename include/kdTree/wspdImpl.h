@@ -27,7 +27,7 @@
 #include "kdTree.h"
 #include "pargeo/parBuffer.h"
 
-namespace pargeo {
+namespace pargeo::kdTree {
 
   // ------------ Serial implementation --------------
 
@@ -102,10 +102,10 @@ namespace pargeo {
   }
 
   template<int dim>
-  parlay::sequence<wsp<kdNode<dim, point<dim>>>>
-  wspdSerial(kdNode<dim, point<dim>>* tree, double s = 2) {
+  parlay::sequence<wsp<node<dim, point<dim>>>>
+  wspdSerial(node<dim, point<dim>>* tree, double s = 2) {
     using pointT = point<dim>;
-    using nodeT = kdNode<dim, pointT>;
+    using nodeT = node<dim, pointT>;
     using pairT = wsp<nodeT>;
 
     parlay::sequence<pairT> out;
@@ -199,10 +199,10 @@ namespace pargeo {
   }
 
   template<int dim>
-  parlay::sequence<wsp<kdNode<dim, point<dim>>>>
-  wspdParallel(kdNode<dim, point<dim>>* tree, double s) {
+  parlay::sequence<wsp<node<dim, point<dim>>>>
+  wellSeparatedPairDecomp(node<dim, point<dim>>* tree, double s) {
     using pointT = point<dim>;
-    using nodeT = kdNode<dim, pointT>;
+    using nodeT = node<dim, pointT>;
     using pairT = wsp<nodeT>;
 
     auto wg = wspdNormalParallel<nodeT>(tree->size());

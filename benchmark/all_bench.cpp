@@ -34,8 +34,8 @@ static void kdTree_build_2d(benchmark::State& state) {
   auto points = data2d();
 
   for (auto _ : state) {
-    kdNode<2, point<2>>* tree =
-      buildKdTree<2, point<2>>(points, true);
+    kdTree::node<2, point<2>>* tree =
+      kdTree::build<2, point<2>>(points, true);
   }
 }
 
@@ -43,11 +43,11 @@ static void kdTree_knn_2d(benchmark::State& state) {
   using namespace pargeo;
   auto points = data2d();
 
-  kdNode<2, point<2>>* tree =
-    buildKdTree<2, point<2>>(points, true);
+  kdTree::node<2, point<2>>* tree =
+    kdTree::build<2, point<2>>(points, true);
 
   for (auto _ : state) {
-    kdTreeKnn(points, 2, tree);
+    kdTree::batchKnn(points, 2, tree);
   }
 
 }
@@ -56,15 +56,15 @@ static void kdTree_rangeSearch_2d(benchmark::State& state) {
   using namespace pargeo;
   auto points = data2d();
 
-  kdNode<2, point<2>>* tree =
-    buildKdTree<2, point<2>>(points, true);
+  kdTree::node<2, point<2>>* tree =
+    kdTree::build<2, point<2>>(points, true);
 
   for (auto _ : state) {
 
     parlay::parallel_for(0, N, [&](size_t i){
 
       // Spherical range search with random radius
-      kdTreeRange(points, tree, points[i],
+      kdTree::rangeSearch(points, tree, points[i],
 		  parlay::hash64(i)/std::numeric_limits<size_t>::max());
 
     });
@@ -76,15 +76,15 @@ static void kdTree_orthRangeSearch_2d(benchmark::State& state) {
   using namespace pargeo;
   auto points = data2d();
 
-  kdNode<2, point<2>>* tree =
-    buildKdTree<2, point<2>>(points, true);
+  kdTree::node<2, point<2>>* tree =
+    kdTree::build<2, point<2>>(points, true);
 
   for (auto _ : state) {
 
     parlay::parallel_for(0, N, [&](size_t i){
 
       // Orthogonal range search with random box
-      kdTreeOrthRange(points, tree, points[i],
+      kdTree::orthogonalRangeSearch(points, tree, points[i],
 		      parlay::hash64(i)/std::numeric_limits<size_t>::max());
 
     });
@@ -96,14 +96,14 @@ static void kdTree_bccp_2d(benchmark::State& state) {
   using namespace pargeo;
   auto points = data2d();
 
-  kdNode<2, point<2>>* tree1 =
-    buildKdTree<2, point<2>>(points.cut(0, N/2), true);
+  kdTree::node<2, point<2>>* tree1 =
+    kdTree::build<2, point<2>>(points.cut(0, N/2), true);
 
-  kdNode<2, point<2>>* tree2 =
-    buildKdTree<2, point<2>>(points.cut(N/2, N), true);
+  kdTree::node<2, point<2>>* tree2 =
+    kdTree::build<2, point<2>>(points.cut(N/2, N), true);
 
   for (auto _ : state) {
-    bccp(tree1, tree2);
+    kdTree::bccp(tree1, tree2);
   }
 }
 
@@ -111,11 +111,11 @@ static void kdTree_wspd_s2_2d(benchmark::State& state) {
   using namespace pargeo;
   auto points = data2d();
 
-  kdNode<2, point<2>>* tree =
-    buildKdTree<2, point<2>>(points, true, 1);
+  kdTree::node<2, point<2>>* tree =
+    kdTree::build<2, point<2>>(points, true, 1);
 
   for (auto _ : state) {
-    wspdParallel(tree, 2);
+    kdTree::wellSeparatedPairDecomp(tree, 2);
   }
 }
 
@@ -124,8 +124,8 @@ static void kdTree_build_5d(benchmark::State& state) {
   auto points = data5d();
 
   for (auto _ : state) {
-    kdNode<5, point<5>>* tree =
-      buildKdTree<5, point<5>>(points, true);
+    kdTree::node<5, point<5>>* tree =
+      kdTree::build<5, point<5>>(points, true);
   }
 }
 
@@ -133,11 +133,11 @@ static void kdTree_knn_5d(benchmark::State& state) {
   using namespace pargeo;
   auto points = data5d();
 
-  kdNode<5, point<5>>* tree =
-    buildKdTree<5, point<5>>(points, true);
+  kdTree::node<5, point<5>>* tree =
+    kdTree::build<5, point<5>>(points, true);
 
   for (auto _ : state) {
-    kdTreeKnn(points, 5, tree);
+    kdTree::batchKnn(points, 5, tree);
   }
 
 }
@@ -146,15 +146,15 @@ static void kdTree_rangeSearch_5d(benchmark::State& state) {
   using namespace pargeo;
   auto points = data5d();
 
-  kdNode<5, point<5>>* tree =
-    buildKdTree<5, point<5>>(points, true);
+  kdTree::node<5, point<5>>* tree =
+    kdTree::build<5, point<5>>(points, true);
 
   for (auto _ : state) {
 
     parlay::parallel_for(0, N, [&](size_t i){
 
       // Spherical range search with random radius
-      kdTreeRange(points, tree, points[i],
+      kdTree::rangeSearch(points, tree, points[i],
 		  parlay::hash64(i)/std::numeric_limits<size_t>::max());
 
     });
@@ -166,15 +166,15 @@ static void kdTree_orthRangeSearch_5d(benchmark::State& state) {
   using namespace pargeo;
   auto points = data5d();
 
-  kdNode<5, point<5>>* tree =
-    buildKdTree<5, point<5>>(points, true);
+  kdTree::node<5, point<5>>* tree =
+    kdTree::build<5, point<5>>(points, true);
 
   for (auto _ : state) {
 
     parlay::parallel_for(0, N, [&](size_t i){
 
       // Orthogonal range search with random box
-      kdTreeOrthRange(points, tree, points[i],
+      kdTree::orthogonalRangeSearch(points, tree, points[i],
 		      parlay::hash64(i)/std::numeric_limits<size_t>::max());
 
     });
@@ -186,14 +186,14 @@ static void kdTree_bccp_5d(benchmark::State& state) {
   using namespace pargeo;
   auto points = data5d();
 
-  kdNode<5, point<5>>* tree1 =
-    buildKdTree<5, point<5>>(points.cut(0, N/2), true);
+  kdTree::node<5, point<5>>* tree1 =
+    kdTree::build<5, point<5>>(points.cut(0, N/2), true);
 
-  kdNode<5, point<5>>* tree2 =
-    buildKdTree<5, point<5>>(points.cut(N/2, N), true);
+  kdTree::node<5, point<5>>* tree2 =
+    kdTree::build<5, point<5>>(points.cut(N/2, N), true);
 
   for (auto _ : state) {
-    bccp(tree1, tree2);
+    kdTree::bccp(tree1, tree2);
   }
 }
 
@@ -201,11 +201,11 @@ static void kdTree_wspd_s2_5d(benchmark::State& state) {
   using namespace pargeo;
   auto points = data5d();
 
-  kdNode<5, point<5>>* tree =
-    buildKdTree<5, point<5>>(points, true);
+  kdTree::node<5, point<5>>* tree =
+    kdTree::build<5, point<5>>(points, true);
 
   for (auto _ : state) {
-    wspdParallel(tree, 2);
+    kdTree::wellSeparatedPairDecomp(tree, 2);
   }
 }
 

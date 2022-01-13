@@ -17,7 +17,7 @@ parlay::sequence<pargeo::dirEdge> pargeo::knnGraph(parlay::sequence<pargeo::poin
     throw std::runtime_error("k must range from 1 to n-1");
 
   // Call knn
-  parlay::sequence<size_t> nnIdx = kdTreeKnn<dim, pargeo::point<dim>>(P, k+1);
+  parlay::sequence<size_t> nnIdx = kdTree::batchKnn<dim, pargeo::point<dim>>(P, k+1);
 
   // Convert to edge list
   auto edges = parlay::sequence<dirEdge>(k * P.size());

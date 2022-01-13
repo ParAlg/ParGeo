@@ -33,7 +33,7 @@ parlay::sequence<pargeo::edge> pargeo::betaSkeleton(parlay::sequence<pargeo::poi
 #endif
   // Take a subset of qualifying edges
 
-  kdNode<dim, pt>* tree = buildKdt<dim, pt>(P, true);
+  node<dim, pt>* tree = buildKdt<dim, pt>(P, true);
 #ifndef SILENT
   cout << "build-tree-time = " << t.get_next() << endl;
 #endif

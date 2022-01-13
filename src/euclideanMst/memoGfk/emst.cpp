@@ -17,9 +17,9 @@ using namespace pargeo::emstInternal;
 template<int dim>
 parlay::sequence<pargeo::wghEdge> pargeo::euclideanMst(parlay::sequence<pargeo::point<dim>> &S) {
   using pointT = point<dim>;
-  using nodeT = kdNode<dim, point<dim>>;
+  using nodeT = kdTree::node<dim, point<dim>>;
   using floatT = typename pointT::floatT;
-  using pairT = wsp<nodeT>;
+  using pairT = kdTree::wsp<nodeT>;
   using bcpT = tuple<pointT*, pointT*, floatT>;
 
   if (S.size() < 2) {
@@ -31,7 +31,7 @@ parlay::sequence<pargeo::wghEdge> pargeo::euclideanMst(parlay::sequence<pargeo::
   bool paraTree = true;
 
   //nodeT* tree = buildKdt<dim, point<dim>>(S, true, true);
-  nodeT* tree = buildKdTree<dim, point<dim>>(S, true, 1);
+  nodeT* tree = kdTree::build<dim, point<dim>>(S, true, 1);
 
   // cout << "build-tree-time = " << t0.get_next() << endl;
 

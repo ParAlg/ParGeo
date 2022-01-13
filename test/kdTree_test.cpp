@@ -5,12 +5,12 @@
 template <int dim>
 inline void testKdTree(parlay::sequence<pargeo::point<dim>>& P) {
   using namespace pargeo;
-  using nodeT = kdNode<dim, point<dim>>;
+  using nodeT = kdTree::node<dim, point<dim>>;
 
-  nodeT* tree1 = buildKdTree<dim, point<dim>>(P, true);
-  nodeT* tree2 = buildKdTree<dim, point<dim>>(P, false);
-  nodeT* tree3 = buildKdTree<dim, point<dim>>(P, true, 1);
-  nodeT* tree4 = buildKdTree<dim, point<dim>>(P, false, 1);
+  nodeT* tree1 = kdTree::build<dim, point<dim>>(P, true);
+  nodeT* tree2 = kdTree::build<dim, point<dim>>(P, false);
+  nodeT* tree3 = kdTree::build<dim, point<dim>>(P, true, 1);
+  nodeT* tree4 = kdTree::build<dim, point<dim>>(P, false, 1);
 
   std::function<size_t(nodeT*)> checkSum =
     [&](nodeT* node)->size_t {

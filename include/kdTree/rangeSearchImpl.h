@@ -27,7 +27,7 @@
 #include "kdTree.h"
 #include "pargeo/point.h"
 
-namespace pargeo {
+namespace pargeo::kdTree {
 
   template<int dim, typename nodeT, typename objT>
   void rangeHelper(nodeT* tree, objT& q, point<dim> qMin, point<dim> qMax,
@@ -57,8 +57,8 @@ namespace pargeo {
   }
 
   template<int dim, typename objT>
-  parlay::sequence<size_t> kdTreeRange(parlay::sequence<objT>& A,
-				       kdNode<dim, objT>* tree,
+  parlay::sequence<size_t> rangeSearch(parlay::sequence<objT>& A,
+				       node<dim, objT>* tree,
 				       objT query,
 				       double radius) {
     auto out = parlay::sequence<size_t>();
@@ -68,7 +68,7 @@ namespace pargeo {
       qMin[i] = tmp;
       qMax[i] = tmp + radius * 2;
     }
-    rangeHelper<dim, kdNode<dim, objT>, objT>(tree, query, qMin, qMax,
+    rangeHelper<dim, node<dim, objT>, objT>(tree, query, qMin, qMax,
 						 radius, out, A.data());
     return out;
   }
@@ -121,8 +121,8 @@ namespace pargeo {
   }
 
   template<int dim, typename objT>
-  parlay::sequence<size_t> kdTreeOrthRange(parlay::sequence<objT>& A,
-					   kdNode<dim, objT>* tree,
+  parlay::sequence<size_t> orthogonalRangeSearch(parlay::sequence<objT>& A,
+					   node<dim, objT>* tree,
 					   objT query,
 					   double halfLen) {
     auto out = parlay::sequence<size_t>();
@@ -132,7 +132,7 @@ namespace pargeo {
       qMin[i] = tmp;
       qMax[i] = tmp + halfLen * 2;
     }
-    orthRangeHelper<dim, kdNode<dim, objT>, objT>(tree, qMin, qMax,
+    orthRangeHelper<dim, node<dim, objT>, objT>(tree, qMin, qMax,
 						 out, A.data());
     return out;
   }

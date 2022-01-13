@@ -133,11 +133,11 @@ filterWspdSerial(double t_beta,
 
   auto myRho = rhoUpdateSerial<nodeT, UF>(t_beta, t_mst);
 
-  pargeo::computeWspdSerial<nodeT, rhoUpdateSerial<nodeT, UF>>(t_kdTree, &myRho);
+  pargeo::kdTree::computeWspdSerial<nodeT, rhoUpdateSerial<nodeT, UF>>(t_kdTree, &myRho);
 
   auto mySplitter = wspGetSerial<nodeT, UF>(t_beta, t_rho_lo, myRho.getRho(), t_kdTree, t_mst);
 
-  pargeo::computeWspdSerial<nodeT, wspGetSerial<nodeT, UF>>(t_kdTree, &mySplitter);
+  pargeo::kdTree::computeWspdSerial<nodeT, wspGetSerial<nodeT, UF>>(t_kdTree, &mySplitter);
 
   t_rho_hi = myRho.getRho();
   return mySplitter.collect();
@@ -260,11 +260,11 @@ filterWspdParallel(double t_beta,
 
   auto myRho = rhoUpdateParallel<nodeT, UF>(t_beta, t_mst);
 
-  pargeo::computeWspdParallel<nodeT, rhoUpdateParallel<nodeT, UF>>(t_kdTree, &myRho);
+  pargeo::kdTree::computeWspdParallel<nodeT, rhoUpdateParallel<nodeT, UF>>(t_kdTree, &myRho);
 
   auto mySplitter = wspGetParallel<nodeT, UF>(t_beta, t_rho_lo, myRho.getRho(), t_kdTree, t_mst);
 
-  pargeo::computeWspdParallel<nodeT, wspGetParallel<nodeT, UF>>(t_kdTree, &mySplitter);
+  pargeo::kdTree::computeWspdParallel<nodeT, wspGetParallel<nodeT, UF>>(t_kdTree, &mySplitter);
 
   t_rho_hi = myRho.getRho();
   return mySplitter.collect();

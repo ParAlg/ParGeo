@@ -65,11 +65,11 @@ namespace skeletonKdt {
   }
 
   template<int dim, class objT>
-  class kdNode {
+  class node {
     typedef int intT;
     typedef double floatT;
     typedef pargeo::point<dim> pointT;
-    typedef kdNode<dim, objT> nodeT;
+    typedef node<dim, objT> nodeT;
 
     static const int boxInclude = 0;
     static const int boxOverlap = 1;
@@ -174,7 +174,7 @@ namespace skeletonKdt {
 	if (median == 0 || median == n) {median = ceil(n/2.0);}
 
 	if (!space[0].isEmpty() || !space[2*median-1].isEmpty()) {
-	  throw std::runtime_error("Error, kdNode overwrite.");
+	  throw std::runtime_error("Error, node overwrite.");
 	}
 
 	// Recursive construction
@@ -210,7 +210,7 @@ namespace skeletonKdt {
 	if (median == 0 || median == n) {median = (n/2.0);}
 
 	if (!space[0].isEmpty() || !space[2*median-1].isEmpty()) {
-	  throw std::runtime_error("Error, kdNode overwrite.");
+	  throw std::runtime_error("Error, node overwrite.");
 	}
 
 	// Recursive construction
@@ -247,12 +247,12 @@ namespace skeletonKdt {
 
     inline pointT getMin() {return pMin;}
 
-    kdNode(parlay::slice<objT**, objT**> itemss, intT nn, nodeT *space, parlay::slice<bool*, bool*> flags, intT leafSize=16): items(itemss), n(nn) {
+    node(parlay::slice<objT**, objT**> itemss, intT nn, nodeT *space, parlay::slice<bool*, bool*> flags, intT leafSize=16): items(itemss), n(nn) {
       if (n>2000) constructParallel(space, flags, leafSize);
       else constructSerial(space, leafSize);
     }
 
-    kdNode(parlay::slice<objT**, objT**> itemss, intT nn, nodeT *space, intT leafSize=16): items(itemss), n(nn) {
+    node(parlay::slice<objT**, objT**> itemss, intT nn, nodeT *space, intT leafSize=16): items(itemss), n(nn) {
       constructSerial(space, leafSize);//todo get rid of intT n
     }
 
@@ -261,8 +261,8 @@ namespace skeletonKdt {
   };
 
   template<int dim, class objT>
-  kdNode<dim, objT>* buildKdt(parlay::sequence<objT>& P, bool parallel=true, bool noCoarsen=false) {
-    typedef kdNode<dim, objT> nodeT;
+  node<dim, objT>* buildKdt(parlay::sequence<objT>& P, bool parallel=true, bool noCoarsen=false) {
+    typedef node<dim, objT> nodeT;
 
     size_t n = P.size();
 
@@ -298,7 +298,7 @@ namespace skeletonKdt {
     - Edge vertices: e1, e2
    */
   template<int dim, class objT>
-  bool kdNode<dim, objT>::nonEmptyLuneHelper(pointT cMin1, pointT cMax1, pointT cMin2, pointT cMax2, objT& p1, double r1, objT& p2, double r2, objT* e1, objT* e2) {
+  bool node<dim, objT>::nonEmptyLuneHelper(pointT cMin1, pointT cMax1, pointT cMin2, pointT cMax2, objT& p1, double r1, objT& p2, double r2, objT* e1, objT* e2) {
     enum stateT {Include, Disjoint, Intersect};
 
     auto boxCompare = [&](pointT pMin1, pointT pMax1, pointT pMin2, pointT pMax2) {
@@ -334,8 +334,8 @@ namespace skeletonKdt {
 	return false;
       } else {
 	return
-	  L()->kdNode<dim, objT>::nonEmptyLuneHelper(cMin1, cMax1, cMin2, cMax2, p1, r1, p2, r2, e1, e2) ||
-	  R()->kdNode<dim, objT>::nonEmptyLuneHelper(cMin1, cMax1, cMin2, cMax2, p1, r1, p2, r2, e1, e2);
+	  L()->node<dim, objT>::nonEmptyLuneHelper(cMin1, cMax1, cMin2, cMax2, p1, r1, p2, r2, e1, e2) ||
+	  R()->node<dim, objT>::nonEmptyLuneHelper(cMin1, cMax1, cMin2, cMax2, p1, r1, p2, r2, e1, e2);
       }
     }
   }
@@ -347,7 +347,7 @@ namespace skeletonKdt {
     - Edge vertices: e1, e2
   */
   template<int dim, class objT>
-  bool kdNode<dim, objT>::nonEmptyLune(objT& p1, double r1, objT& p2, double r2, objT* e1, objT* e2) {
+  bool node<dim, objT>::nonEmptyLune(objT& p1, double r1, objT& p2, double r2, objT* e1, objT* e2) {
     pointT cMin1, cMax1, cMin2, cMax2;
     cMin1[0] = p1[0] - r1; cMin1[1] = p1[1] - r1;
     cMax1[0] = p1[0] + r1; cMax1[1] = p1[1] + r1;
