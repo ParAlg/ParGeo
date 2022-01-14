@@ -25,12 +25,14 @@ int main(int argc, char* argv[]) {
   /* Spherical range query example
      surrounding P[0] with radius 0.1 */
 
-  parlay::sequence<size_t> elems1 = pargeo::kdTree::rangeSearch(P, tree, P[0], 0.1);
+  parlay::sequence<pargeo::point<dim>*> elems1 =
+    pargeo::kdTree::rangeSearch(tree, P[0], 0.1);
 
   /* Rectangular range query example
      surrounding P[0] with half-length 0.1 */
 
-  parlay::sequence<size_t> elems2 = pargeo::kdTree::orthogonalRangeSearch(P, tree, P[0], 0.1);
+  parlay::sequence<pargeo::point<dim>*> elems2 =
+    pargeo::kdTree::orthogonalRangeSearch(tree, P[0], 0.1);
 
   pargeo::kdTree::del(tree);
 }

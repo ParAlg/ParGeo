@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
   /* Compute bichromatic closest pair between blue and red point sets */
 
   std::tuple<pargeo::point<dim>, pargeo::point<dim>, double> myBccp =
-    pargeo::kdTree::bccp(treeRed, treeBlue);
+    pargeo::kdTree::bichromaticClosestPair(treeRed, treeBlue);
 
   pargeo::kdTree::del(treeRed);
   pargeo::kdTree::del(treeBlue);

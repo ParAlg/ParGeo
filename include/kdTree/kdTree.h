@@ -291,13 +291,13 @@ namespace pargeo::kdTree {
   /* Kd-tree range search */
 
   template<int dim, typename objT>
-  parlay::sequence<size_t> rangeSearch(parlay::sequence<objT>& A,
+  parlay::sequence<objT*> rangeSearch(
 				       node<dim, objT>* tree,
 				       objT query,
 				       double radius);
 
   template<int dim, typename objT>
-  parlay::sequence<size_t> orthogonalRangeSearch(parlay::sequence<objT>& A,
+  parlay::sequence<objT*> orthogonalRangeSearch(
 					   node<dim, objT>* tree,
 					   objT query,
 					   double halfLen);
@@ -307,7 +307,7 @@ namespace pargeo::kdTree {
   template <typename nodeT>
   std::tuple<typename nodeT::objT*,
 	     typename nodeT::objT*,
-	     typename nodeT::objT::floatT> bccp(nodeT* n1, nodeT* n2);
+	     typename nodeT::objT::floatT> bichromaticClosestPair(nodeT* n1, nodeT* n2);
 
   /* Well-separated pair decomposition */
 

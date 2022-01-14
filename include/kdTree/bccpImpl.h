@@ -114,7 +114,7 @@ namespace pargeo::kdTree {
   template <typename nodeT>
   std::tuple<typename nodeT::objT*,
 	typename nodeT::objT*,
-	typename nodeT::objT::floatT> bccp(nodeT* n1, nodeT* n2) {
+	typename nodeT::objT::floatT> bichromaticClosestPair(nodeT* n1, nodeT* n2) {
     using namespace bccpInternal;
     using floatT = double;
 
