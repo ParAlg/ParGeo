@@ -1,0 +1,4 @@
+[submodule "external/parlaylib"]
+	path = external/parlaylib
+	url = https://github.com/ParAlg/parlaylib.git
+	branch = pargeo
