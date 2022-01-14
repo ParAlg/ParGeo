@@ -37,28 +37,63 @@ namespace pargeo::kdTree {
 
     using baseT = node<_dim, _objT>;
 
-    parlay::sequence<_objT*>* items;
+    parlay::sequence<_objT*>* allItems;
+    node<_dim, _objT>* space;
 
     public:
 
-    tree(parlay::sequence<_objT*>* _items,
-	      typename baseT::intT n,
-	      baseT *space,
-	      typename baseT::intT leafSize = 16):
-        items(_items),
-        node<_dim, _objT>(_items->cut(0, _items->size()), n, space, leafSize) { }
+    tree(parlay::slice<_objT*, _objT*> _items,
+	 typename baseT::intT leafSize = 16) {
 
-    tree(parlay::sequence<_objT*>* _items,
-	      typename baseT::intT n,
-	      baseT *space,
-	      parlay::slice<bool *, bool *> flags,
-	      typename baseT::intT leafSize = 16):
-        items(_items),
-        node<_dim, _objT>(_items->cut(0, _items->size()), n, space, flags, leafSize) { }
+      typedef tree<_dim, _objT> treeT;
+      typedef node<_dim, _objT> nodeT;
+
+      // allocate space for children
+      space = (nodeT*) malloc(sizeof(nodeT) * (2 * _items.size() - 1));
+
+      // allocate space for a copy of the items
+      allItems = new parlay::sequence<_objT*>(_items.size());
+
+      for (size_t i = 0; i < _items.size(); ++ i)
+	allItems->at(i) = &_items[i];
+
+      // construct self
+
+      baseT::items = allItems->cut(0, allItems->size());
+
+      baseT::resetId();
+      baseT::constructSerial(space, leafSize);
+    }
+
+    tree(parlay::slice<_objT*, _objT*> _items,
+	 parlay::slice<bool *, bool *> flags,
+	 typename baseT::intT leafSize = 16) {
+
+      typedef tree<_dim, _objT> treeT;
+      typedef node<_dim, _objT> nodeT;
+
+      // allocate space for children
+      space = (nodeT*) malloc(sizeof(nodeT) * (2 * _items.size() - 1));
+
+      // allocate space for a copy of the items
+      allItems = new parlay::sequence<_objT*>(_items.size());
+
+      parlay::parallel_for(0, _items.size(), [&](size_t i) {allItems->at(i) = &_items[i];});
+
+      // construct self
+
+      baseT::items = allItems->cut(0, allItems->size());
+
+      baseT::resetId();
+      if (baseT::size() > 2000) baseT::constructParallel(space, flags, leafSize);
+      else baseT::constructSerial(space, leafSize);
+    }
 
     ~tree() {
-      delete items;
+      free(space);
+      delete allItems;
     }
+
   };
 
   template<int _dim, class _objT>
@@ -211,6 +246,8 @@ namespace pargeo::kdTree {
       else if (include) return boxInclude;
       else return boxOverlap;
     }
+
+    node();
 
     node(parlay::slice<_objT**, _objT**> itemss,
 	   intT nn,

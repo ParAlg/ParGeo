@@ -192,6 +192,9 @@ namespace pargeo::kdTree {
   }
 
   template<int _dim, class _objT>
+  node<_dim, _objT>::node() { }
+
+  template<int _dim, class _objT>
   node<_dim, _objT>::node(parlay::slice<_objT**, _objT**> itemss,
 			      intT nn,
 			      nodeT *space,
@@ -251,28 +254,13 @@ namespace pargeo::kdTree {
     typedef tree<dim, objT> treeT;
     typedef node<dim, objT> nodeT;
 
-    size_t n = P.size();
-
-    parlay::sequence<objT*>* items =
-      new parlay::sequence<objT*>(n);
-
-    parlay::parallel_for(0, n, [&](size_t i) {items->at(i)=&P[i];});
-
-    auto root = (nodeT*) malloc(sizeof(nodeT)*(2*n-1));
-
-    // parlay::parallel_for(0, 2*n-1, [&](size_t i) {
-    //   root[i].setEmpty();
-    // });
-
     if (parallel) {
-      auto flags = parlay::sequence<bool>(n);
+      auto flags = parlay::sequence<bool>(P.size());
       auto flagSlice = parlay::slice(flags.begin(), flags.end());
-      root[0] = treeT(items, n, root + 1, flagSlice, leafSize);
+      return new treeT(P, flagSlice, leafSize);
     } else {
-      root[0] = treeT(items, n, root + 1, leafSize);
+      return new treeT(P, leafSize);
     }
-
-    return root;
   }
 
   template<int dim, class objT>
@@ -284,7 +272,7 @@ namespace pargeo::kdTree {
 
   template<int dim, class objT>
   void del(node<dim, objT>* tree) {
-    free(tree);
+    delete tree;
   }
 
 } // End namespace pargeo
