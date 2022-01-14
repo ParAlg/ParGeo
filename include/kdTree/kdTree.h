@@ -29,8 +29,75 @@
 namespace pargeo::kdTree
 {
 
+
+
+  /* Kd-tree node */
+
   template <int _dim, class _objT>
   class node;
+
+  /* Kd-tree construction and destruction */
+
+  template <int dim, class objT>
+  node<dim, objT> *build(parlay::slice<objT *, objT *> P,
+                         bool parallel = true,
+                         size_t leafSize = 16);
+
+  template <int dim, class objT>
+  node<dim, objT> *build(parlay::sequence<objT> &P,
+                         bool parallel = true,
+                         size_t leafSize = 16);
+
+  template <int dim, class objT>
+  void del(node<dim, objT> *tree);
+
+  /* Kd-tree knn search */
+
+  template <int dim, class objT>
+  parlay::sequence<size_t> batchKnn(parlay::sequence<objT> &queries,
+                                    size_t k,
+                                    node<dim, objT> *tree = nullptr,
+                                    bool sorted = false);
+
+  /* Kd-tree range search */
+
+  template <int dim, typename objT>
+  parlay::sequence<objT *> rangeSearch(
+      node<dim, objT> *tree,
+      objT query,
+      double radius);
+
+  template <int dim, typename objT>
+  parlay::sequence<objT *> orthogonalRangeSearch(
+      node<dim, objT> *tree,
+      objT query,
+      double halfLen);
+
+  /* Bichromatic closest pair */
+
+  template <typename nodeT>
+  std::tuple<typename nodeT::objT *,
+             typename nodeT::objT *,
+             typename nodeT::objT::floatT>
+  bichromaticClosestPair(nodeT *n1, nodeT *n2);
+
+  /* Well-separated pair decomposition */
+
+  template <typename nodeT>
+  struct wsp
+  {
+    nodeT *u;
+    nodeT *v;
+    wsp(nodeT *uu, nodeT *vv) : u(uu), v(vv) {}
+  };
+
+  template <int dim>
+  parlay::sequence<wsp<node<dim, point<dim>>>>
+  wellSeparatedPairDecomp(node<dim, point<dim>> *tree, double s = 2);
+
+
+
+  /********* Implementations *********/
 
   template <int _dim, class _objT>
   class tree : public node<_dim, _objT>
@@ -296,66 +363,7 @@ namespace pargeo::kdTree
     }
   };
 
-  /* Kd-tree construction and destruction */
-
-  template <int dim, class objT>
-  node<dim, objT> *build(parlay::slice<objT *, objT *> P,
-                         bool parallel = true,
-                         size_t leafSize = 16);
-
-  template <int dim, class objT>
-  node<dim, objT> *build(parlay::sequence<objT> &P,
-                         bool parallel = true,
-                         size_t leafSize = 16);
-
-  template <int dim, class objT>
-  void del(node<dim, objT> *tree);
-
-  /* Kd-tree knn search */
-
-  template <int dim, class objT>
-  parlay::sequence<size_t> batchKnn(parlay::sequence<objT> &queries,
-                                    size_t k,
-                                    node<dim, objT> *tree = nullptr,
-                                    bool sorted = false);
-
-  /* Kd-tree range search */
-
-  template <int dim, typename objT>
-  parlay::sequence<objT *> rangeSearch(
-      node<dim, objT> *tree,
-      objT query,
-      double radius);
-
-  template <int dim, typename objT>
-  parlay::sequence<objT *> orthogonalRangeSearch(
-      node<dim, objT> *tree,
-      objT query,
-      double halfLen);
-
-  /* Bichromatic closest pair */
-
-  template <typename nodeT>
-  std::tuple<typename nodeT::objT *,
-             typename nodeT::objT *,
-             typename nodeT::objT::floatT>
-  bichromaticClosestPair(nodeT *n1, nodeT *n2);
-
-  /* Well-separated pair decomposition */
-
-  template <typename nodeT>
-  struct wsp
-  {
-    nodeT *u;
-    nodeT *v;
-    wsp(nodeT *uu, nodeT *vv) : u(uu), v(vv) {}
-  };
-
-  template <int dim>
-  parlay::sequence<wsp<node<dim, point<dim>>>>
-  wellSeparatedPairDecomp(node<dim, point<dim>> *tree, double s = 2);
-
-} // End namespace pargeo
+} // End namespace pargeo::kdTree
 
 #include "treeImpl.h"
 #include "knnImpl.h"
