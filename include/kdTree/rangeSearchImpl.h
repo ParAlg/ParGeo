@@ -106,7 +106,7 @@ namespace pargeo::kdTree
 
   template <int dim, typename nodeT, typename objT>
   void orthRangeHelper(nodeT *tree, point<dim> qMin, point<dim> qMax,
-                       parlay::sequence<objT*> &out)
+                       parlay::sequence<objT *> &out)
   {
     int relation = tree->boxCompare(qMin, qMax, tree->getMin(), tree->getMax());
 
@@ -149,11 +149,11 @@ namespace pargeo::kdTree
   }
 
   template <int dim, typename objT>
-  parlay::sequence<objT*> orthogonalRangeSearch(node<dim, objT> *tree,
+  parlay::sequence<objT *> orthogonalRangeSearch(node<dim, objT> *tree,
                                                  objT query,
                                                  double halfLen)
   {
-    auto out = parlay::sequence<objT*>();
+    auto out = parlay::sequence<objT *>();
     point<dim> qMin, qMax;
     for (size_t i = 0; i < dim; i++)
     {

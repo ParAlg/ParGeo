@@ -203,6 +203,10 @@ TEST(kdTree_method, bichromaticClosestPair)
   EXPECT_FLOAT_EQ(std::get<0>(result)->dist(*std::get<1>(result)), sqrt(5));
 
   EXPECT_FLOAT_EQ(std::get<2>(result), sqrt(5));
+
+  kdTree::del(tree1);
+
+  kdTree::del(tree2);
 }
 
 int main(int argc, char **argv)
