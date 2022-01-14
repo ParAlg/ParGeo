@@ -91,7 +91,7 @@ struct wspGetSerial {
   }
 
   void run(nodeT *u, nodeT *v) {
-    auto bcp = bccp(u, v);
+    auto bcp = bichromaticClosestPair(u, v);
     if (u->size() + v->size() <= beta &&
         std::get<2>(bcp) >= rhoLo &&
         std::get<2>(bcp) < rhoHi) {
@@ -217,7 +217,7 @@ struct wspGetParallel {
   }
 
   void run(nodeT *u, nodeT *v) {
-    auto bcp = bccp(u, v);
+    auto bcp = bichromaticClosestPair(u, v);
     if (u->size() + v->size() <= beta &&
 	std::get<2>(bcp) >= rhoLo &&
         std::get<2>(bcp) < rhoHi) {

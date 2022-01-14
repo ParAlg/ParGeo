@@ -26,5 +26,5 @@ int main(int argc, char* argv[]) {
   parlay::sequence<pargeo::kdTree::wsp<pargeo::kdTree::node<dim, pargeo::point<dim>>>> pairs =
     pargeo::kdTree::wellSeparatedPairDecomp(T, 2);
 
-  free(T);
+  pargeo::kdTree::del(T);
 }

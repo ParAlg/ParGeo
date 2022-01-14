@@ -63,6 +63,8 @@ TEST(wspd_test, testSerial2d) {
   auto pairs2 = kdTree::wspdSerial(tree, 2.2);
 
   testWspd<2>(P, pairs2, 2.2);
+
+  kdTree::del(tree);
 }
 
 TEST(wspd_test, testParallel2d) {
@@ -85,6 +87,8 @@ TEST(wspd_test, testParallel2d) {
   auto pairs2 = kdTree::wellSeparatedPairDecomp(tree, 3.9);
 
   testWspd<2>(P, pairs2, 3.9);
+
+  kdTree::del(tree);
 }
 
 TEST(wspd_test, testSerial3d) {
@@ -107,6 +111,8 @@ TEST(wspd_test, testSerial3d) {
   auto pairs2 = kdTree::wspdSerial(tree, 2.2);
 
   testWspd<3>(P, pairs2, 2.2);
+
+  kdTree::del(tree);
 }
 
 TEST(wspd_test, testParallel3d) {
@@ -129,6 +135,8 @@ TEST(wspd_test, testParallel3d) {
   auto pairs2 = kdTree::wellSeparatedPairDecomp(tree, 3.9);
 
   testWspd<3>(P, pairs2, 3.9);
+
+  kdTree::del(tree);
 }
 
 int main(int argc, char **argv) {
