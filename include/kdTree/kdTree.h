@@ -198,13 +198,13 @@ namespace pargeo::kdTree
 
     inline void minCoords(pointT &_pMin, pointT &p)
     {
-      for (int i = 0; i < _pMin.dim; ++i)
+      for (int i = 0; i < dim; ++i)
         _pMin[i] = std::min(_pMin[i], p[i]);
     }
 
     inline void maxCoords(pointT &_pMax, pointT &p)
     {
-      for (int i = 0; i < _pMax.dim; ++i)
+      for (int i = 0; i < dim; ++i)
         _pMax[i] = std::max(_pMax[i], p[i]);
     }
 
