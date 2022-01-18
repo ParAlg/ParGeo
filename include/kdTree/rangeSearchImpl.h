@@ -30,9 +30,9 @@
 namespace pargeo::kdTree
 {
 
-  template <int dim, typename nodeT, typename objT>
+  template <int dim, typename nodeT, typename objT, typename F>
   void rangeHelper(nodeT *tree, objT &q, point<dim> qMin, point<dim> qMax,
-                   double radius, parlay::sequence<objT *> &out)
+                   double radius, F func)
   {
     int relation = tree->boxCompare(qMin, qMax, tree->getMin(), tree->getMax());
 
@@ -46,7 +46,7 @@ namespace pargeo::kdTree
       {
         objT *p = tree->getItem(i);
         if (p->dist(q) <= radius)
-          out.push_back(p);
+          func(p);
       }
     }
     else
@@ -58,24 +58,24 @@ namespace pargeo::kdTree
           objT *p = tree->getItem(i);
           double dist = q.dist(*p);
           if (dist <= radius)
-            out.push_back(p);
+            func(p);
         }
       }
       else
       {
-        rangeHelper<dim, nodeT, objT>(tree->L(), q, qMin, qMax, radius, out);
-        rangeHelper<dim, nodeT, objT>(tree->R(), q, qMin, qMax, radius, out);
+        rangeHelper<dim, nodeT, objT>(tree->L(), q, qMin, qMax, radius, func);
+        rangeHelper<dim, nodeT, objT>(tree->R(), q, qMin, qMax, radius, func);
       }
     }
   }
 
-  template <int dim, typename objT>
-  parlay::sequence<objT *> rangeSearch(
+  template <int dim, typename objT, typename F>
+  void rangeTraverse(
       node<dim, objT> *tree,
       objT query,
-      double radius)
+      double radius,
+      F func)
   {
-    auto out = parlay::sequence<objT *>();
     point<dim> qMin, qMax;
     for (size_t i = 0; i < dim; i++)
     {
@@ -84,8 +84,20 @@ namespace pargeo::kdTree
       qMax[i] = tmp + radius * 2;
     }
     rangeHelper<dim, node<dim, objT>, objT>(tree, query, qMin, qMax,
-                                            radius, out);
-    return out;
+                                            radius, func);
+  }
+
+  template <int dim, typename objT>
+  parlay::sequence<objT *> rangeSearch(
+      node<dim, objT> *tree,
+      objT query,
+      double radius)
+  {
+    parlay::sequence<objT *> output;
+    auto collect = [&](objT *p)
+    { output.push_back(p); };
+    rangeTraverse(tree, query, radius, collect);
+    return output;
   }
 
   template <int dim, typename objT>
@@ -104,9 +116,9 @@ namespace pargeo::kdTree
                           { return i < elems.size(); });
   }
 
-  template <int dim, typename nodeT, typename objT>
+  template <int dim, typename nodeT, typename objT, typename F>
   void orthRangeHelper(nodeT *tree, point<dim> qMin, point<dim> qMax,
-                       parlay::sequence<objT *> &out)
+                       F func)
   {
     int relation = tree->boxCompare(qMin, qMax, tree->getMin(), tree->getMax());
 
@@ -119,7 +131,7 @@ namespace pargeo::kdTree
       for (size_t i = 0; i < tree->size(); ++i)
       {
         objT *p = tree->getItem(i);
-        out.push_back(p);
+        func(p);
       }
     }
     else
@@ -137,23 +149,23 @@ namespace pargeo::kdTree
               in = false;
           }
           if (in)
-            out.push_back(p);
+            func(p);
         }
       }
       else
       {
-        orthRangeHelper<dim, nodeT, objT>(tree->L(), qMin, qMax, out);
-        orthRangeHelper<dim, nodeT, objT>(tree->R(), qMin, qMax, out);
+        orthRangeHelper<dim, nodeT, objT>(tree->L(), qMin, qMax, func);
+        orthRangeHelper<dim, nodeT, objT>(tree->R(), qMin, qMax, func);
       }
     }
   }
 
-  template <int dim, typename objT>
-  parlay::sequence<objT *> orthogonalRangeSearch(node<dim, objT> *tree,
-                                                 objT query,
-                                                 double halfLen)
+  template <int dim, typename objT, typename F>
+  void orthogonalRangeTraverse(node<dim, objT> *tree,
+                               objT query,
+                               double halfLen,
+                               F func)
   {
-    auto out = parlay::sequence<objT *>();
     point<dim> qMin, qMax;
     for (size_t i = 0; i < dim; i++)
     {
@@ -161,8 +173,19 @@ namespace pargeo::kdTree
       qMin[i] = tmp;
       qMax[i] = tmp + halfLen * 2;
     }
-    orthRangeHelper<dim, node<dim, objT>, objT>(tree, qMin, qMax, out);
-    return out;
+    orthRangeHelper<dim, node<dim, objT>, objT>(tree, qMin, qMax, func);
+  }
+
+  template <int dim, typename objT>
+  parlay::sequence<objT *> orthogonalRangeSearch(node<dim, objT> *tree,
+                                                 objT query,
+                                                 double halfLen)
+  {
+    parlay::sequence<objT *> output;
+    auto collect = [&](objT *p)
+    { output.push_back(p); };
+    orthogonalRangeTraverse(tree, query, halfLen, collect);
+    return output;
   }
 
   template <int dim, typename objT>

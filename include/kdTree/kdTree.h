@@ -67,11 +67,25 @@ namespace pargeo::kdTree
       objT query,
       double radius);
 
+  template <int dim, typename objT, typename F>
+  void rangeTraverse(
+      node<dim, objT> *tree,
+      objT query,
+      double radius,
+      F func);
+
   template <int dim, typename objT>
   parlay::sequence<objT *> orthogonalRangeSearch(
       node<dim, objT> *tree,
       objT query,
       double halfLen);
+
+  template <int dim, typename objT, typename F>
+  void orthogonalRangeTraverse(
+      node<dim, objT> *tree,
+      objT query,
+      double halfLen,
+      F func);
 
   /* Bichromatic closest pair */
 
