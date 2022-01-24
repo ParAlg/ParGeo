@@ -25,7 +25,7 @@
 #include "parlay/primitives.h"
 #include "parlay/parallel.h"
 #include "pargeo/atomics.h"
-#include "pargeo/edge.h"
+#include "spatialGraph/edge.h"
 
 namespace pargeo {
 
