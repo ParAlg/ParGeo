@@ -1,16 +1,15 @@
 #include "pargeo/pointIO.h"
-#include "pargeo/kdTree.h"
-#include "pargeo/wspd.h"
+#include "kdTree/kdTree.h"
 #include "gtest/gtest.h"
 
 template <int dim>
 inline void testWspd(parlay::sequence<pargeo::point<dim>>& P,
-		     parlay::sequence<pargeo::wsp<pargeo::kdNode<dim, pargeo::point<dim>>>> pairs,
+		     parlay::sequence<pargeo::kdTree::wsp<pargeo::kdTree::node<dim, pargeo::point<dim>>>> pairs,
 		     double constant) {
   using namespace std;
   using namespace pargeo;
   using pointT = point<dim>;
-  using nodeT = kdNode<dim, point<dim>>;
+  using nodeT = kdTree::node<dim, point<dim>>;
 
   // Check that each pair is well separated
   for (auto pair: pairs) {
@@ -55,15 +54,17 @@ TEST(wspd_test, testSerial2d) {
   parlay::sequence<pargeo::point<2>> P =
     readPointsFromFile<pargeo::point<2>>(filePath);
 
-  kdNode<2, point<2>>* tree = buildKdt<2, point<2>>(P, true, true);
+  kdTree::node<2, point<2>>* tree = kdTree::build<2, point<2>>(P, true, 1);
 
-  auto pairs1 = wspdSerial(tree, 2);
+  auto pairs1 = kdTree::wspdSerial(tree, 2);
 
   testWspd<2>(P, pairs1, 2);
 
-  auto pairs2 = wspdSerial(tree, 2.2);
+  auto pairs2 = kdTree::wspdSerial(tree, 2.2);
 
   testWspd<2>(P, pairs2, 2.2);
+
+  kdTree::del(tree);
 }
 
 TEST(wspd_test, testParallel2d) {
@@ -77,15 +78,17 @@ TEST(wspd_test, testParallel2d) {
   parlay::sequence<pargeo::point<2>> P =
     readPointsFromFile<pargeo::point<2>>(filePath);
 
-  kdNode<2, point<2>>* tree = buildKdt<2, point<2>>(P, true, true);
+  kdTree::node<2, point<2>>* tree = kdTree::build<2, point<2>>(P, true, 1);
 
-  auto pairs1 = wspdParallel(tree, 2);
+  auto pairs1 = kdTree::wellSeparatedPairDecomp(tree, 2);
 
   testWspd<2>(P, pairs1, 2);
 
-  auto pairs2 = wspdParallel(tree, 3.9);
+  auto pairs2 = kdTree::wellSeparatedPairDecomp(tree, 3.9);
 
   testWspd<2>(P, pairs2, 3.9);
+
+  kdTree::del(tree);
 }
 
 TEST(wspd_test, testSerial3d) {
@@ -99,15 +102,17 @@ TEST(wspd_test, testSerial3d) {
   parlay::sequence<pargeo::point<3>> P =
     readPointsFromFile<pargeo::point<3>>(filePath);
 
-  kdNode<3, point<3>>* tree = buildKdt<3, point<3>>(P, true, true);
+  kdTree::node<3, point<3>>* tree = kdTree::build<3, point<3>>(P, true, 1);
 
-  auto pairs1 = wspdSerial(tree, 2);
+  auto pairs1 = kdTree::wspdSerial(tree, 2);
 
   testWspd<3>(P, pairs1, 2);
 
-  auto pairs2 = wspdSerial(tree, 2.2);
+  auto pairs2 = kdTree::wspdSerial(tree, 2.2);
 
   testWspd<3>(P, pairs2, 2.2);
+
+  kdTree::del(tree);
 }
 
 TEST(wspd_test, testParallel3d) {
@@ -121,15 +126,17 @@ TEST(wspd_test, testParallel3d) {
   parlay::sequence<pargeo::point<3>> P =
     readPointsFromFile<pargeo::point<3>>(filePath);
 
-  kdNode<3, point<3>>* tree = buildKdt<3, point<3>>(P, true, true);
+  kdTree::node<3, point<3>>* tree = kdTree::build<3, point<3>>(P, true, 1);
 
-  auto pairs1 = wspdParallel(tree, 2);
+  auto pairs1 = kdTree::wellSeparatedPairDecomp(tree, 2);
 
   testWspd<3>(P, pairs1, 2);
 
-  auto pairs2 = wspdParallel(tree, 3.9);
+  auto pairs2 = kdTree::wellSeparatedPairDecomp(tree, 3.9);
 
   testWspd<3>(P, pairs2, 3.9);
+
+  kdTree::del(tree);
 }
 
 int main(int argc, char **argv) {

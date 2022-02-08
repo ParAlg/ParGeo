@@ -17,7 +17,7 @@ static void BM_kdTree_2d_includeTree(benchmark::State& state) {
   using namespace pargeo;
   auto points = data2d(state.range(0));
   for (auto _ : state) {
-    kdNode<2, point<2>>* tree =
+    node<2, point<2>>* tree =
       buildKdt<2, point<2>>(points, true, true);
   }
 }
@@ -26,7 +26,7 @@ static void BM_kdTree_3d_includeTree(benchmark::State& state) {
   using namespace pargeo;
   auto points = data3d(state.range(0));
   for (auto _ : state) {
-    kdNode<3, point<3>>* tree =
+    node<3, point<3>>* tree =
       buildKdt<3, point<3>>(points, true, true);
   }
 }

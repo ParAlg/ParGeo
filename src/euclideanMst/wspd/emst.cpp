@@ -2,10 +2,8 @@
 #include "parlay/sequence.h"
 #include "pargeo/getTime.h"
 #include "pargeo/point.h"
-#include "pargeo/wspd.h"
-#include "pargeo/kdTree.h"
-#include "pargeo/bccp.h"
-#include "pargeo/kruskal.h"
+#include "kdTree/kdTree.h"
+#include "euclideanMst/kruskal.h"
 #include "euclideanMst/euclideanMst.h"
 
 using namespace parlay;
@@ -18,7 +16,8 @@ parlay::sequence<pargeo::wghEdge> pargeo::euclideanMst(parlay::sequence<pargeo::
 
   timer t;
 
-  nodeT* tree = buildKdt<dim, point<dim>>(S, true, true);
+  //nodeT* tree = buildKdt<dim, point<dim>>(S, true, true);
+  nodeT* tree = buildKdTree<dim, point<dim>>(S, true, 1);
 
   cout << "build-time = " << t.get_next() << endl;
 

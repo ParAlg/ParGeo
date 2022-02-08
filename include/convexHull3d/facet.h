@@ -5,21 +5,15 @@
 namespace pargeo {
   namespace hull3d {
 
-    /* Clockwise oriented 3d facet */
-
-    template <typename _pointT> class facet {
-    public:
-      using pointT = _pointT;
-
-      pointT a, b, c;
-
-      facet(pointT _a, pointT _b, pointT _c): a(_a), b(_b), c(_c) {
-
-	if (pargeo::determinant3by3(a, b, c) > 0)
-	  std::swap(b, c);
-
+    // Clockwise oriented 3d facet
+    template <class pt>
+    struct facet {
+      using pointT = pt;
+      pt a, b, c;// Indices into P
+      facet(pt _a, pt _b, pt _c): a(_a), b(_b), c(_c) {
+	      if (pargeo::determinant3by3(a, b, c) > 0)
+	        std::swap(b, c);
       }
-
     };
 
   } // End namespace hull3d

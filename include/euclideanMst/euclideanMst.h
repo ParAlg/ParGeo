@@ -1,7 +1,7 @@
 #pragma once
 
 #include "parlay/sequence.h"
-#include "pargeo/edge.h"
+#include "spatialGraph/edge.h"
 #include "pargeo/point.h"
 
 namespace pargeo {

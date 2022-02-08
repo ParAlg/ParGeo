@@ -51,8 +51,10 @@ add_test(NAME dynKdTree_test COMMAND dynKdTree_test)
 
 add_executable(closestPair_test closestPair_test.cpp)
 target_link_libraries(closestPair_test PRIVATE
-  pargeoLib ${GTest_LIBRARIES})
-add_test(NAME cloestPair_test COMMAND closestPair_test)
+  closestPairLib
+  pargeoLib
+  ${GTest_LIBRARIES})
+add_test(NAME closetPair_test COMMAND closestPair_test)
 
 add_executable(wspd_test wspd_test.cpp)
 target_link_libraries(wspd_test PRIVATE
@@ -67,11 +69,6 @@ target_link_libraries(hull_test PRIVATE
   serialHull3dLib
   ${GTest_LIBRARIES})
 add_test(NAME hull_test COMMAND hull_test)
-
-add_executable(hullTopology_test hullTopology_test.cpp)
-target_link_libraries(hullTopology_test PRIVATE
-  pargeoLib ${GTest_LIBRARIES})
-add_test(NAME hullTopology_test COMMAND hullTopology_test)
 
 add_executable(dataset_test dataset_test.cpp)
 target_link_libraries(dataset_test PRIVATE

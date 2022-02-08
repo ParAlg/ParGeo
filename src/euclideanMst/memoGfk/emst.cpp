@@ -3,10 +3,8 @@
 #include "parlay/sequence.h"
 #include "pargeo/getTime.h"
 #include "pargeo/point.h"
-#include "pargeo/wspd.h"
-#include "pargeo/kdTree.h"
-#include "pargeo/bccp.h"
-#include "pargeo/kruskal.h"
+#include "kdTree/kdTree.h"
+#include "euclideanMst/kruskal.h"
 #include "euclideanMst/euclideanMst.h"
 #include "wspdFilter.h"
 #include "mark.h"
@@ -19,9 +17,9 @@ using namespace pargeo::emstInternal;
 template<int dim>
 parlay::sequence<pargeo::wghEdge> pargeo::euclideanMst(parlay::sequence<pargeo::point<dim>> &S) {
   using pointT = point<dim>;
-  using nodeT = kdNode<dim, point<dim>>;
+  using nodeT = kdTree::node<dim, point<dim>>;
   using floatT = typename pointT::floatT;
-  using pairT = wsp<nodeT>;
+  using pairT = kdTree::wsp<nodeT>;
   using bcpT = tuple<pointT*, pointT*, floatT>;
 
   if (S.size() < 2) {
@@ -32,7 +30,8 @@ parlay::sequence<pargeo::wghEdge> pargeo::euclideanMst(parlay::sequence<pargeo::
   // t0.start();
   bool paraTree = true;
 
-  nodeT* tree = buildKdt<dim, point<dim>>(S, true, true);
+  //nodeT* tree = buildKdt<dim, point<dim>>(S, true, true);
+  nodeT* tree = kdTree::build<dim, point<dim>>(S, true, 1);
 
   // cout << "build-tree-time = " << t0.get_next() << endl;
 
@@ -104,6 +103,7 @@ parlay::sequence<pargeo::wghEdge> pargeo::euclideanMst(parlay::sequence<pargeo::
   // cout << "wspd-time = " << wspdTime << endl;
   // cout << "kruskal-time = " << kruskalTime << endl;
   // cout << "mark-time = " << markTime << endl;
+  pargeo::kdTree::del(tree);
   return UF.getEdge();
 }
 

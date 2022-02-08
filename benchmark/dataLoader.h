@@ -4,7 +4,7 @@
 #include "pargeo/pointIO.h"
 #include "parlay/sequence.h"
 
-size_t N = 10000000;
+size_t N = 1000000;
 
 /* Synthetic data sets */
 

@@ -1,8 +1,7 @@
+#include "kdTree/kdTree.h"
 #include "parlay/parallel.h"
 #include "parlay/primitives.h"
 #include "pargeo/point.h"
-#include "pargeo/kdTree.h"
-#include "pargeo/wspd.h"
 #include "pargeo/getTime.h"
 #include "spatialGraph/spatialGraph.h"
 
@@ -13,8 +12,8 @@ parlay::sequence<pargeo::edge> pargeo::spanner(parlay::sequence<pargeo::point<di
   using namespace parlay;
 
   using pointT = point<dim>;
-  using nodeT = kdNode<dim, pointT>;
-  using pairT = wsp<nodeT>;
+  using nodeT = kdTree::node<dim, pointT>;
+  using pairT = kdTree::wsp<nodeT>;
 
   // cout << t << "-spanner of " << S.size() << ", dim " << dim << " points" << endl;
   if (S.size() < 2) abort();
@@ -27,10 +26,10 @@ parlay::sequence<pargeo::edge> pargeo::spanner(parlay::sequence<pargeo::point<di
   timer t0;
   t0.start();
 
-  nodeT* tree = buildKdt<dim, point<dim>>(S, true, true);
+  nodeT* tree = kdTree::build<dim, point<dim>>(S, true, 1);
   // cout << "build-tree-time = " << t0.get_next() << endl;
 
-  auto wspd = wspdParallel<dim>(tree, s);
+  auto wspd = kdTree::wellSeparatedPairDecomp<dim>(tree, s);
   // cout << "decomposition-time = " << t0.get_next() << endl;
 
   auto edges = sequence<edge>(wspd.size());
@@ -42,6 +41,7 @@ parlay::sequence<pargeo::edge> pargeo::spanner(parlay::sequence<pargeo::point<di
     });
 
   // cout << "edge-count = " << edges.size() << endl;
+  kdTree::del(tree);
 
   return edges;
 }
