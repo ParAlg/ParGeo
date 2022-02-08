@@ -54,7 +54,7 @@ target_link_libraries(closestPair_test PRIVATE
   closestPairLib
   pargeoLib
   ${GTest_LIBRARIES})
-add_test(NAME cloestPair_test COMMAND closestPair_test)
+add_test(NAME closetPair_test COMMAND closestPair_test)
 
 add_executable(wspd_test wspd_test.cpp)
 target_link_libraries(wspd_test PRIVATE
