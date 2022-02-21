@@ -84,5 +84,12 @@ target_link_libraries(seb_test PRIVATE
   ${GTest_LIBRARIES})
 add_test(NAME seb_test COMMAND seb_test)
 
+add_executable(seedSpreader_test seedSpreader_test.cpp)
+target_link_libraries(seedSpreader_test PRIVATE
+  datasetLib
+  pargeoLib
+  ${GTest_LIBRARIES})
+add_test(NAME seedSpreader_test COMMAND seedSpreader_test)
+
 message(STATUS "CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}")
 file(COPY datasets DESTINATION ${CMAKE_BINARY_DIR}/test)
