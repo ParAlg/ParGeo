@@ -1,3 +1,4 @@
+
 /* The seed spreader is based on these papers:
 [1] Junhao Gan, Yufei Tao. On the Hardness and Approximation of Euclidean DBSCAN
 [2] Junhao Gan, Yufei Tao. DBSCAN Revisited: Mis-Claim, Un-Fixability, and Approximation
@@ -179,6 +180,34 @@ pargeo::seedSpreader::vardenGenerator(size_t n, double rhoNoise) {
 
 template parlay::sequence<pargeo::point<2>>
 pargeo::seedSpreader::simdenGenerator<2>(size_t, double);
+template parlay::sequence<pargeo::point<3>>
+pargeo::seedSpreader::simdenGenerator<3>(size_t, double);
+template parlay::sequence<pargeo::point<4>>
+pargeo::seedSpreader::simdenGenerator<4>(size_t, double);
+template parlay::sequence<pargeo::point<5>>
+pargeo::seedSpreader::simdenGenerator<5>(size_t, double);
+template parlay::sequence<pargeo::point<6>>
+pargeo::seedSpreader::simdenGenerator<6>(size_t, double);
+template parlay::sequence<pargeo::point<7>>
+pargeo::seedSpreader::simdenGenerator<7>(size_t, double);
+template parlay::sequence<pargeo::point<8>>
+pargeo::seedSpreader::simdenGenerator<8>(size_t, double);
+template parlay::sequence<pargeo::point<9>>
+pargeo::seedSpreader::simdenGenerator<9>(size_t, double);
 
 template parlay::sequence<pargeo::point<2>>
 pargeo::seedSpreader::vardenGenerator<2>(size_t, double);
+template parlay::sequence<pargeo::point<3>>
+pargeo::seedSpreader::vardenGenerator<3>(size_t, double);
+template parlay::sequence<pargeo::point<4>>
+pargeo::seedSpreader::vardenGenerator<4>(size_t, double);
+template parlay::sequence<pargeo::point<5>>
+pargeo::seedSpreader::vardenGenerator<5>(size_t, double);
+template parlay::sequence<pargeo::point<6>>
+pargeo::seedSpreader::vardenGenerator<6>(size_t, double);
+template parlay::sequence<pargeo::point<7>>
+pargeo::seedSpreader::vardenGenerator<7>(size_t, double);
+template parlay::sequence<pargeo::point<8>>
+pargeo::seedSpreader::vardenGenerator<8>(size_t, double);
+template parlay::sequence<pargeo::point<9>>
+pargeo::seedSpreader::vardenGenerator<9>(size_t, double);

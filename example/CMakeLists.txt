@@ -29,6 +29,11 @@ target_link_libraries(mortonSort pargeoLib)
 add_executable(uniformDataGenerator uniformDataGenerator.cpp)
 target_link_libraries(uniformDataGenerator pargeoLib)
 
+add_executable(seedSpreader seedSpreaderGenerator.cpp)
+target_link_libraries(seedSpreader
+  datasetLib
+  pargeoLib)
+
 add_executable(convexHull convexHull.cpp)
 target_link_libraries(convexHull pargeoLib
   divideHull2dLib
