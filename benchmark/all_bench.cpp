@@ -9,7 +9,7 @@
 #include "kdTree/kdTree.h"
 #include "mortonSort/mortonSort.h"
 #include "parlay/utilities.h"
-#include "dynamicKdTree/dynKdTree.h"
+#include "dynamicKdTree/baseline/dynKdTree.h"
 #include "spatialGraph/spatialGraph.h"
 
 int N = 1000000;

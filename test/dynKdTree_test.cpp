@@ -3,7 +3,7 @@
 #include "dataset/uniform.h"
 #include "parlay/sequence.h"
 #include "pargeo/pointIO.h"
-#include "dynamicKdTree/dynKdTree.h"
+#include "dynamicKdTree/baseline/dynKdTree.h"
 #include "gtest/gtest.h"
 
 

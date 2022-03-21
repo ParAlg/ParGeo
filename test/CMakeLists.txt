@@ -91,5 +91,7 @@ target_link_libraries(seedSpreader_test PRIVATE
   ${GTest_LIBRARIES})
 add_test(NAME seedSpreader_test COMMAND seedSpreader_test)
 
+add_subdirectory(dynKdTree_tests)
+
 message(STATUS "CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}")
 file(COPY datasets DESTINATION ${CMAKE_BINARY_DIR}/test)

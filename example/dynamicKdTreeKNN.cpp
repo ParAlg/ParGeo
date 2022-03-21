@@ -1,7 +1,7 @@
 #include <assert.h>
 #include "dataset/uniform.h"
 #include <iostream>
-#include "dynamicKdTree/dynKdTree.h" /* Include dynamic kdTree */
+#include "dynamicKdTree/baseline/dynKdTree.h" /* Include dynamic kdTree */
 #include "pargeo/getTime.h"
 #include "pargeo/point.h"
 

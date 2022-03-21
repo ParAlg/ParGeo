@@ -6,8 +6,8 @@
 #include <iostream>
 #include <vector>
 
-#include "../parlay/parallel.h"
-#include "../parlay/sequence.h"
+#include "parlay/parallel.h"
+#include "parlay/sequence.h"
 
 template <typename T>
 using container = parlay::sequence<T>;

@@ -32,6 +32,8 @@ namespace pargeo {
 
     _point(_tData* p) { for (int i=0; i<_dim; ++i) x[i]=p[i]; }
 
+    _point(const _tData* p) { for (int i=0; i<_dim; ++i) x[i]=p[i]; }
+
     _point(_tData* p, _tAtt _attribute): attribute(_attribute) {
       for (int i=0; i<_dim; ++i) x[i]=p[i];
     }
@@ -121,6 +123,20 @@ namespace pargeo {
 
     _tFloat length() {
       return sqrt((_tFloat)lenSqr());}
+
+  // TODO the following methods should be deprecated
+
+  void minCoords(const _point &b) {
+    for (int i=0; i<_dim; ++i) x[i] = std::min(x[i], b.x[i]);}
+
+  void minCoords(floatT* b) {
+    for (int i=0; i<_dim; ++i) x[i] = std::min(x[i], b[i]);}
+
+  void maxCoords(const _point &b) {
+    for (int i=0; i<_dim; ++i) x[i] = std::max(x[i], b.x[i]);}
+
+  void maxCoords(floatT* b) {
+    for (int i=0; i<_dim; ++i) x[i] = std::max(x[i], b[i]);}
   };
 
   template<int dim>
