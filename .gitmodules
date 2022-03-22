@@ -2,3 +2,6 @@
 	path = external/parlaylib
 	url = https://github.com/ParAlg/parlaylib.git
 	branch = pargeo
+[submodule "external/batchKdTree"]
+	path = external/batchKdTree
+	url = https://github.com/wangyiqiu/batch-dynamic-kdtree.git
