@@ -4,13 +4,14 @@
 #include "BasicStructure.h"
 #include <gtest/gtest.h>
 //#include "common/geometryIO.h"
+#include "pargeo/point.h"
 #include "pargeo/pointIO.h"
 
 #include <algorithm>
 //#include <kdtree/shared/box.h>
 #include "dynamicKdTree/shared/box.h"
 
-typedef point<2> pointT;
+typedef pargeo::point<2> pointT;
 template <typename Tree>
 class Shared2DTest : public BasicStructure2D<Tree> {
  public:
@@ -23,7 +24,7 @@ TYPED_TEST_P(Shared2DTest, Verify) {
   auto tree = this->CONSTRUCT_RESOURCES_1000();
   ASSERT_TRUE(tree.verify());
   auto points = this->RESOURCES_1000();
-  for (const auto& p : points) {
+  for (auto& p : points) {
     ASSERT_TRUE(tree.contains(p));
   }
 
@@ -31,7 +32,7 @@ TYPED_TEST_P(Shared2DTest, Verify) {
   for (int i = 0; i < 100; i++) {
     point_buf[0] = (double)i;
     point_buf[1] = (double)i;
-    point<this->DIM> p(point_buf);
+    pargeo::point<this->DIM> p(point_buf);
     ASSERT_FALSE(tree.contains(p));
   }
 }
@@ -41,7 +42,7 @@ TYPED_TEST_P(Shared2DTest, SimpleDelete) {
   auto points = this->RESOURCES_1000();
 
   // make sure it's built correctly
-  for (const auto& p : points)
+  for (auto& p : points)
     ASSERT_TRUE(tree.contains(p));
 
   // Individual Deletes
@@ -107,10 +108,10 @@ TYPED_TEST_P(Shared2DTest, BulkDelete) {
 TYPED_TEST_P(Shared2DTest, BulkInsert) {
   auto tree = this->CONSTRUCT_RESOURCES_1000_EVEN();
   auto points = this->RESOURCES_1000();
-  const auto to_insert = KEEP_ODD(points);
+  auto to_insert = KEEP_ODD(points);
 
   // make sure even points aren't in tree
-  for (const auto& pt : to_insert) {
+  for (auto& pt : to_insert) {
     ASSERT_FALSE(tree.contains(pt));
   }
 
@@ -119,7 +120,7 @@ TYPED_TEST_P(Shared2DTest, BulkInsert) {
 
   // verify the insertion
   int i = 0;
-  for (const auto& pt : points) {
+  for (auto& pt : points) {
     ASSERT_TRUE(tree.contains(pt)) << "POINT #" << i;
     i++;
   }

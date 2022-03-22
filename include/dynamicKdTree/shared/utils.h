@@ -32,10 +32,10 @@ template <class objT, bool select = false>
 static inline double split_val(const parlay::slice<objT *, objT *> &items, int dimension) {
   auto split_point = split_n(items);
   if (select) {  // only have split_point in place, not element before, so can only use it.
-    return items[split_point].coordinate(dimension);
+    return items[split_point][dimension];
   } else {
-    return (items[split_point - 1].coordinate(dimension) +
-            items[split_point].coordinate(dimension)) /
+    return (items[split_point - 1][dimension] +
+            items[split_point][dimension]) /
            2.0;
   }
 }
@@ -44,8 +44,8 @@ static inline double split_val(const parlay::slice<objT *, objT *> &items, int d
 // sort based implementation
 template <class objT, bool parallel>
 static inline void medianPartitionSort(parlay::slice<objT *, objT *> &items, int dimension) {
-  auto compare = [dimension](const objT &l, const objT &r) {
-    return l.coordinate(dimension) < r.coordinate(dimension);
+  auto compare = [dimension](objT &l, objT &r) {
+    return l[dimension] < r[dimension];
   };
 
   if (parallel) {
@@ -59,8 +59,8 @@ static inline void medianPartitionSort(parlay::slice<objT *, objT *> &items, int
 template <class objT>
 static inline void serialMedianPartitionSelect(parlay::slice<objT *, objT *> &items,
                                                int dimension) {
-  auto compare = [dimension](const objT &l, const objT &r) {
-    return l.coordinate(dimension) < r.coordinate(dimension);
+  auto compare = [dimension](objT &l, objT &r) {
+    return l[dimension] < r[dimension];
   };
 
   auto split_point = split_n(items);
@@ -95,7 +95,7 @@ double serialMedianPartition(parlay::slice<objT *, objT *> items, int dimension)
 
 template <class objT>
 auto serialPartition(parlay::slice<objT *, objT *> points, int dimension, double value) {
-  auto comp_lambda = [dimension, value](const objT &o) { return o.coordinate(dimension) < value; };
+  auto comp_lambda = [dimension, value](objT &o) { return o[dimension] < value; };
   auto ret_it = std::partition(points.begin(), points.end(), comp_lambda);
   return ret_it - points.begin();
 }
@@ -115,7 +115,7 @@ auto parallelPartition(parlay::slice<objT *, objT *> points,
 #endif
 
   parlay::parallel_for(0, points.size(), [dimension, value, points, flags](size_t i) {
-    if (points[i].coordinate(dimension) < value)
+    if (points[i][dimension] < value)
       flags[i] = false;
     else
       flags[i] = true;

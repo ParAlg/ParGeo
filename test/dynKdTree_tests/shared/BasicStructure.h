@@ -85,7 +85,7 @@ class BasicStructure2D : public ::testing::Test {
 
     parlay::sequence<pargeo::point<dim>> points =
       pargeo::pointIO::readPointsFromFile<pargeo::point<dim>>(test_file);
-    const auto to_insert = KEEP_EVEN(points);
+    auto to_insert = KEEP_EVEN(points);
 
     Tree ret(10);
     ret.insert(to_insert.cut(0, to_insert.size()));

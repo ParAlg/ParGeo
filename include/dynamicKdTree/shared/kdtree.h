@@ -31,7 +31,7 @@ struct FoundPoint {
   long int gparent_idx;
   int point_idx;  // index of point in [subtree_items]
 };
-[[maybe_unused]] static std::ostream &operator<<(std::ostream &os, const FoundPoint &fp) {
+[[maybe_unused]] static std::ostream &operator<<(std::ostream &os, FoundPoint &fp) {
   os << "{node_idx=" << fp.idx << ", parent_idx=" << fp.parent_idx
      << ", gparent_idx=" << fp.gparent_idx << ", point_idx=" << fp.point_idx << "}";
   return os;
@@ -191,7 +191,7 @@ class KdTree {
   // return getNodeValueIdx(n).first;
   //}
 
-  bool contains(const objT &p) const {
+  bool contains(objT &p) const {
     if (empty()) return false;
 
     auto node = nodes;
@@ -219,7 +219,7 @@ class KdTree {
     return ret;
   }
 
-  FoundPoint find(const objT &p) const {
+  FoundPoint find(objT &p) const {
     if (!empty()) {
       auto node = nodes;
       nodeT *parent = nullptr;
@@ -252,7 +252,7 @@ class KdTree {
     return {FoundPoint::NOT_FOUND, FoundPoint::NOT_FOUND, FoundPoint::NOT_FOUND, -1};
   }
 
-  parlay::sequence<objT> orthogonalQuery(const objT &qMin, const objT &qMax) const {
+  parlay::sequence<objT> orthogonalQuery(objT &qMin, objT &qMax) {
     parlay::sequence<objT> ret;
     if (!empty()) {
       nodes[0].orthogonalQuery(qMin, qMax, items.begin(), present, ret);
@@ -274,22 +274,22 @@ class KdTree {
 #endif
 
   template <bool update, bool recurse_sibling>
-  void knnSinglePoint(const objT &p, knnBuf::buffer<const pointT *> &buf) const {
+  void knnSinglePoint(objT &p, knnBuf::buffer<pointT *> &buf) {
     nodes[0].template knnHelper<update, recurse_sibling>(
-        pointT(p.coordinate()), items.begin(), present, buf);
+        pointT(p.coords()), items.begin(), present, buf);
     buf.keepK();  // TODO: could cause problems in logtree when running on nearly depleted
                   // subtree
   }
 
   template <bool set_res, bool update, bool recurse_sibling>
   void knnSinglePoint(
-      const objT &p,
+      objT &p,
       int i,
-      parlay::slice<knnBuf::elem<const pointT *> *, knnBuf::elem<const pointT *> *> &out,
-      parlay::slice<const pointT **, const pointT **> &res,
+      parlay::slice<knnBuf::elem<pointT *> *, knnBuf::elem<pointT *> *> &out,
+      parlay::slice<pointT **, pointT **> &res,
       int k,
-      bool preload) const {
-    auto buf = knnBuf::buffer<const pointT *>(k, out.cut(i * 2 * k, (i + 1) * 2 * k));
+      bool preload) {
+    auto buf = knnBuf::buffer<pointT *>(k, out.cut(i * 2 * k, (i + 1) * 2 * k));
     if (preload) buf.ptr = k;
     knnSinglePoint<update, recurse_sibling>(p, buf);
 
@@ -317,11 +317,11 @@ class KdTree {
   }
 
   template <bool set_res, bool update, bool recurse_sibling>
-  void knn(const parlay::sequence<objT> &queries,
-           parlay::slice<knnBuf::elem<const pointT *> *, knnBuf::elem<const pointT *> *> &out,
-           parlay::slice<const pointT **, const pointT **> &res,
+  void knn(parlay::sequence<objT> &queries,
+           parlay::slice<knnBuf::elem<pointT *> *, knnBuf::elem<pointT *> *> &out,
+           parlay::slice<pointT **, pointT **> &res,
            int k,
-           bool preload = false) const {
+           bool preload = false) {
     assert(res.size() == k * queries.size());
     assert(out.size() == 2 * k * queries.size());
 
@@ -349,9 +349,9 @@ class KdTree {
   }
 
   template <bool update = false, bool recurse_sibling = false>
-  parlay::sequence<const pointT *> knn(const parlay::sequence<objT> &queries, int k) const {
-    parlay::sequence<const pointT *> res(k * queries.size());
-    parlay::sequence<knnBuf::elem<const pointT *>> out(2 * k * queries.size());
+  parlay::sequence<pointT *> knn(parlay::sequence<objT> &queries, int k) {
+    parlay::sequence<pointT *> res(k * queries.size());
+    parlay::sequence<knnBuf::elem<pointT *>> out(2 * k * queries.size());
 
     auto res_slice = res.head(res.size());
     auto out_slice = out.head(out.size());
@@ -514,7 +514,7 @@ class KdTree {
 
   // Basic Erase-By-Point: Directly erase the passed-in points in a single phase. ------------------
   template <bool log_tree = false>
-  bool erase(const objT &point) {
+  bool erase(objT &point) {
     const auto &found_node = find(point);
     if (found_node.idx != FoundPoint::NOT_FOUND) {
       // Found!
@@ -530,13 +530,13 @@ class KdTree {
    */
   template <bool log_tree>
   void erase(parlay::slice<objT *, objT *> points) {
-    for (const auto &p : points)
+    for (auto &p : points)
       erase<log_tree>(p);
   }
 
   template <bool log_tree>
-  void erase(const parlay::sequence<objT> &points) {
-    for (const auto &p : points)
+  void erase(parlay::sequence<objT> &points) {
+    for (auto &p : points)
       erase<log_tree>(p);
   }
 

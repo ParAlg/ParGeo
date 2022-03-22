@@ -17,7 +17,7 @@ enum BoxComparison { BOX_INCLUDE = 0, BOX_OVERLAP, BOX_EXCLUDE };
 template <int dim, class objT>
 inline bool itemInBox(pargeo::point<dim> &pMin1, pargeo::point<dim> &pMax1, objT *item) {
   for (int i = 0; i < dim; ++i) {
-    if (pMax1[i] < item[i] || pMin1[i] > item[i])
+    if (pMax1[i] < item->at(i) || pMin1[i] > item->at(i))
       return false;
   }
   return true;

@@ -197,7 +197,7 @@ class BHL_KdTree : public KdTree<dim, objT, parallel, coarsen> {
 #endif
   }
 
-  void insert(const parlay::slice<const objT *, const objT *> &points) {
+  void insert(parlay::slice<objT *, objT *> &points) {
     if (points.size() == 0) return;
 #ifndef NDEBUG
 #warning "this is probably bad for runtime - remove later"

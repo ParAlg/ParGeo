@@ -57,7 +57,7 @@ class LogTree {
 #elif (PARTITION_TYPE == PARTITION_SPATIAL_MEDIAN)
   typedef BHL_KdTree<dim, objT, parallel, coarsen> staticTree;
 #endif
-  typedef point<dim> pointT;
+  typedef pargeo::point<dim> pointT;
 #ifdef LOGTREE_USE_BLOOM
   typedef BloomFilter<dim> BloomFilterT;
 #endif
@@ -1053,7 +1053,7 @@ class LogTree {
         // queryTree.unsafe_root(), buffer_tree.root(), queryTree, buffer_tree, buf_slice);
         //#endif
         //#else
-        timer t;
+        //timer t; // TODO
 #if (LOGTREE_BUFFER == ARR_BUFFER)
         buffer_tree.knn(queryTree.items, buf_slice);
 #else

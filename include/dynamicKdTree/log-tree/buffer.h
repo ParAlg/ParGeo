@@ -8,7 +8,7 @@
 
 template <int dim, class objT, bool parallel = false>
 class alignas(64) LogTreeBuffer {
-  typedef point<dim> pointT;
+  typedef pargeo::point<dim> pointT;
   // simple wrapper around parlay::sequence
   parlay::sequence<objT> items;
   parlay::sequence<bool> present;
@@ -136,7 +136,7 @@ class alignas(64) LogTreeBuffer {
     return ret;
   }
 
-  void knnSinglePoint(const objT &p, knnBuf::buffer<const pointT *> &buf) const {
+  void knnSinglePoint(const objT &p, knnBuf::buffer<pointT *> &buf) {
     auto cur_end = items.size() - insert_size;
     for (size_t i = 0; i < cur_end; i++) {
       if (present[i]) {
@@ -153,7 +153,7 @@ class alignas(64) LogTreeBuffer {
   void knnSinglePoint(
       const objT &p,
       int i,
-      parlay::slice<knnBuf::elem<const pointT *> *, knnBuf::elem<const pointT *> *> &out,
+      parlay::slice<knnBuf::elem<pointT *> *, knnBuf::elem<pointT *> *> &out,
       parlay::slice<const pointT **, const pointT **> &res,
       int k,
       bool preload) const {
@@ -170,7 +170,7 @@ class alignas(64) LogTreeBuffer {
   }
 
   void knn(const parlay::sequence<objT> &queries,
-           parlay::slice<knnBuf::buffer<const pointT *> *, knnBuf::buffer<const pointT *> *> &bufs)
+           parlay::slice<knnBuf::buffer<pointT *> *, knnBuf::buffer<pointT *> *> &bufs)
       const {
     if (parallel) {
       parlay::parallel_for(
@@ -183,8 +183,8 @@ class alignas(64) LogTreeBuffer {
 
   template <bool set_res, bool _update, bool _recurse_sibling>
   void knn(const parlay::sequence<objT> &queries,
-           parlay::slice<knnBuf::elem<const pointT *> *, knnBuf::elem<const pointT *> *> &out,
-           parlay::slice<const pointT **, const pointT **> &res,
+           parlay::slice<knnBuf::elem<pointT *> *, knnBuf::elem<pointT *> *> &out,
+           parlay::slice<pointT **, pointT **> &res,
            int k,
            bool preload = false) const {
     assert(res.size() == k * queries.size());

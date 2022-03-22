@@ -264,7 +264,7 @@ class kdNode {
                        objT &qMax,
                        objT *tree_start,
                        parlay::sequence<bool> &present,
-                       parlay::sequence<objT> &ret) const {
+                       parlay::sequence<objT> &ret) {
     auto cmp = boxCompare(qMin, qMax, pMin, pMax);
     if (cmp == BOX_EXCLUDE) {
       return;
@@ -312,11 +312,11 @@ class kdNode {
     }
   }
 
-  void knnAddToBuffer(const pointT &q,
-                      const objT *tree_start,
-                      const parlay::sequence<bool> &present,
-                      knnBuf::buffer<const pointT *> &out,
-                      double radius = std::numeric_limits<double>::max()) const {
+  void knnAddToBuffer(pointT &q,
+                      objT *tree_start,
+                      parlay::sequence<bool> &present,
+                      knnBuf::buffer<pointT *> &out,
+                      double radius = std::numeric_limits<double>::max()) {
     // TODO: maybe parallelize?
     auto start = getStartValue() - tree_start;
     [[maybe_unused]] auto end = getEndValue() - tree_start;
@@ -383,10 +383,10 @@ class kdNode {
   // Taken with modifications from:
   // https://github.mit.edu/yiqiuw/pargeo/blob/master/knnSearch/kdTree/kdtKnn.h#L365
   template <bool update, bool recurse_sibling>
-  void knnHelper(const pointT &q,
-                 const objT *tree_start,
-                 const parlay::sequence<bool> &present,
-                 knnBuf::buffer<const pointT *> &out) const {
+  void knnHelper(pointT &q,
+                 objT *tree_start,
+                 parlay::sequence<bool> &present,
+                 knnBuf::buffer<pointT *> &out) {
     // first, find the leaf
     nodeT *other_child;
     if (isLeaf()) {

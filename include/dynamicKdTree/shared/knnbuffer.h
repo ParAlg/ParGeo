@@ -62,27 +62,28 @@ struct buffer {
   }
 };
 
-template <int dim>
-parlay::sequence<const pargeo::point<dim>*> bruteforceKnn(const parlay::sequence<pargeo::point<dim>>& queries,
-                                                  size_t k) {
-  auto out = parlay::sequence<elem<const pargeo::point<dim>*>>(2 * k * queries.size());
-  auto idx = parlay::sequence<const pargeo::point<dim>*>(k * queries.size());
-  parlay::parallel_for(0, queries.size(), [&](size_t i) {
-    auto q = queries[i];
-    buffer buf = buffer<const pargeo::point<dim>*>(k, out.cut(i * 2 * k, (i + 1) * 2 * k));
-    for (intT j = 0; j < (int)queries.size(); ++j) {
-      auto p = &queries[j];
-      buf.insert(elem(q.dist(p), p));
-    }
-    buf.keepK();
+// TODO
+// template <int dim>
+// parlay::sequence<const pargeo::point<dim>*> bruteforceKnn(const parlay::sequence<pargeo::point<dim>>& queries,
+//                                                   size_t k) {
+//   auto out = parlay::sequence<elem<const pargeo::point<dim>*>>(2 * k * queries.size());
+//   auto idx = parlay::sequence<const pargeo::point<dim>*>(k * queries.size());
+//   parlay::parallel_for(0, queries.size(), [&](size_t i) {
+//     auto q = queries[i];
+//     buffer buf = buffer<pargeo::point<dim>*>(k, out.cut(i * 2 * k, (i + 1) * 2 * k));
+//     for (intT j = 0; j < (int)queries.size(); ++j) {
+//       auto p = &queries[j];
+//       buf.insert(elem(q.dist(p), p));
+//     }
+//     buf.keepK();
 
-    // store results
-    for (size_t j = 0; j < k; j++) {
-      idx[i * k + j] = buf[j].entry;
-    }
-  });
-  return idx;
-}
+//     // store results
+//     for (size_t j = 0; j < k; j++) {
+//       idx[i * k + j] = buf[j].entry;
+//     }
+//   });
+//   return idx;
+// }
 
 }  // namespace knnBuf
 
