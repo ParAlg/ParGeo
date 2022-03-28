@@ -27,7 +27,7 @@
 #include "kdTree.h"
 #include "pargeo/parBuffer.h"
 
-namespace pargeo::kdTree
+namespace pargeo::kdTreeNUMA
 {
 
   // ------------ Serial implementation --------------

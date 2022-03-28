@@ -25,8 +25,10 @@
 #include "parlay/sequence.h"
 #include "pargeo/point.h"
 #include <tuple>
+#include <numa.h>
+#include <numaif.h>
 
-namespace pargeo::kdTree
+namespace pargeo::kdTreeNUMA
 {
 
 
@@ -40,11 +42,13 @@ namespace pargeo::kdTree
 
   template <int dim, class objT>
   node<dim, objT> *build(parlay::slice<objT *, objT *> P,
+                         int node = -1,
                          bool parallel = true,
                          size_t leafSize = 16);
 
   template <int dim, class objT>
   node<dim, objT> *build(parlay::sequence<objT> &P,
+                         int node = -1,
                          bool parallel = true,
                          size_t leafSize = 16);
 
@@ -122,6 +126,7 @@ namespace pargeo::kdTree
 
     parlay::sequence<_objT *> *allItems;
     node<_dim, _objT> *space;
+    bool numa = false;
 
   public:
     tree(parlay::slice<_objT *, _objT *> _items,
@@ -176,9 +181,23 @@ namespace pargeo::kdTree
         baseT::constructSerial(space, leafSize);
     }
 
+    // copy space and allItems to space2 and allItems2. 
+    // space2 must have size at least the size of space
+    // void copyTo(node<_dim, _objT> *space2, parlay::sequence<_objT *> *allItems2, parlay::slice<_objT *, _objT *> _items2){
+    //   parlay::parallel_for(0, space.size(), [&](size_t i)
+    //                        { space2[i] = space[i]; });
+    // }
+    // tree(tree<_dim, _objT>& tree0, int node){
+    //   space = (nodeT *)malloc(sizeof(nodeT) * (2 * _items.size() - 1));
+
+    // }
+
     ~tree()
     {
+      if(numa){ numa_free(space);
+      }else{
       free(space);
+      }
       delete allItems;
     }
   };
@@ -377,7 +396,7 @@ namespace pargeo::kdTree
     }
   };
 
-} // End namespace pargeo::kdTree
+} // End namespace pargeo::kdTreeNUMA
 
 #include "treeImpl.h"
 #include "knnImpl.h"

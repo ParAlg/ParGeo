@@ -25,7 +25,7 @@
 #include "limits.h"
 #include <tuple>
 
-namespace pargeo::kdTree
+namespace pargeo::kdTreeNUMA
 {
 
 	namespace bccpInternal

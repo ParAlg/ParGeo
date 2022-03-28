@@ -26,7 +26,7 @@
 #include "parlay/utilities.h"
 #include "kdTree.h"
 
-namespace pargeo::kdTree
+namespace pargeo::kdTreeNUMA
 {
 
   namespace kdTreeInternal
@@ -311,6 +311,7 @@ namespace pargeo::kdTree
 
   template <int dim, class objT>
   node<dim, objT> *build(parlay::slice<objT *, objT *> P,
+                         int node,
                          bool parallel,
                          size_t leafSize)
   {
@@ -331,6 +332,7 @@ namespace pargeo::kdTree
 
   template <int dim, class objT>
   node<dim, objT> *build(parlay::sequence<objT> &P,
+                         int node,
                          bool parallel,
                          size_t leafSize)
   {

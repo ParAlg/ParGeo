@@ -27,7 +27,7 @@
 #include "kdTree.h"
 #include "pargeo/point.h"
 
-namespace pargeo::kdTree
+namespace pargeo::kdTreeNUMA
 {
 
   template <int dim, typename nodeT, typename objT, typename F>
