@@ -60,6 +60,9 @@ namespace pargeo::batchKdTree {
 #define ARR_BUFFER 1
 #define LOGTREE_BUFFER BHL_BUFFER
 
+// KNN OPTIMIZATION
+#define FEWER_SQRT 1
+
 // LEAF CLUSTER SIZE
 #ifndef CLUSTER_SIZE
 #define CLUSTER_SIZE 16

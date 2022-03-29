@@ -335,6 +335,8 @@ class kdNode {
     }
   }
 
+#if FEWER_SQRT == 1
+
   void knnAddToBuffer(const pointT &q,
                       const objT *tree_start,
                       const parlay::sequence<bool> &present,
@@ -462,6 +464,135 @@ class kdNode {
       other_child->knnPrune<update>(q, tree_start, present, radiusSqr, qMin, qMax, out);
     }
   }
+
+#else
+
+  void knnAddToBuffer(const pointT &q,
+                      const objT *tree_start,
+                      const parlay::sequence<bool> &present,
+                      knnBuf::buffer<const pointT *> &out,
+                      double radius = std::numeric_limits<double>::max()) const {
+    // TODO: maybe parallelize?
+    auto start = getStartValue() - tree_start;
+    [[maybe_unused]] auto end = getEndValue() - tree_start;
+    assert(end > start);
+    assert(subtree_items.size() == (size_t)(end - start));
+
+    for (size_t i = 0; i < subtree_items.size(); i++) {
+      if (present[start + i]) {  // point isn't deleted
+        auto dist = q.dist(subtree_items[i]);
+        if (dist <= radius) {  // point within radius of interest
+          const pointT *item_ptr = subtree_items.begin() + i;
+          out.insert(knnBuf::elem(dist, item_ptr));
+        }
+      }
+    }
+  }
+
+  template <bool update>
+  void knnPrune(const pointT &q,
+                const objT *tree_start,
+                const parlay::sequence<bool> &present,
+                double &radius,
+                pointT &qMin,
+                pointT &qMax,
+                knnBuf::buffer<const pointT *> &out) const {
+    if (update) {
+      // compute current radius
+      auto tmp = out.keepK();
+      auto new_radius = tmp.cost;
+
+      // update the query box if necessary
+      if (new_radius < radius) {
+        radius = new_radius;
+        // create box based on radius
+        for (int i = 0; i < dim; i++) {
+          qMin[i] = q.coordinate(i) - radius;
+          qMax[i] = q.coordinate(i) + radius;
+        }
+      }
+    }
+
+    // search only the intersection of the subtree with the radius-box
+    auto cmp = boxCompare(qMin, qMax, pMin, pMax);
+    switch (cmp) {
+      case BOX_EXCLUDE: {
+        return;
+      }
+      case BOX_INCLUDE: {
+        knnAddToBuffer(q, tree_start, present, out, radius);
+        break;
+      }
+      case BOX_OVERLAP: {
+        if (isLeaf()) {
+          knnAddToBuffer(q, tree_start, present, out, radius);
+        } else {
+          left->knnPrune<update>(q, tree_start, present, radius, qMin, qMax, out);
+          right->knnPrune<update>(q, tree_start, present, radius, qMin, qMax, out);
+        }
+        break;
+      }
+    }
+  }
+
+  // Taken with modifications from:
+  // https://github.mit.edu/yiqiuw/pargeo/blob/master/knnSearch/kdTree/kdtKnn.h#L365
+  template <bool update, bool recurse_sibling>
+  void knnHelper(const pointT &q,
+                 const objT *tree_start,
+                 const parlay::sequence<bool> &present,
+                 knnBuf::buffer<const pointT *> &out) const {
+    // first, find the leaf
+    nodeT *other_child;
+    if (isLeaf()) {
+      knnAddToBuffer(q, tree_start, present, out);
+      return;  // base case
+    } else {
+      if (q.coordinate(split_dimension) < split_value) {
+        // TODO: hint to compiler that [left] will pretty much never be null
+        if (left) left->knnHelper<update, recurse_sibling>(q, tree_start, present, out);
+        other_child = right;
+      } else {
+        if (right) right->knnHelper<update, recurse_sibling>(q, tree_start, present, out);
+        other_child = left;
+      }
+    }
+
+    // now, check alternate children with aggressive pruning
+    if (!out.hasK()) {
+      // try finding knn on other child
+      if (recurse_sibling) {
+        other_child->knnHelper<update, recurse_sibling>(q, tree_start, present, out);
+      } else {
+        other_child->knnAddToBuffer(q, tree_start, present, out);
+      }
+    } else {
+      double radius = std::numeric_limits<double>::max();
+      pointT qMin, qMax;
+
+      if (!update) {
+        // compute current radius
+        auto tmp = out.keepK();
+        auto new_radius = tmp.cost;
+
+        // update the query box if necessary
+        if (new_radius < radius) {
+          radius = new_radius;
+          // create box based on radius
+          for (int i = 0; i < dim; i++) {
+            qMin[i] = q.coordinate(i) - radius;
+            qMax[i] = q.coordinate(i) + radius;
+          }
+        } else {
+          assert(false);
+        }
+      }
+
+      other_child->knnPrune<update>(q, tree_start, present, radius, qMin, qMax, out);
+    }
+  }
+
+#endif
 
   // TODO Dual knn tests fail potentially due to sqrt optimization above
 
