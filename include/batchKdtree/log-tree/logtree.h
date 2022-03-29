@@ -814,6 +814,16 @@ class LogTree {
 #ifdef PRINT_LOGTREE_TIMINGS
     timer t;
 #endif
+
+#if SPATIAL_SORT == 1
+    if (objT::dim == 2) {
+      pargeo::zorderSort2d_2<objT>(queries);
+    }
+    else if (objT::dim == 3) {
+      pargeo::zorderSort3d_2<objT>(queries);
+    }
+#endif
+
     constexpr int BUFFER_TREE_IDX = -1;
     auto tree_ids = gatherFullTrees();
 
@@ -873,6 +883,16 @@ class LogTree {
 
   template <bool update = false, bool recurse_sibling = false>
   parlay::sequence<const pointT*> knn2(const parlay::sequence<objT>& queries, int k) const {
+
+#if SPATIAL_SORT == 1
+    if (objT::dim == 2) {
+      pargeo::zorderSort2d_2<objT>(queries);
+    }
+    else if (objT::dim == 3) {
+      pargeo::zorderSort3d_2<objT>(queries);
+    }
+#endif
+
     constexpr int BUFFER_TREE_IDX = -1;
     auto tree_ids = gatherFullTrees();
 
@@ -917,6 +937,16 @@ class LogTree {
 
   template <bool update = false, bool recurse_sibling = false>
   parlay::sequence<const pointT*> knn(const parlay::sequence<objT>& queries, int k) const {
+
+#if SPATIAL_SORT == 1
+    if (objT::dim == 2) {
+      pargeo::zorderSort2d_2<objT>(queries);
+    }
+    else if (objT::dim == 3) {
+      pargeo::zorderSort3d_2<objT>(queries);
+    }
+#endif
+
 #ifdef PRINT_LOGTREE_TIMINGS
     timer t;
 #endif
