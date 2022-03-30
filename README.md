@@ -1,4 +1,4 @@
-# **  Forked ParGeo: A Library for Parallel Computational Geometry**
+# **ParGeo: A Library for Parallel Computational Geometry**
 
 ParGeo is a library containing a collection of implementations of parallel algorithms in computational geometry in low-dimensional space.
 
