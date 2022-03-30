@@ -18,33 +18,31 @@ using namespace std;
 template <int _dim> class point {
   // Internal declarations
   typedef int intT;
-  typedef double _floatT;
+  typedef double floatT;
   typedef point pointT;
   static constexpr double empty = numeric_limits<double>::max();
 
 public:
 
-  using floatT = _floatT;
-
   static const int dim = _dim;
 
   // Data field
 
-  _floatT x[_dim];
+  floatT x[_dim];
 
   // Constructors
 
   point() { for (int i=0; i<_dim; ++i) x[i]=empty; }
 
-  point(const _floatT* p) { for (int i=0; i<_dim; ++i) x[i]=p[i]; }
+  point(const floatT* p) { for (int i=0; i<_dim; ++i) x[i]=p[i]; }
 
   point(const pointT* p) { for (int i=0; i<_dim; ++i) x[i]=p->x[i]; }
 
-  point(parlay::slice<_floatT*,_floatT*> p) {
+  point(parlay::slice<floatT*,floatT*> p) {
     for(int i=0; i<_dim; ++i) x[i] = p[i];}
 
   // useful for tests
-  point(std::initializer_list<_floatT> l) {
+  point(std::initializer_list<floatT> l) {
     int i = 0;
     for(auto elem: l) {
       if(i >= _dim) break;
@@ -71,19 +69,17 @@ public:
     for (int i=0; i<_dim; ++i) xx[i] = x[i]-op2.x[i];
     return pointT(xx);}
 
-  pointT operator/(_floatT dv) {
+  pointT operator/(floatT dv) {
     floatT xx[_dim];
     for (int i=0; i<_dim; ++i) xx[i] = x[i]/dv;
     return pointT(xx);}
 
-  pointT operator*(_floatT dv) {
+  pointT operator*(floatT dv) {
     floatT xx[_dim];
     for (int i=0; i<_dim; ++i) xx[i] = x[i]*dv;
     return pointT(xx);}
 
-  _floatT& operator[](int i) {return x[i];}
-
-  const _floatT readCoord(const int i) const {return x[i];}
+  floatT& operator[](int i) {return x[i];}
 
   friend bool operator==(pointT a, pointT b) {
     for (intT ii=0; ii<dim; ++ii) {
@@ -92,9 +88,9 @@ public:
 
   friend bool operator!=(pointT a, pointT b) {return !(a==b);}
 
-  const _floatT* coordinate() const {return x;}
+  const floatT* coordinate() const {return x;}
 
-  _floatT coordinate(int i) const {return x[i];}
+  floatT coordinate(int i) const {return x[i];}
 
   //void updateCoordinate(int i, floatT val) {x[i]=val;}
 
@@ -106,13 +102,13 @@ public:
   void minCoords(const pointT &b) {
     for (int i=0; i<_dim; ++i) x[i] = min(x[i], b.x[i]);}
 
-  void minCoords(_floatT* b) {
+  void minCoords(floatT* b) {
     for (int i=0; i<_dim; ++i) x[i] = min(x[i], b[i]);}
 
   void maxCoords(const pointT &b) {
     for (int i=0; i<_dim; ++i) x[i] = max(x[i], b.x[i]);}
 
-  void maxCoords(_floatT* b) {
+  void maxCoords(floatT* b) {
     for (int i=0; i<_dim; ++i) x[i] = max(x[i], b[i]);}
 
   intT quadrant(pointT center) {
@@ -124,29 +120,29 @@ public:
     }
     return index;}
 
-  bool outOfBox(pointT center, _floatT hsize) {
+  bool outOfBox(pointT center, floatT hsize) {
     for (int i=0; i<_dim; ++i) {
       if (x[i]-hsize > center.x[i] || x[i]+hsize < center.x[i])
         return true;
     }
     return false;}
 
-  inline _floatT dist(const pointT &p) const {
+  inline floatT dist(const pointT &p) const {
     floatT xx=0;
     for (int i=0; i<_dim; ++i) xx += (x[i]-p.x[i])*(x[i]-p.x[i]);
     return sqrt(xx);}
 
-  inline _floatT distSqr(const pointT &p) const {
+  inline floatT distSqr(const pointT &p) const {
     floatT xx=0;
     for (int i=0; i<_dim; ++i) xx += (x[i]-p.x[i])*(x[i]-p.x[i]);
     return xx;}
 
-  _floatT dot(pointT p2) {
+  floatT dot(pointT p2) {
     floatT r = 0;
     for(int i=0; i<dim; ++i) r += x[i]*p2[i];
     return r;}
 
-  pointT mult(_floatT c) {
+  pointT mult(floatT c) {
     pointT r;
     for(int i=0; i<dim; ++i) r[i] = x[i]*c;
     return r;}
@@ -159,7 +155,7 @@ public:
     for (int i=0; i<dim; ++i) r[i] /= s;
     return r;}
 
-  _floatT length() {
+  floatT length() {
     floatT xx=0;
     for (int i=0; i<_dim; ++i) xx += x[i]*x[i];
     return sqrt(xx);}

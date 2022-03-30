@@ -32,8 +32,6 @@
 #include "box.h"
 #include "macro.h"
 
-#include "mortonSort/mortonSort.h"
-
 #ifdef ALL_USE_BLOOM
 #include "bloom.h"
 #endif
@@ -331,15 +329,6 @@ class KdTree {
       const {
     assert(bufs.size() == queries.size());
 
-#if SPATIAL_SORT == 1
-    if (objT::dim == 2) {
-      pargeo::zorderSort2d_2<objT>(queries);
-    }
-    else if (objT::dim == 3) {
-      pargeo::zorderSort3d_2<objT>(queries);
-    }
-#endif
-
     if (parallel) {
       parlay::parallel_for(0, queries.size(), [&](size_t i) {
         knnSinglePoint<update, recurse_sibling>(queries[i], bufs[i]);
@@ -358,15 +347,6 @@ class KdTree {
            bool preload = false) const {
     assert(res.size() == k * queries.size());
     assert(out.size() == 2 * k * queries.size());
-
-#if SPATIAL_SORT == 1
-    if (objT::dim == 2) {
-      pargeo::zorderSort2d_2<objT>(queries);
-    }
-    else if (objT::dim == 3) {
-      pargeo::zorderSort3d_2<objT>(queries);
-    }
-#endif
 
     if (parallel) {
       parlay::parallel_for(0, queries.size(), [&](size_t i) {
@@ -395,15 +375,6 @@ class KdTree {
   parlay::sequence<const pointT *> knn(const parlay::sequence<objT> &queries, int k) const {
     parlay::sequence<const pointT *> res(k * queries.size());
     parlay::sequence<knnBuf::elem<const pointT *>> out(2 * k * queries.size());
-
-#if SPATIAL_SORT == 1
-    if (objT::dim == 2) {
-      pargeo::zorderSort2d_2<objT>(queries);
-    }
-    else if (objT::dim == 3) {
-      pargeo::zorderSort3d_2<objT>(queries);
-    }
-#endif
 
     auto res_slice = res.head(res.size());
     auto out_slice = out.head(out.size());
