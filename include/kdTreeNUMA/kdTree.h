@@ -121,10 +121,11 @@ namespace pargeo::kdTreeNUMA
   class tree : public node<_dim, _objT>
   {
 
-  private:
+  protected:
     using baseT = node<_dim, _objT>;
 
-    parlay::sequence<_objT *> *allItems;
+    // parlay::slice<_objT **, _objT **> allItems; //why allitems is a pointer
+    _objT ** allItems_alloc;
     node<_dim, _objT> *space;
     bool numa = false;
 
@@ -140,14 +141,20 @@ namespace pargeo::kdTreeNUMA
       space = (nodeT *)malloc(sizeof(nodeT) * (2 * _items.size() - 1));
 
       // allocate space for a copy of the items
-      allItems = new parlay::sequence<_objT *>(_items.size());
+      _objT ** allItems_alloc = (_objT **)malloc(sizeof(_objT *) * _items.size());
+      // allItems = parlay::slice<_objT **, _objT **>(allItems_alloc, allItems_alloc+_items.size());
+      // allItems = new parlay::sequence<_objT *>(_items.size());
 
-      for (size_t i = 0; i < _items.size(); ++i)
-        allItems->at(i) = &_items[i];
+      // for (size_t i = 0; i < _items.size(); ++i)
+      //   allItems[i] = &_items[i];
 
       // construct self
 
-      baseT::items = allItems->cut(0, allItems->size());
+      // baseT::items = allItems.cut(0, allItems.size());
+
+      baseT::items = parlay::slice<_objT **, _objT **>(allItems_alloc, allItems_alloc+_items.size());
+      for (size_t i = 0; i < _items.size(); ++i)
+        baseT::items[i] = &_items[i];
 
       baseT::resetId();
       baseT::constructSerial(space, leafSize);
@@ -165,14 +172,19 @@ namespace pargeo::kdTreeNUMA
       space = (nodeT *)malloc(sizeof(nodeT) * (2 * _items.size() - 1));
 
       // allocate space for a copy of the items
-      allItems = new parlay::sequence<_objT *>(_items.size());
+      _objT ** allItems_alloc = (_objT **)malloc(sizeof(_objT *) * _items.size());
+      // allItems = parlay::slice<_objT **, _objT **>(allItems_alloc, allItems_alloc+_items.size());
+      // allItems = new parlay::sequence<_objT *>(_items.size());
 
-      parlay::parallel_for(0, _items.size(), [&](size_t i)
-                           { allItems->at(i) = &_items[i]; });
+      // parlay::parallel_for(0, _items.size(), [&](size_t i)
+      //                      { allItems[i] = &_items[i]; });
 
       // construct self
 
-      baseT::items = allItems->cut(0, allItems->size());
+      // baseT::items = allItems.cut(0, allItems.size());
+      baseT::items = parlay::slice<_objT **, _objT **>(allItems_alloc, allItems_alloc+_items.size());
+      for (size_t i = 0; i < _items.size(); ++i)
+        baseT::items[i] = &_items[i];
 
       baseT::resetId();
       if (baseT::size() > 2000)
@@ -181,24 +193,39 @@ namespace pargeo::kdTreeNUMA
         baseT::constructSerial(space, leafSize);
     }
 
-    // copy space and allItems to space2 and allItems2. 
-    // space2 must have size at least the size of space
-    // void copyTo(node<_dim, _objT> *space2, parlay::sequence<_objT *> *allItems2, parlay::slice<_objT *, _objT *> _items2){
-    //   parlay::parallel_for(0, space.size(), [&](size_t i)
-    //                        { space2[i] = space[i]; });
-    // }
-    // tree(tree<_dim, _objT>& tree0, int node){
-    //   space = (nodeT *)malloc(sizeof(nodeT) * (2 * _items.size() - 1));
+    // parametrize integer type, change all pointers to numbers? need to store extra pointers in node
+    // see numa-aware schedulers
+    // tree0 : the tree to copy
+    // _items: a new copy of _items in the new numa location
+    // numa_node: the numa to copy to
+    tree(tree<_dim, _objT>& tree0, parlay::slice<_objT *, _objT *> _items, int numa_node){
+      typedef tree<_dim, _objT> treeT;
+      typedef node<_dim, _objT> nodeT;
+      numa = true;
+      space = (nodeT *)numa_alloc_onnode(sizeof(nodeT) * (2 * _items.size() - 1), numa_node);
+      _objT ** allItems_alloc = (_objT **)numa_alloc_onnode(sizeof(_objT *) * _items.size() , numa_node);
+      // allItems = parlay::slice<_objT **, _objT **>(allItems_alloc, allItems_alloc+_items.size());
+      // baseT::items = allItems.cut(0, allItems.size());
+      baseT::items = parlay::slice<_objT **, _objT **>(allItems_alloc, allItems_alloc+_items.size());
+      for (size_t i = 0; i < _items.size(); ++i)
+        baseT::items[i] = &_items[i];
 
-    // }
+      parlay::parallel_for(0, 2 * _items.size() - 1, [&](size_t i){
+        space[i] = node<_dim, _objT>(tree0.space[i], tree0.space, space, tree0.allItems_alloc, allItems_alloc);
+      });
+
+    }
 
     ~tree()
     {
-      if(numa){ numa_free(space);
+      if(numa){ 
+        numa_free(space, sizeof(node<_dim, _objT>) * (2 * baseT::items.size() - 1)); 
+        numa_free(allItems_alloc, sizeof(_objT *) * baseT::items.size());
       }else{
       free(space);
+      free(allItems_alloc );
       }
-      delete allItems;
+      // delete allItems;
     }
   };
 
@@ -390,6 +417,19 @@ namespace pargeo::kdTreeNUMA
          intT nn,
          nodeT *space,
          intT leafSize = 16);
+    
+    // copy the node to be a new node
+    // require the nodes and items are stored in a contigous chunk of memory
+    // node_orig: the original node to copy
+    // node_begin_orig: the beginning of the node array of the original node
+    // node_begin: the beginning of the node array of the current node
+    // itemss_start_orig: the beginning of the items array of the original node
+    // itemss_start: the beginning of the items array of the current node
+    node(node<_dim, _objT>& node_orig, 
+         node<_dim, _objT>* node_begin_orig,
+         node<_dim, _objT>* node_begin,
+         _objT ** itemss_start_orig,
+         _objT ** itemss_start);
 
     virtual ~node()
     {

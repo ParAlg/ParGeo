@@ -272,6 +272,22 @@ namespace pargeo::kdTreeNUMA
     constructSerial(space, leafSize);
   }
 
+  template <int _dim, class _objT>
+  node<_dim, _objT>::node(node<_dim, _objT>& node_orig, 
+                          node<_dim, _objT>* node_begin_orig,
+                          node<_dim, _objT>* node_begin,
+                          _objT ** itemss_start_orig,
+                          _objT ** itemss_start) 
+  {
+    setId(node_orig.getId());
+    k = node_orig.k;
+    pMin, pMax = node_orig.getMin(), node_orig.getMax();
+    left = node_orig.left ? node_begin + (node_orig.left - node_begin_orig): nullptr;
+    right = node_orig.right ? node_begin + (node_orig.right - node_begin_orig): nullptr;
+    sib = node_orig.sib ? node_begin + (node_orig.sib - node_begin_orig): nullptr;
+    items = parlay::make_slice(itemss_start + (node_orig.items.begin()-itemss_start_orig), itemss_start + (node_orig.items.end()-itemss_start_orig));
+  }
+
   template <typename nodeT>
   double nodeDistance(nodeT *n1, nodeT *n2)
   {
@@ -316,7 +332,7 @@ namespace pargeo::kdTreeNUMA
                          size_t leafSize)
   {
     typedef tree<dim, objT> treeT;
-    typedef node<dim, objT> nodeT;
+    // typedef node<dim, objT> nodeT;
 
     if (parallel)
     {
