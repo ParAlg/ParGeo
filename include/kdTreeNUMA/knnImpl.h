@@ -205,7 +205,7 @@ namespace pargeo::kdTreeNUMA
   }
 
   template <int dim, class objT>
-  parlay::sequence<size_t> batchKnn(parlay::sequence<objT> &queries,
+  parlay::sequence<size_t> batchKnn(parlay::slice<objT *, objT *> queries,
                                     size_t k,
                                     node<dim, objT> *tree,
                                     bool sorted)
@@ -228,9 +228,45 @@ namespace pargeo::kdTreeNUMA
                              buf.sort();
                            for (size_t j = 0; j < k; ++j)
                            {
-                             idx[i * k + j] = buf[j].entry - queries.data();
+                             idx[i * k + j] = buf[j].entry - queries.begin();
                            }
                          });
+    if (freeTree)
+      free(tree);
+    return idx;
+  }
+
+  template <int dim, class objT>
+  parlay::sequence<size_t> batchKnnOmp(parlay::slice<objT *, objT *> queries,
+                                    size_t k,
+                                    node<dim, objT> *tree,
+                                    bool sorted)
+  {
+    using nodeT = node<dim, objT>;
+    bool freeTree = false;
+    if (!tree)
+    {
+      freeTree = true;
+      tree = build<dim, objT>(queries, true);
+    }
+    auto out = parlay::sequence<knnBuf::elem<objT *>>(2 * k * queries.size());
+    auto idx = parlay::sequence<size_t>(k * queries.size());
+    #pragma omp parallel for proc_bind(master)// num_threads( numThreads/2 ) 
+    for ( size_t i = 0; i < queries.size(); i++ ){
+          int place_num = omp_get_place_num();
+          if(place_num != 0){
+            std::cout << 111 << std::endl;
+          }
+          knnBuf::buffer buf = knnBuf::buffer<objT *>(k, out.cut(i * 2 * k, (i + 1) * 2 * k));
+          knnHelper<dim, nodeT, objT>(tree, queries[i], buf);
+          buf.keepK();
+          if (sorted)
+            buf.sort();
+          for (size_t j = 0; j < k; ++j)
+          {
+            idx[i * k + j] = buf[j].entry - queries.begin();
+          }          
+    }
     if (freeTree)
       free(tree);
     return idx;

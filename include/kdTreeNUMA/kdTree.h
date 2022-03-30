@@ -38,27 +38,13 @@ namespace pargeo::kdTreeNUMA
   template <int _dim, class _objT>
   class node;
 
-  /* Kd-tree construction and destruction */
-
-  template <int dim, class objT>
-  node<dim, objT> *build(parlay::slice<objT *, objT *> P,
-                         int node = -1,
-                         bool parallel = true,
-                         size_t leafSize = 16);
-
-  template <int dim, class objT>
-  node<dim, objT> *build(parlay::sequence<objT> &P,
-                         int node = -1,
-                         bool parallel = true,
-                         size_t leafSize = 16);
-
   template <int dim, class objT>
   void del(node<dim, objT> *tree);
 
   /* Kd-tree knn search */
 
   template <int dim, class objT>
-  parlay::sequence<size_t> batchKnn(parlay::sequence<objT> &queries,
+  parlay::sequence<size_t> batchKnn(parlay::slice<objT *, objT *> queries,
                                     size_t k,
                                     node<dim, objT> *tree = nullptr,
                                     bool sorted = false);
@@ -198,10 +184,11 @@ namespace pargeo::kdTreeNUMA
     // tree0 : the tree to copy
     // _items: a new copy of _items in the new numa location
     // numa_node: the numa to copy to
-    tree(tree<_dim, _objT>& tree0, parlay::slice<_objT *, _objT *> _items, int numa_node){
+    tree(tree<_dim, _objT>* tree0, parlay::slice<_objT *, _objT *> _items, int numa_node){
       typedef tree<_dim, _objT> treeT;
       typedef node<_dim, _objT> nodeT;
       numa = true;
+
       space = (nodeT *)numa_alloc_onnode(sizeof(nodeT) * (2 * _items.size() - 1), numa_node);
       _objT ** allItems_alloc = (_objT **)numa_alloc_onnode(sizeof(_objT *) * _items.size() , numa_node);
       // allItems = parlay::slice<_objT **, _objT **>(allItems_alloc, allItems_alloc+_items.size());
@@ -210,8 +197,9 @@ namespace pargeo::kdTreeNUMA
       for (size_t i = 0; i < _items.size(); ++i)
         baseT::items[i] = &_items[i];
 
+
       parlay::parallel_for(0, 2 * _items.size() - 1, [&](size_t i){
-        space[i] = node<_dim, _objT>(tree0.space[i], tree0.space, space, tree0.allItems_alloc, allItems_alloc);
+        space[i] = node<_dim, _objT>(tree0->space[i], tree0->space, space, tree0->allItems_alloc, allItems_alloc);
       });
 
     }
@@ -436,6 +424,17 @@ namespace pargeo::kdTreeNUMA
     }
   };
 
+  /* Kd-tree construction and destruction */
+
+  template <int dim, class objT>
+  tree<dim, objT> *build(parlay::slice<objT *, objT *> P,
+                         bool parallel = true,
+                         size_t leafSize = 16);
+
+  template <int dim, class objT>
+  tree<dim, objT> *build(parlay::sequence<objT> &P,
+                         bool parallel = true,
+                         size_t leafSize = 16);
 } // End namespace pargeo::kdTreeNUMA
 
 #include "treeImpl.h"

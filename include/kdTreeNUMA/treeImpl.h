@@ -326,8 +326,7 @@ namespace pargeo::kdTreeNUMA
   }
 
   template <int dim, class objT>
-  node<dim, objT> *build(parlay::slice<objT *, objT *> P,
-                         int node,
+  tree<dim, objT> *build(parlay::slice<objT *, objT *> P,
                          bool parallel,
                          size_t leafSize)
   {
@@ -347,8 +346,7 @@ namespace pargeo::kdTreeNUMA
   }
 
   template <int dim, class objT>
-  node<dim, objT> *build(parlay::sequence<objT> &P,
-                         int node,
+  tree<dim, objT> *build(parlay::sequence<objT> &P,
                          bool parallel,
                          size_t leafSize)
   {
