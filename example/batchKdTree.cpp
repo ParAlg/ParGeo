@@ -488,5 +488,9 @@ int main(int argc, char* argv[]) {
     runTests<2>(iFile, test_options);
   } else if (dim == 3) {
     runTests<3>(iFile, test_options);
+  } else if (dim == 5) {
+    runTests<5>(iFile, test_options);
+  } else {
+    throw std::runtime_error("Dimension not yet added to example.");
   }
 }

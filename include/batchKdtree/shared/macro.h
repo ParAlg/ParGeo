@@ -62,7 +62,7 @@ namespace pargeo::batchKdTree {
 
 // KNN OPTIMIZATION
 #define FEWER_SQRT 0
-#define SPATIAL_SORT 0 // Supported in 2d and 3d only
+#define SPATIAL_SORT 0 // Supported in 2d and 3d only, 1: enable, 2: enable + timer
 
 // LEAF CLUSTER SIZE
 #ifndef CLUSTER_SIZE

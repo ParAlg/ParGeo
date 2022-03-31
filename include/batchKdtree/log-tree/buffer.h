@@ -196,6 +196,22 @@ class alignas(64) LogTreeBuffer {
   void knn(const parlay::sequence<objT> &queries,
            parlay::slice<knnBuf::buffer<const pointT *> *, knnBuf::buffer<const pointT *> *> &bufs)
       const {
+
+#if SPATIAL_SORT == 2
+  pargeo::timer t; t.start();
+#endif
+#if SPATIAL_SORT > 0
+    if (objT::dim == 2) {
+      pargeo::zorderSort2d_2<objT>(queries);
+    }
+    else if (objT::dim == 3) {
+      pargeo::zorderSort3d_2<objT>(queries);
+    }
+#endif
+#if SPATIAL_SORT == 2
+    std::cout << "spatial-sort-time-3 = " << t.stop() << "\n";
+#endif
+
     if (parallel) {
       parlay::parallel_for(
           0, queries.size(), [&](size_t i) { knnSinglePoint(queries[i], bufs[i]); });
@@ -213,6 +229,21 @@ class alignas(64) LogTreeBuffer {
            bool preload = false) const {
     assert(res.size() == k * queries.size());
     assert(out.size() == 2 * k * queries.size());
+
+#if SPATIAL_SORT == 2
+  pargeo::timer t; t.start();
+#endif
+#if SPATIAL_SORT > 0
+    if (objT::dim == 2) {
+      pargeo::zorderSort2d_2<objT>(queries);
+    }
+    else if (objT::dim == 3) {
+      pargeo::zorderSort3d_2<objT>(queries);
+    }
+#endif
+#if SPATIAL_SORT == 2
+    std::cout << "spatial-sort-time-4 = " << t.stop() << "\n";
+#endif
 
     if (parallel) {
       parlay::parallel_for(0, queries.size(), [&](size_t i) {
