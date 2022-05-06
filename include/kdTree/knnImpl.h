@@ -80,7 +80,7 @@ namespace pargeo::kdTree
       { // todo check
         if (ptr < k)
           throw std::runtime_error("Error, sorting kbuffer without enough k.");
-        parlay::sort(buf.cut(0, k));
+        parlay::sort_inplace(buf.cut(0, k));
       }
 
       void insert(elem<T> t_elem)
