@@ -12,11 +12,7 @@ if (USE_WARNINGS)
   set(EXTRA_FLAGS "-Wall -Wextra")
 endif()
 
-if(USE_PARALLEL)
-  set(CMAKE_CXX_FLAGS "-DHOMEGROWN -pthread -mcx16 -O3 -DNDEBUG -fPIC ${EXTRA_FLAGS}")
-else()
-  set(CMAKE_CXX_FLAGS "-DPARLAY_SEQUENTIAL -mcx16 -O3 -DNDEBUG -fPIC ${EXTRA_FLAGS}")
-endif()
+set(CMAKE_CXX_FLAGS "-DPARLAY_OPENMP -fopenmp -mcx16 -O3 -DNDEBUG -fPIC ${EXTRA_FLAGS}")
 
 message(STATUS "--------------- General configuration -------------")
 message(STATUS "CMake Generator:                ${CMAKE_GENERATOR}")
